@@ -1,0 +1,6 @@
+{
+  "name": "IT SMM Tigers – Rewards & Recognition",
+  "description": "Weekly performance tracking, weighted score calculation, rankings, and rewards recognition platform for IT SMM Tigers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
