@@ -1,5 +1,7 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
+import { TeamDashboardSwitcher } from '../dashboard/TeamDashboardSwitcher';
 import {
   FileText,
   Printer,
@@ -18,7 +20,17 @@ import {
 import { DataService } from '../../services/dataService';
 
 export const MonthlyReportView: React.FC = () => {
-  const { leaderboardData, selectedMonth, selectedYear, settings, records, allUsers, kpis, addToast } = useApp();
+  const { allUsers } = useAuth();
+  const {
+    leaderboardData,
+    selectedMonth,
+    selectedYear,
+    settings,
+    records,
+    kpis,
+    addToast,
+    selectedTeam,
+  } = useApp();
   const { winner, top3, rankings, teamStats } = leaderboardData;
 
   const handlePrint = () => {
@@ -79,6 +91,8 @@ export const MonthlyReportView: React.FC = () => {
           </button>
         </div>
       </div>
+
+      <TeamDashboardSwitcher />
 
       {/* Printable Report Document Card */}
       <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-8 sm:p-12 shadow-2xl space-y-8 print:p-0 print:border-none print:shadow-none print:bg-white text-slate-100 print:text-black">

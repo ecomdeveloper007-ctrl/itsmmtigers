@@ -9,6 +9,8 @@ import { WeeklyDataEntryModal } from './components/member/WeeklyDataEntryModal';
 import { KPISummaryCards } from './components/dashboard/KPISummaryCards';
 import { LeaderboardTable } from './components/dashboard/LeaderboardTable';
 import { PerformanceCharts } from './components/dashboard/PerformanceCharts';
+import { TeamDashboardSwitcher } from './components/dashboard/TeamDashboardSwitcher';
+import { TeamComparisonCard } from './components/dashboard/TeamComparisonCard';
 import { MemberDashboard } from './components/member/MemberDashboard';
 import { DataManagement } from './components/admin/DataManagement';
 import { UserManagement } from './components/admin/UserManagement';
@@ -21,7 +23,7 @@ import { Trophy, Crown, Sparkles, ArrowRight, Flame } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading, currentUser, isAdmin, isSuperAdmin } = useAuth();
-  const { activeTab, setActiveTab, openWinnerModal, leaderboardData } = useApp();
+  const { activeTab, setActiveTab, openWinnerModal, leaderboardData, selectedTeam } = useApp();
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
 
   if (isLoading) {
@@ -58,7 +60,10 @@ const AppContent: React.FC = () => {
         {/* DASHBOARD TAB */}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
-            {/* Top Podium Spotlight for Top 3 Performers */}
+            {/* Team Division Selector Bar (IT Team / SMM Team / All Teams) */}
+            <TeamDashboardSwitcher />
+
+            {/* Top Podium Spotlight for Top 3 Performers of Active Division */}
             {top3.length > 0 && (
               <div className="relative rounded-3xl bg-gradient-to-b from-slate-900/90 via-slate-900/60 to-slate-950 border border-orange-500/30 p-6 sm:p-8 shadow-2xl overflow-hidden">
                 <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
@@ -68,10 +73,19 @@ const AppContent: React.FC = () => {
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
                   <div>
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/40 text-xs font-black uppercase tracking-wider">
-                      <Sparkles className="w-3.5 h-3.5" /> Month Leaderboard Podium
+                      <Sparkles className="w-3.5 h-3.5" />
+                      {selectedTeam === 'it'
+                        ? '💻 IT Team Podium'
+                        : selectedTeam === 'smm'
+                        ? '📱 SMM Team Podium'
+                        : '🌟 All Division Champions Podium'}
                     </div>
                     <h2 className="text-2xl sm:text-3xl font-black text-white mt-1">
-                      Top Tiger Performers
+                      {selectedTeam === 'it'
+                        ? 'Top IT Team Performers'
+                        : selectedTeam === 'smm'
+                        ? 'Top SMM Team Performers'
+                        : 'Top Tiger Performers'}
                     </h2>
                     <p className="text-xs text-slate-400">
                       Evaluated against strict KPI targets and weighted algorithm
@@ -110,7 +124,7 @@ const AppContent: React.FC = () => {
 
                       <div>
                         <h3 className="font-bold text-white text-base">{top3[1].userName}</h3>
-                        <p className="text-xs text-slate-400">{top3[1].performanceBand}</p>
+                        <p className="text-xs text-slate-400">{top3[1].department || top3[1].performanceBand}</p>
                       </div>
 
                       <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
@@ -150,7 +164,7 @@ const AppContent: React.FC = () => {
                       <div>
                         <h3 className="font-black text-white text-lg sm:text-xl">{top3[0].userName}</h3>
                         <p className="text-xs font-semibold text-amber-400">
-                          High Performance Leader
+                          {top3[0].department || 'High Performance Leader'}
                         </p>
                       </div>
 
@@ -193,7 +207,7 @@ const AppContent: React.FC = () => {
 
                       <div>
                         <h3 className="font-bold text-white text-base">{top3[2].userName}</h3>
-                        <p className="text-xs text-slate-400">{top3[2].performanceBand}</p>
+                        <p className="text-xs text-slate-400">{top3[2].department || top3[2].performanceBand}</p>
                       </div>
 
                       <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
@@ -213,19 +227,28 @@ const AppContent: React.FC = () => {
               </div>
             )}
 
-            {/* KPI Summary Cards */}
+            {/* If in All Teams view, render comparative battleground overview */}
+            {selectedTeam === 'all' && <TeamComparisonCard />}
+
+            {/* KPI Summary Cards for selected division */}
             <KPISummaryCards />
 
-            {/* Performance Analytics Charts */}
+            {/* Performance Analytics Charts for selected division */}
             <PerformanceCharts />
 
             {/* Comprehensive Leaderboard Table */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-white">All Team Member Rankings</h3>
+                  <h3 className="text-lg font-bold text-white">
+                    {selectedTeam === 'it'
+                      ? '💻 IT Team Member Rankings'
+                      : selectedTeam === 'smm'
+                      ? '📱 SMM Team Member Rankings'
+                      : '🌟 All Team Member Rankings'}
+                  </h3>
                   <p className="text-xs text-slate-400">
-                    Comprehensive leaderboard with multi-tier tie-breakers
+                    Comprehensive division leaderboard with multi-tier tie-breakers
                   </p>
                 </div>
               </div>
@@ -237,7 +260,7 @@ const AppContent: React.FC = () => {
         {/* LEADERBOARD TAB */}
         {activeTab === 'leaderboard' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-black text-white">Full Team Leaderboard</h1>
                 <p className="text-xs text-slate-400">
@@ -251,6 +274,7 @@ const AppContent: React.FC = () => {
                 🏆 View Winner Podium
               </button>
             </div>
+            <TeamDashboardSwitcher />
             <LeaderboardTable />
             <PerformanceCharts />
           </div>

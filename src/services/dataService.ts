@@ -36,16 +36,18 @@ const LS_KEYS = {
 // Initial Seed Users
 export const INITIAL_USERS: UserProfile[] = [
   {
-    uid: 'user_superadmin',
-    userId: 'superadmin',
-    name: 'Chief Admin (Tiger Command)',
-    email: 'superadmin@itsmmtigers.com',
+    uid: 'user_superadmin_prakash',
+    userId: 'prakash.choudhary',
+    name: 'Prakash Choudhary',
+    email: 'prakash.choudhary@coozmoo.com',
+    password: 'Coozmoo@@12',
     role: 'super_admin',
     status: 'active',
     department: 'Leadership & Ops',
+    team: 'Leadership',
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    joiningDate: '2025-01-01',
-    createdAt: '2025-01-01T00:00:00.000Z',
+    joiningDate: '2024-01-01',
+    createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2026-08-25T00:00:00.000Z',
   },
   {
@@ -53,22 +55,27 @@ export const INITIAL_USERS: UserProfile[] = [
     userId: 'admin',
     name: 'Aditi Roy (Ops Admin)',
     email: 'admin@itsmmtigers.com',
+    password: 'tiger2026admin',
     role: 'admin',
     status: 'active',
     department: 'Operations',
+    team: 'Operations',
     avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
     joiningDate: '2025-03-15',
     createdAt: '2025-03-15T00:00:00.000Z',
     updatedAt: '2026-08-25T00:00:00.000Z',
   },
+  // --- SMM TEAM MEMBERS ---
   {
     uid: 'user_divya',
     userId: 'divya.bhardwaj',
     name: 'Divya Bhardwaj',
     email: 'divya@itsmmtigers.com',
+    password: 'tiger2026divya',
     role: 'team_member',
     status: 'active',
     department: 'SMM Enterprise',
+    team: 'SMM',
     avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
     joiningDate: '2025-05-10',
     createdAt: '2025-05-10T00:00:00.000Z',
@@ -79,9 +86,11 @@ export const INITIAL_USERS: UserProfile[] = [
     userId: 'mohita.sharma',
     name: 'Mohita Sharma',
     email: 'mohita@itsmmtigers.com',
+    password: 'tiger2026mohita',
     role: 'team_member',
     status: 'active',
     department: 'SMM Growth',
+    team: 'SMM',
     avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
     joiningDate: '2025-06-01',
     createdAt: '2025-06-01T00:00:00.000Z',
@@ -92,9 +101,11 @@ export const INITIAL_USERS: UserProfile[] = [
     userId: 'naveen.jakhar',
     name: 'Naveen Jakhar',
     email: 'naveen@itsmmtigers.com',
+    password: 'tiger2026naveen',
     role: 'team_member',
     status: 'active',
     department: 'SMM Accounts',
+    team: 'SMM',
     avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     joiningDate: '2025-07-15',
     createdAt: '2025-07-15T00:00:00.000Z',
@@ -105,9 +116,11 @@ export const INITIAL_USERS: UserProfile[] = [
     userId: 'rahul.verma',
     name: 'Rahul Verma',
     email: 'rahul@itsmmtigers.com',
+    password: 'tiger2026rahul',
     role: 'team_member',
     status: 'active',
     department: 'SMM Creative & Client',
+    team: 'SMM',
     avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
     joiningDate: '2025-08-01',
     createdAt: '2025-08-01T00:00:00.000Z',
@@ -118,12 +131,75 @@ export const INITIAL_USERS: UserProfile[] = [
     userId: 'priya.patel',
     name: 'Priya Patel',
     email: 'priya@itsmmtigers.com',
+    password: 'tiger2026priya',
     role: 'team_member',
     status: 'active',
     department: 'SMM Strategy',
+    team: 'SMM',
     avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
     joiningDate: '2025-09-10',
     createdAt: '2025-09-10T00:00:00.000Z',
+    updatedAt: '2026-08-25T00:00:00.000Z',
+  },
+  // --- IT TEAM MEMBERS ---
+  {
+    uid: 'user_amitabh',
+    userId: 'amitabh.sharma',
+    name: 'Amitabh Sharma',
+    email: 'amitabh@itsmmtigers.com',
+    password: 'tiger2026amitabh',
+    role: 'team_member',
+    status: 'active',
+    department: 'IT Solutions & Architecture',
+    team: 'IT',
+    avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
+    joiningDate: '2025-02-10',
+    createdAt: '2025-02-10T00:00:00.000Z',
+    updatedAt: '2026-08-25T00:00:00.000Z',
+  },
+  {
+    uid: 'user_rohan',
+    userId: 'rohan.gupta',
+    name: 'Rohan Gupta',
+    email: 'rohan@itsmmtigers.com',
+    password: 'tiger2026rohan',
+    role: 'team_member',
+    status: 'active',
+    department: 'IT Engineering & Apps',
+    team: 'IT',
+    avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
+    joiningDate: '2025-04-01',
+    createdAt: '2025-04-01T00:00:00.000Z',
+    updatedAt: '2026-08-25T00:00:00.000Z',
+  },
+  {
+    uid: 'user_sneha',
+    userId: 'sneha.joshi',
+    name: 'Sneha Joshi',
+    email: 'sneha@itsmmtigers.com',
+    password: 'tiger2026sneha',
+    role: 'team_member',
+    status: 'active',
+    department: 'IT Cloud & DevOps',
+    team: 'IT',
+    avatarUrl: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80',
+    joiningDate: '2025-05-15',
+    createdAt: '2025-05-15T00:00:00.000Z',
+    updatedAt: '2026-08-25T00:00:00.000Z',
+  },
+  {
+    uid: 'user_vikas',
+    userId: 'vikas.mehra',
+    name: 'Vikas Mehra',
+    email: 'vikas@itsmmtigers.com',
+    password: 'tiger2026vikas',
+    role: 'team_member',
+    status: 'active',
+    department: 'IT Support & Security',
+    team: 'IT',
+    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+    joiningDate: '2025-06-20',
+    createdAt: '2025-06-20T00:00:00.000Z',
     updatedAt: '2026-08-25T00:00:00.000Z',
   },
 ];
@@ -475,6 +551,319 @@ export const INITIAL_RECORDS: PerformanceRecord[] = [
     createdAt: '2026-08-07T14:30:00.000Z',
     updatedAt: '2026-08-07T14:30:00.000Z',
   },
+
+  // --- IT TEAM PERFORMANCE RECORDS ---
+  // Amitabh Sharma (IT Solutions & Architecture) - High IT Performer
+  {
+    id: 'rec_amitabh_w1',
+    userId: 'user_amitabh',
+    userName: 'Amitabh Sharma',
+    periodId: 'period_2026_08_w1',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 1',
+    projectClosed: 4,
+    revenueGenerated: 1800,
+    upsells: 2,
+    clientRating: 5,
+    followupsCompleted: 12,
+    repeatClients: 2,
+    notes: 'Enterprise API integration architecture deliverable',
+    submittedBy: 'amitabh.sharma',
+    createdAt: '2026-08-07T18:30:00.000Z',
+    updatedAt: '2026-08-07T18:30:00.000Z',
+  },
+  {
+    id: 'rec_amitabh_w2',
+    userId: 'user_amitabh',
+    userName: 'Amitabh Sharma',
+    periodId: 'period_2026_08_w2',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 2',
+    projectClosed: 5,
+    revenueGenerated: 1950,
+    upsells: 2,
+    clientRating: 5,
+    followupsCompleted: 14,
+    repeatClients: 2,
+    notes: 'Custom CRM connector deploy & SLA maintenance upgrade',
+    submittedBy: 'amitabh.sharma',
+    createdAt: '2026-08-14T18:30:00.000Z',
+    updatedAt: '2026-08-14T18:30:00.000Z',
+  },
+  {
+    id: 'rec_amitabh_w3',
+    userId: 'user_amitabh',
+    userName: 'Amitabh Sharma',
+    periodId: 'period_2026_08_w3',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 3',
+    projectClosed: 5,
+    revenueGenerated: 1850,
+    upsells: 2,
+    clientRating: 5,
+    followupsCompleted: 11,
+    repeatClients: 2,
+    notes: 'Microservices migration and speed optimization phase',
+    submittedBy: 'amitabh.sharma',
+    createdAt: '2026-08-21T18:30:00.000Z',
+    updatedAt: '2026-08-21T18:30:00.000Z',
+  },
+  {
+    id: 'rec_amitabh_w4',
+    userId: 'user_amitabh',
+    userName: 'Amitabh Sharma',
+    periodId: 'period_2026_08_w4',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 4',
+    projectClosed: 4,
+    revenueGenerated: 1600,
+    upsells: 1,
+    clientRating: 5,
+    followupsCompleted: 11,
+    repeatClients: 1,
+    notes: 'Database sharding project handover & sign-off',
+    submittedBy: 'amitabh.sharma',
+    createdAt: '2026-08-25T11:30:00.000Z',
+    updatedAt: '2026-08-25T11:30:00.000Z',
+  },
+
+  // Rohan Gupta (IT Engineering & Apps)
+  {
+    id: 'rec_rohan_w1',
+    userId: 'user_rohan',
+    userName: 'Rohan Gupta',
+    periodId: 'period_2026_08_w1',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 1',
+    projectClosed: 3,
+    revenueGenerated: 1450,
+    upsells: 1,
+    clientRating: 4.9,
+    followupsCompleted: 9,
+    repeatClients: 1,
+    notes: 'React web application MVP rollout',
+    submittedBy: 'rohan.gupta',
+    createdAt: '2026-08-07T17:00:00.000Z',
+    updatedAt: '2026-08-07T17:00:00.000Z',
+  },
+  {
+    id: 'rec_rohan_w2',
+    userId: 'user_rohan',
+    userName: 'Rohan Gupta',
+    periodId: 'period_2026_08_w2',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 2',
+    projectClosed: 4,
+    revenueGenerated: 1600,
+    upsells: 2,
+    clientRating: 5,
+    followupsCompleted: 10,
+    repeatClients: 2,
+    notes: 'Payment gateway multi-currency addon setup',
+    submittedBy: 'rohan.gupta',
+    createdAt: '2026-08-14T17:00:00.000Z',
+    updatedAt: '2026-08-14T17:00:00.000Z',
+  },
+  {
+    id: 'rec_rohan_w3',
+    userId: 'user_rohan',
+    userName: 'Rohan Gupta',
+    periodId: 'period_2026_08_w3',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 3',
+    projectClosed: 4,
+    revenueGenerated: 1550,
+    upsells: 2,
+    clientRating: 4.8,
+    followupsCompleted: 8,
+    repeatClients: 1,
+    notes: 'Mobile app push notification services module',
+    submittedBy: 'rohan.gupta',
+    createdAt: '2026-08-21T17:00:00.000Z',
+    updatedAt: '2026-08-21T17:00:00.000Z',
+  },
+  {
+    id: 'rec_rohan_w4',
+    userId: 'user_rohan',
+    userName: 'Rohan Gupta',
+    periodId: 'period_2026_08_w4',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 4',
+    projectClosed: 4,
+    revenueGenerated: 1500,
+    upsells: 1,
+    clientRating: 5,
+    followupsCompleted: 8,
+    repeatClients: 1,
+    notes: 'Fullstack dashboard optimization milestone',
+    submittedBy: 'rohan.gupta',
+    createdAt: '2026-08-25T11:45:00.000Z',
+    updatedAt: '2026-08-25T11:45:00.000Z',
+  },
+
+  // Sneha Joshi (IT Cloud & DevOps)
+  {
+    id: 'rec_sneha_w1',
+    userId: 'user_sneha',
+    userName: 'Sneha Joshi',
+    periodId: 'period_2026_08_w1',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 1',
+    projectClosed: 3,
+    revenueGenerated: 1300,
+    upsells: 1,
+    clientRating: 5,
+    followupsCompleted: 7,
+    repeatClients: 1,
+    notes: 'Kubernetes cluster deployment & auto-scale setup',
+    submittedBy: 'sneha.joshi',
+    createdAt: '2026-08-07T16:30:00.000Z',
+    updatedAt: '2026-08-07T16:30:00.000Z',
+  },
+  {
+    id: 'rec_sneha_w2',
+    userId: 'user_sneha',
+    userName: 'Sneha Joshi',
+    periodId: 'period_2026_08_w2',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 2',
+    projectClosed: 3,
+    revenueGenerated: 1400,
+    upsells: 1,
+    clientRating: 5,
+    followupsCompleted: 7,
+    repeatClients: 1,
+    notes: 'CI/CD pipeline pipeline security scan automation',
+    submittedBy: 'sneha.joshi',
+    createdAt: '2026-08-14T16:30:00.000Z',
+    updatedAt: '2026-08-14T16:30:00.000Z',
+  },
+  {
+    id: 'rec_sneha_w3',
+    userId: 'user_sneha',
+    userName: 'Sneha Joshi',
+    periodId: 'period_2026_08_w3',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 3',
+    projectClosed: 3,
+    revenueGenerated: 1350,
+    upsells: 1,
+    clientRating: 5,
+    followupsCompleted: 8,
+    repeatClients: 1,
+    notes: 'AWS cloud cost reduction audit & execution',
+    submittedBy: 'sneha.joshi',
+    createdAt: '2026-08-21T16:30:00.000Z',
+    updatedAt: '2026-08-21T16:30:00.000Z',
+  },
+  {
+    id: 'rec_sneha_w4',
+    userId: 'user_sneha',
+    userName: 'Sneha Joshi',
+    periodId: 'period_2026_08_w4',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 4',
+    projectClosed: 3,
+    revenueGenerated: 1350,
+    upsells: 1,
+    clientRating: 5,
+    followupsCompleted: 6,
+    repeatClients: 1,
+    notes: 'Cloud backup disaster recovery drill completed',
+    submittedBy: 'sneha.joshi',
+    createdAt: '2026-08-25T11:50:00.000Z',
+    updatedAt: '2026-08-25T11:50:00.000Z',
+  },
+
+  // Vikas Mehra (IT Support & Security)
+  {
+    id: 'rec_vikas_w1',
+    userId: 'user_vikas',
+    userName: 'Vikas Mehra',
+    periodId: 'period_2026_08_w1',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 1',
+    projectClosed: 2,
+    revenueGenerated: 950,
+    upsells: 1,
+    clientRating: 4.8,
+    followupsCompleted: 10,
+    repeatClients: 1,
+    notes: 'Corporate SOC monitoring onboarding',
+    submittedBy: 'vikas.mehra',
+    createdAt: '2026-08-07T16:00:00.000Z',
+    updatedAt: '2026-08-07T16:00:00.000Z',
+  },
+  {
+    id: 'rec_vikas_w2',
+    userId: 'user_vikas',
+    userName: 'Vikas Mehra',
+    periodId: 'period_2026_08_w2',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 2',
+    projectClosed: 3,
+    revenueGenerated: 1100,
+    upsells: 1,
+    clientRating: 4.8,
+    followupsCompleted: 12,
+    repeatClients: 1,
+    notes: 'SSL certificate renewals and pen-testing fixes',
+    submittedBy: 'vikas.mehra',
+    createdAt: '2026-08-14T16:00:00.000Z',
+    updatedAt: '2026-08-14T16:00:00.000Z',
+  },
+  {
+    id: 'rec_vikas_w3',
+    userId: 'user_vikas',
+    userName: 'Vikas Mehra',
+    periodId: 'period_2026_08_w3',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 3',
+    projectClosed: 2,
+    revenueGenerated: 1050,
+    upsells: 1,
+    clientRating: 4.9,
+    followupsCompleted: 9,
+    repeatClients: 1,
+    notes: 'Zero trust network configuration',
+    submittedBy: 'vikas.mehra',
+    createdAt: '2026-08-21T16:00:00.000Z',
+    updatedAt: '2026-08-21T16:00:00.000Z',
+  },
+  {
+    id: 'rec_vikas_w4',
+    userId: 'user_vikas',
+    userName: 'Vikas Mehra',
+    periodId: 'period_2026_08_w4',
+    month: 'August',
+    year: 2026,
+    weekName: 'Week 4',
+    projectClosed: 2,
+    revenueGenerated: 1000,
+    upsells: 0,
+    clientRating: 4.7,
+    followupsCompleted: 9,
+    repeatClients: 0,
+    notes: '24/7 IT helpdesk response compliance sprint',
+    submittedBy: 'vikas.mehra',
+    createdAt: '2026-08-25T11:55:00.000Z',
+    updatedAt: '2026-08-25T11:55:00.000Z',
+  },
 ];
 
 // Initial Audit Logs
@@ -689,6 +1078,161 @@ export class DataService {
         details: `Changed status of ${u.name} to ${newStatus}`,
       });
     }
+  }
+
+  public static async registerUser(registrationData: {
+    name: string;
+    userId: string;
+    email: string;
+    password?: string;
+    department?: string;
+    avatarUrl?: string;
+    notes?: string;
+  }): Promise<{ success: boolean; user?: UserProfile; message?: string }> {
+    const cleanUserId = registrationData.userId.trim().toLowerCase();
+    const cleanEmail = registrationData.email.trim().toLowerCase();
+
+    const users = await this.getUsers();
+    const existing = users.find(
+      (u) => u.userId.toLowerCase() === cleanUserId || u.email.toLowerCase() === cleanEmail
+    );
+
+    if (existing) {
+      if (existing.status === 'pending_approval') {
+        return {
+          success: false,
+          message: 'An application with this User ID or Email is already pending Super Admin approval.',
+        };
+      }
+      return {
+        success: false,
+        message: 'A user with this User ID or Email already exists. Please choose a different one or sign in.',
+      };
+    }
+
+    const assignedTeam: 'IT' | 'SMM' =
+      registrationData.department && registrationData.department.toLowerCase().includes('it')
+        ? 'IT'
+        : 'SMM';
+
+    const newUser: UserProfile = {
+      uid: `user_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      userId: cleanUserId,
+      name: registrationData.name.trim(),
+      email: cleanEmail,
+      password: registrationData.password || 'tiger2026',
+      role: 'team_member',
+      status: 'pending_approval',
+      department: registrationData.department || (assignedTeam === 'IT' ? 'IT Team' : 'SMM Team'),
+      team: assignedTeam,
+      avatarUrl:
+        registrationData.avatarUrl ||
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      joiningDate: new Date().toISOString().split('T')[0],
+      registrationNotes: registrationData.notes || 'Registered through public onboarding portal',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      await setDoc(doc(db, 'users', newUser.uid), newUser);
+    } catch (e) {
+      console.warn('Firestore registerUser error:', e);
+    }
+
+    users.push(newUser);
+    saveToStorage(LS_KEYS.USERS, users);
+
+    await this.logAudit({
+      userId: newUser.uid,
+      userName: newUser.name,
+      userRole: 'team_member',
+      action: 'Registration Request Submitted',
+      entityType: 'user',
+      entityId: newUser.uid,
+      details: `New registration submitted by ${newUser.name} (${newUser.userId}, ${newUser.email}, Dept: ${newUser.department}). Pending Super Admin Prakash Choudhary approval.`,
+      newValue: newUser,
+    });
+
+    return { success: true, user: newUser };
+  }
+
+  public static async approveRegistration(
+    userId: string,
+    assignedRole: UserRole,
+    actor: { id: string; name: string; role: UserRole }
+  ): Promise<void> {
+    const users = await this.getUsers();
+    const target = users.find((u) => u.uid === userId || u.userId === userId);
+    if (!target) return;
+
+    const updatedUser: UserProfile = {
+      ...target,
+      status: 'active',
+      role: assignedRole,
+      approvedBy: actor.name,
+      approvedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      await setDoc(doc(db, 'users', updatedUser.uid), updatedUser);
+    } catch (e) {
+      console.warn('Firestore approveRegistration error:', e);
+    }
+
+    const idx = users.findIndex((u) => u.uid === updatedUser.uid);
+    if (idx >= 0) users[idx] = updatedUser;
+    saveToStorage(LS_KEYS.USERS, users);
+
+    await this.logAudit({
+      userId: actor.id,
+      userName: actor.name,
+      userRole: actor.role,
+      action: 'Registration Approved',
+      entityType: 'user',
+      entityId: updatedUser.uid,
+      details: `Super Admin ${actor.name} approved registration for ${updatedUser.name} (${updatedUser.userId}) with role ${assignedRole}`,
+      newValue: updatedUser,
+    });
+  }
+
+  public static async rejectRegistration(
+    userId: string,
+    reason: string,
+    actor: { id: string; name: string; role: UserRole }
+  ): Promise<void> {
+    const users = await this.getUsers();
+    const target = users.find((u) => u.uid === userId || u.userId === userId);
+    if (!target) return;
+
+    const updatedUser: UserProfile = {
+      ...target,
+      status: 'rejected',
+      rejectionReason: reason || 'Application declined by Super Admin',
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      await setDoc(doc(db, 'users', updatedUser.uid), updatedUser);
+    } catch (e) {
+      console.warn('Firestore rejectRegistration error:', e);
+    }
+
+    const idx = users.findIndex((u) => u.uid === updatedUser.uid);
+    if (idx >= 0) users[idx] = updatedUser;
+    saveToStorage(LS_KEYS.USERS, users);
+
+    await this.logAudit({
+      userId: actor.id,
+      userName: actor.name,
+      userRole: actor.role,
+      action: 'Registration Rejected',
+      entityType: 'user',
+      entityId: updatedUser.uid,
+      details: `Registration for ${updatedUser.name} (${updatedUser.userId}) was rejected: ${reason}`,
+      newValue: updatedUser,
+    });
   }
 
   // ================= KPIS =================

@@ -9,6 +9,7 @@ import {
   ToastMessage,
   ToastType,
   MemberPerformanceSummary,
+  TeamType,
 } from '../types';
 import { DataService } from '../services/dataService';
 import {
@@ -16,6 +17,7 @@ import {
   DEFAULT_SETTINGS,
   calculateLeaderboard,
   validateKPIWeights,
+  resolveUserTeam,
 } from '../services/calculationService';
 import { useAuth } from './AuthContext';
 
@@ -27,6 +29,8 @@ interface AppContextType {
   settings: AppSettings;
   auditLogs: AuditLog[];
   leaderboardData: LeaderboardData;
+  itLeaderboardData: LeaderboardData;
+  smmLeaderboardData: LeaderboardData;
   isLoading: boolean;
 
   // Selected filters
@@ -36,6 +40,8 @@ interface AppContextType {
   setSelectedYear: (year: number) => void;
   selectedPeriodId: string; // 'all' or specific period id
   setSelectedPeriodId: (id: string) => void;
+  selectedTeam: TeamType;
+  setSelectedTeam: (team: TeamType) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   availableMonths: string[];
@@ -91,6 +97,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [selectedMonth, setSelectedMonth] = useState<string>('August');
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>('all');
+  const [selectedTeam, setSelectedTeam] = useState<TeamType>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // UI state
@@ -164,7 +171,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   }, [periods, records]);
 
-  // Compute Real-Time Leaderboard with tie-breakers and metrics
+  // Compute Real-Time Leaderboard with tie-breakers and metrics for currently selected team
   const leaderboardData = useMemo(() => {
     return calculateLeaderboard(
       allUsers,
@@ -173,7 +180,36 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       settings,
       selectedMonth,
       selectedYear,
-      selectedPeriodId
+      selectedPeriodId,
+      selectedTeam
+    );
+  }, [allUsers, records, kpis, settings, selectedMonth, selectedYear, selectedPeriodId, selectedTeam]);
+
+  // Compute dedicated IT Team Leaderboard
+  const itLeaderboardData = useMemo(() => {
+    return calculateLeaderboard(
+      allUsers,
+      records,
+      kpis,
+      settings,
+      selectedMonth,
+      selectedYear,
+      selectedPeriodId,
+      'it'
+    );
+  }, [allUsers, records, kpis, settings, selectedMonth, selectedYear, selectedPeriodId]);
+
+  // Compute dedicated SMM Team Leaderboard
+  const smmLeaderboardData = useMemo(() => {
+    return calculateLeaderboard(
+      allUsers,
+      records,
+      kpis,
+      settings,
+      selectedMonth,
+      selectedYear,
+      selectedPeriodId,
+      'smm'
     );
   }, [allUsers, records, kpis, settings, selectedMonth, selectedYear, selectedPeriodId]);
 
@@ -357,6 +393,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         settings,
         auditLogs,
         leaderboardData,
+        itLeaderboardData,
+        smmLeaderboardData,
         isLoading,
         selectedMonth,
         setSelectedMonth,
@@ -364,6 +402,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setSelectedYear,
         selectedPeriodId,
         setSelectedPeriodId,
+        selectedTeam,
+        setSelectedTeam,
         searchQuery,
         setSearchQuery,
         availableMonths,

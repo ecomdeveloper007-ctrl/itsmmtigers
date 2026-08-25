@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
-  const { currentUser, logout, switchUser, allUsers, isSuperAdmin, isAdmin, isTeamMember } = useAuth();
+  const { currentUser, logout, switchUser, allUsers, isSuperAdmin, isAdmin, isTeamMember, pendingCount } = useAuth();
   const {
     selectedMonth,
     setSelectedMonth,
@@ -73,60 +73,54 @@ export const Header: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800">
-      {/* Quick Demo Switcher Bar for Seamless Reviewing */}
+      {/* Super Admin / Active Session Bar */}
       <div className="bg-gradient-to-r from-orange-950/70 via-slate-900/90 to-amber-950/70 border-b border-orange-500/20 px-4 py-1.5 text-xs text-slate-300 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1 font-semibold text-orange-400">
             <Flame className="w-3.5 h-3.5 text-orange-500 animate-pulse" />
-            Quick Switch Role / Account:
+            Authenticated Session:
           </span>
-          <span className="hidden sm:inline text-slate-400">
-            Currently logged in as <strong className="text-white">{currentUser?.name}</strong> ({currentUser?.role})
+          <span className="text-slate-300">
+            <strong className="text-white">{currentUser?.name}</strong>{' '}
+            <span className="text-slate-400 font-mono text-[11px]">({currentUser?.email})</span>
           </span>
+          {isSuperAdmin && (
+            <span className="px-2 py-0.2 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+              Super Admin Root
+            </span>
+          )}
         </div>
 
+        {/* Super Admin Pending Approvals Alert Badge */}
+        {isSuperAdmin && pendingCount > 0 && (
+          <button
+            onClick={() => setActiveTab('user-management')}
+            className="px-3 py-0.5 rounded-full text-xs font-black bg-amber-500 text-slate-950 hover:bg-amber-400 flex items-center gap-1.5 animate-pulse shadow-md cursor-pointer"
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>{pendingCount} Pending Registration Requests</span>
+          </button>
+        )}
+
         <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
-          {allUsers.slice(0, 5).map((user) => (
-            <button
-              key={user.uid}
-              onClick={() => switchUser(user.uid)}
-              className={`px-2 py-0.5 rounded-md font-medium text-xs transition-all flex items-center gap-1 whitespace-nowrap ${
-                currentUser?.uid === user.uid
-                  ? 'bg-orange-500 text-white shadow-sm shadow-orange-500/30'
-                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white'
-              }`}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              {user.name.split(' ')[0]} ({user.role === 'super_admin' ? 'Super' : user.role === 'admin' ? 'Admin' : 'Member'})
-            </button>
-          ))}
-          {allUsers.length > 5 && (
-            <div className="relative">
+          <span className="hidden sm:inline text-[11px] text-slate-400 mr-1">Switch View:</span>
+          {allUsers
+            .filter((u) => u.status === 'active')
+            .slice(0, 4)
+            .map((user) => (
               <button
-                onClick={() => setIsDemoSwitchOpen(!isDemoSwitchOpen)}
-                className="px-2 py-0.5 rounded-md font-medium text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center gap-1"
+                key={user.uid}
+                onClick={() => switchUser(user.uid)}
+                className={`px-2 py-0.5 rounded-md font-medium text-xs transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer ${
+                  currentUser?.uid === user.uid
+                    ? 'bg-orange-500 text-white shadow-sm shadow-orange-500/30'
+                    : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white'
+                }`}
               >
-                More <ChevronDown className="w-3 h-3" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                {user.name.split(' ')[0]} ({user.role === 'super_admin' ? 'Super' : user.role === 'admin' ? 'Admin' : 'Member'})
               </button>
-              {isDemoSwitchOpen && (
-                <div className="absolute right-0 mt-1 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl p-1 z-50">
-                  {allUsers.slice(5).map((user) => (
-                    <button
-                      key={user.uid}
-                      onClick={() => {
-                        switchUser(user.uid);
-                        setIsDemoSwitchOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-xs rounded-md text-slate-200 hover:bg-orange-500/20 hover:text-orange-300 flex items-center justify-between"
-                    >
-                      <span>{user.name}</span>
-                      <span className="text-[10px] text-slate-400 capitalize">{user.role.replace('_', ' ')}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+            ))}
         </div>
       </div>
 
@@ -475,7 +469,12 @@ export const Header: React.FC = () => {
                 }`}
               >
                 <Users className="w-3.5 h-3.5 text-indigo-400" />
-                Team Members
+                <span>Team Members & Approvals</span>
+                {pendingCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-500 text-slate-950">
+                    {pendingCount}
+                  </span>
+                )}
               </button>
 
               <button

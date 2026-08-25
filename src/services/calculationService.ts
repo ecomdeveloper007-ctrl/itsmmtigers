@@ -6,6 +6,8 @@ import {
   UserProfile,
   AppSettings,
   LeaderboardData,
+  TeamType,
+  TeamStatsSummary,
 } from '../types';
 
 /**
@@ -332,77 +334,62 @@ export function validateKPIWeights(kpis: KPIConfig[]): {
 }
 
 /**
- * Calculate full Leaderboard with multi-tier tie-breakers:
- * 1. Final Score DESC
- * 2. Higher Revenue DESC
- * 3. Higher Repeat Clients DESC
- * 4. Higher Client Rating DESC
- * 5. Higher Projects Closed DESC
+ * Helper to determine team from user object
  */
-export function calculateLeaderboard(
-  users: UserProfile[],
-  records: PerformanceRecord[],
-  kpis: KPIConfig[] = DEFAULT_KPIS,
-  settings: AppSettings = DEFAULT_SETTINGS,
-  filterMonth?: string,
-  filterYear?: number,
-  filterPeriodId?: string
-): LeaderboardData {
-  // Only include active team members (and admins if they have records)
-  const eligibleUsers = users.filter(
-    (u) => u.status === 'active' && u.role === 'team_member'
-  );
+export function resolveUserTeam(user: { team?: string; department?: string }): 'IT' | 'SMM' | 'Operations' | 'Leadership' {
+  if (user.team === 'IT' || user.team === 'SMM' || user.team === 'Operations' || user.team === 'Leadership') {
+    return user.team;
+  }
+  const dept = (user.department || '').toLowerCase();
+  if (dept.includes('it') || dept.includes('tech') || dept.includes('dev') || dept.includes('engineer') || dept.includes('cloud') || dept.includes('support') || dept.includes('software')) {
+    return 'IT';
+  }
+  if (dept.includes('leadership') || dept.includes('super')) {
+    return 'Leadership';
+  }
+  if (dept.includes('ops') || dept.includes('operation')) {
+    return 'Operations';
+  }
+  return 'SMM';
+}
 
-  const summaries: MemberPerformanceSummary[] = eligibleUsers.map((user) => {
-    // Filter records for this user
-    let userRecords = records.filter((r) => r.userId === user.uid || r.userId === user.userId);
+/**
+ * Calculate team statistics summary for a subset of members
+ */
+function computeTeamStats(summaries: MemberPerformanceSummary[]): TeamStatsSummary {
+  const totalMembers = summaries.length;
+  const totalProjects = summaries.reduce((s, m) => s + m.projectClosed, 0);
+  const totalRevenue = summaries.reduce((s, m) => s + m.revenueGenerated, 0);
+  const totalUpsells = summaries.reduce((s, m) => s + m.upsells, 0);
+  const validRatings = summaries.filter((m) => m.clientRating > 0);
+  const avgClientRating =
+    validRatings.length > 0
+      ? validRatings.reduce((s, m) => s + m.clientRating, 0) / validRatings.length
+      : 0;
+  const totalFollowups = summaries.reduce((s, m) => s + m.followupsCompleted, 0);
+  const totalRepeatClients = summaries.reduce((s, m) => s + m.repeatClients, 0);
+  const avgTeamScore =
+    totalMembers > 0
+      ? summaries.reduce((s, m) => s + m.finalScore, 0) / totalMembers
+      : 0;
 
-    if (filterMonth) {
-      userRecords = userRecords.filter((r) => r.month.toLowerCase() === filterMonth.toLowerCase());
-    }
-    if (filterYear) {
-      userRecords = userRecords.filter((r) => r.year === filterYear);
-    }
-    if (filterPeriodId && filterPeriodId !== 'all') {
-      userRecords = userRecords.filter((r) => r.periodId === filterPeriodId);
-    }
+  return {
+    totalMembers,
+    totalProjects,
+    totalRevenue,
+    totalUpsells,
+    avgClientRating,
+    totalFollowups,
+    totalRepeatClients,
+    avgTeamScore,
+  };
+}
 
-    const {
-      totals,
-      weeksSubmitted,
-      breakdown,
-      finalScore,
-      finalScoreDisplay,
-      overallAchievement,
-    } = aggregateMemberRecords(userRecords, kpis, settings);
-
-    return {
-      userId: user.uid || user.userId,
-      userName: user.name,
-      userRole: user.role,
-      userStatus: user.status,
-      avatarUrl: user.avatarUrl,
-      month: filterMonth || 'August',
-      year: filterYear || 2026,
-      periodId: filterPeriodId,
-      projectClosed: totals.projectClosed,
-      revenueGenerated: totals.revenueGenerated,
-      upsells: totals.upsells,
-      clientRating: totals.clientRating,
-      followupsCompleted: totals.followupsCompleted,
-      repeatClients: totals.repeatClients,
-      weeksSubmitted,
-      breakdown,
-      finalScore,
-      finalScoreDisplay,
-      achievementPercentage: overallAchievement,
-      rank: 0,
-      performanceBand: getPerformanceBand(finalScore, settings),
-    };
-  });
-
-  // Sort by tie-breaker rules
-  summaries.sort((a, b) => {
+/**
+ * Sort summaries according to strict tie-breaking rules
+ */
+function sortRankings(summaries: MemberPerformanceSummary[]): MemberPerformanceSummary[] {
+  return [...summaries].sort((a, b) => {
     // 1. Final Score DESC (with float precision)
     const scoreDiff = b.finalScore - a.finalScore;
     if (Math.abs(scoreDiff) > 0.0001) {
@@ -426,9 +413,12 @@ export function calculateLeaderboard(
     }
     return 0;
   });
+}
 
-  // Assign ranks & check for true ties
-  let currentRank = 1;
+/**
+ * Assign sequential ranks and mark ties
+ */
+function applyRanks(summaries: MemberPerformanceSummary[], isTeamRank = false): void {
   for (let i = 0; i < summaries.length; i++) {
     if (i > 0) {
       const prev = summaries[i - 1];
@@ -441,54 +431,161 @@ export function calculateLeaderboard(
         curr.projectClosed === prev.projectClosed;
 
       if (isIdentical) {
-        curr.rank = prev.rank;
-        curr.isTie = true;
-        prev.isTie = true;
+        if (isTeamRank) {
+          curr.teamRank = prev.teamRank;
+        } else {
+          curr.rank = prev.rank;
+          curr.isTie = true;
+          prev.isTie = true;
+        }
       } else {
-        curr.rank = i + 1;
-        currentRank = i + 1;
+        if (isTeamRank) {
+          curr.teamRank = i + 1;
+        } else {
+          curr.rank = i + 1;
+        }
       }
     } else {
-      summaries[i].rank = 1;
+      if (isTeamRank) {
+        summaries[i].teamRank = 1;
+      } else {
+        summaries[i].rank = 1;
+      }
     }
   }
+}
 
-  // Calculate team stats
-  const totalMembers = summaries.length;
-  const totalProjects = summaries.reduce((s, m) => s + m.projectClosed, 0);
-  const totalRevenue = summaries.reduce((s, m) => s + m.revenueGenerated, 0);
-  const totalUpsells = summaries.reduce((s, m) => s + m.upsells, 0);
-  const validRatings = summaries.filter((m) => m.clientRating > 0);
-  const avgClientRating =
-    validRatings.length > 0
-      ? validRatings.reduce((s, m) => s + m.clientRating, 0) / validRatings.length
-      : 0;
-  const totalFollowups = summaries.reduce((s, m) => s + m.followupsCompleted, 0);
-  const totalRepeatClients = summaries.reduce((s, m) => s + m.repeatClients, 0);
-  const avgTeamScore =
-    totalMembers > 0
-      ? summaries.reduce((s, m) => s + m.finalScore, 0) / totalMembers
-      : 0;
+/**
+ * Calculate full Leaderboard with multi-tier tie-breakers:
+ * 1. Final Score DESC
+ * 2. Higher Revenue DESC
+ * 3. Higher Repeat Clients DESC
+ * 4. Higher Client Rating DESC
+ * 5. Higher Projects Closed DESC
+ */
+export function calculateLeaderboard(
+  users: UserProfile[],
+  records: PerformanceRecord[],
+  kpis: KPIConfig[] = DEFAULT_KPIS,
+  settings: AppSettings = DEFAULT_SETTINGS,
+  filterMonth?: string,
+  filterYear?: number,
+  filterPeriodId?: string,
+  filterTeam: TeamType = 'all'
+): LeaderboardData {
+  // Only include active team members (and admins if they have records)
+  const eligibleUsers = users.filter(
+    (u) => u.status === 'active' && u.role === 'team_member'
+  );
 
-  const top3 = summaries.slice(0, 3);
-  const winner = summaries.length > 0 ? summaries[0] : undefined;
+  const allSummaries: MemberPerformanceSummary[] = eligibleUsers.map((user) => {
+    // Filter records for this user
+    let userRecords = records.filter((r) => r.userId === user.uid || r.userId === user.userId);
+
+    if (filterMonth) {
+      userRecords = userRecords.filter((r) => r.month.toLowerCase() === filterMonth.toLowerCase());
+    }
+    if (filterYear) {
+      userRecords = userRecords.filter((r) => r.year === filterYear);
+    }
+    if (filterPeriodId && filterPeriodId !== 'all') {
+      userRecords = userRecords.filter((r) => r.periodId === filterPeriodId);
+    }
+
+    const {
+      totals,
+      weeksSubmitted,
+      breakdown,
+      finalScore,
+      finalScoreDisplay,
+      overallAchievement,
+    } = aggregateMemberRecords(userRecords, kpis, settings);
+
+    const userTeam = resolveUserTeam(user);
+
+    return {
+      userId: user.uid || user.userId,
+      userName: user.name,
+      userRole: user.role,
+      userStatus: user.status,
+      avatarUrl: user.avatarUrl,
+      department: user.department || (userTeam === 'IT' ? 'IT Solutions' : 'SMM Strategy'),
+      team: userTeam,
+      month: filterMonth || 'August',
+      year: filterYear || 2026,
+      periodId: filterPeriodId,
+      projectClosed: totals.projectClosed,
+      revenueGenerated: totals.revenueGenerated,
+      upsells: totals.upsells,
+      clientRating: totals.clientRating,
+      followupsCompleted: totals.followupsCompleted,
+      repeatClients: totals.repeatClients,
+      weeksSubmitted,
+      breakdown,
+      finalScore,
+      finalScoreDisplay,
+      achievementPercentage: overallAchievement,
+      rank: 0,
+      performanceBand: getPerformanceBand(finalScore, settings),
+    };
+  });
+
+  // Sort overall
+  const sortedAll = sortRankings(allSummaries);
+  applyRanks(sortedAll, false);
+
+  // Group by IT Team & SMM Team
+  const itSummaries = sortRankings(sortedAll.filter((m) => m.team === 'IT'));
+  applyRanks(itSummaries, true);
+
+  const smmSummaries = sortRankings(sortedAll.filter((m) => m.team === 'SMM' || m.team === 'Operations'));
+  applyRanks(smmSummaries, true);
+
+  // Compute team statistics
+  const itTeamStats = computeTeamStats(itSummaries);
+  const smmTeamStats = computeTeamStats(smmSummaries);
+  const overallTeamStats = computeTeamStats(sortedAll);
+
+  const itWinner = itSummaries.length > 0 ? itSummaries[0] : undefined;
+  const smmWinner = smmSummaries.length > 0 ? smmSummaries[0] : undefined;
+
+  // Choose the active dataset based on filterTeam
+  let activeRankings: MemberPerformanceSummary[];
+  let activeStats: TeamStatsSummary;
+  let activeWinner: MemberPerformanceSummary | undefined;
+  let activeTop3: MemberPerformanceSummary[];
+
+  if (filterTeam === 'it') {
+    activeRankings = itSummaries;
+    activeStats = itTeamStats;
+    activeWinner = itWinner;
+    activeTop3 = itSummaries.slice(0, 3);
+  } else if (filterTeam === 'smm') {
+    activeRankings = smmSummaries;
+    activeStats = smmTeamStats;
+    activeWinner = smmWinner;
+    activeTop3 = smmSummaries.slice(0, 3);
+  } else {
+    activeRankings = sortedAll;
+    activeStats = overallTeamStats;
+    activeWinner = sortedAll.length > 0 ? sortedAll[0] : undefined;
+    activeTop3 = sortedAll.slice(0, 3);
+  }
 
   return {
     month: filterMonth || 'August',
     year: filterYear || 2026,
     periodFilter: filterPeriodId || 'all',
-    rankings: summaries,
-    winner,
-    top3,
-    teamStats: {
-      totalMembers,
-      totalProjects,
-      totalRevenue,
-      totalUpsells,
-      avgClientRating,
-      totalFollowups,
-      totalRepeatClients,
-      avgTeamScore,
-    },
+    teamFilter: filterTeam,
+    rankings: activeRankings,
+    winner: activeWinner,
+    top3: activeTop3,
+    teamStats: activeStats,
+    itTeamStats,
+    smmTeamStats,
+    itRankings: itSummaries,
+    smmRankings: smmSummaries,
+    itWinner,
+    smmWinner,
   };
 }

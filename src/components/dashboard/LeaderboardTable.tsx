@@ -278,9 +278,20 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
                         className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-700"
                       />
                       <div>
-                        <p className="font-bold text-white text-sm">{member.userName}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-bold text-white text-sm">{member.userName}</p>
+                          <span
+                            className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${
+                              member.team === 'IT'
+                                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                                : 'bg-pink-500/20 text-pink-300 border border-pink-500/40'
+                            }`}
+                          >
+                            {member.team || 'SMM'}
+                          </span>
+                        </div>
                         <p className="text-[11px] text-slate-400">
-                          {member.weeksSubmitted} week(s) logged
+                          {member.department || (member.team === 'IT' ? 'IT Solutions' : 'SMM Strategy')} • {member.weeksSubmitted} wk(s)
                         </p>
                       </div>
                     </div>
@@ -359,8 +370,21 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
                   className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-700"
                 />
                 <div>
-                  <h4 className="font-bold text-white text-sm">{member.userName}</h4>
-                  <p className="text-[10px] text-slate-400">{member.weeksSubmitted} week(s) logged</p>
+                  <div className="flex items-center gap-1.5">
+                    <h4 className="font-bold text-white text-sm">{member.userName}</h4>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.2 rounded font-black uppercase ${
+                        member.team === 'IT'
+                          ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                          : 'bg-pink-500/20 text-pink-300 border border-pink-500/40'
+                      }`}
+                    >
+                      {member.team || 'SMM'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    {member.department || (member.team === 'IT' ? 'IT Solutions' : 'SMM Strategy')} • {member.weeksSubmitted} wk(s)
+                  </p>
                 </div>
               </div>
 

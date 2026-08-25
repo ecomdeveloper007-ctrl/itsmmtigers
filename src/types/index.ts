@@ -1,18 +1,26 @@
 export type UserRole = 'super_admin' | 'admin' | 'team_member';
 
-export type UserStatus = 'active' | 'disabled';
+export type UserStatus = 'active' | 'disabled' | 'pending_approval' | 'rejected';
+
+export type TeamType = 'all' | 'it' | 'smm';
 
 export interface UserProfile {
   uid: string;
-  userId: string; // e.g., 'divya.bhardwaj' or 'emp_001'
+  userId: string; // e.g., 'prakash.choudhary' or 'divya.bhardwaj'
   name: string;
   email: string;
   role: UserRole;
   status: UserStatus;
+  password?: string;
   avatarUrl?: string;
   department?: string;
+  team?: 'IT' | 'SMM' | 'Operations' | 'Leadership';
   joiningDate?: string;
   lastLogin?: string;
+  registrationNotes?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectionReason?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -83,6 +91,8 @@ export interface MemberPerformanceSummary {
   userRole: UserRole;
   userStatus: UserStatus;
   avatarUrl?: string;
+  department?: string;
+  team?: 'IT' | 'SMM' | 'Operations' | 'Leadership';
   month: string;
   year: number;
   periodId?: string; // If filtered by specific week
@@ -101,27 +111,37 @@ export interface MemberPerformanceSummary {
   finalScoreDisplay: string; // e.g., "68.02"
   achievementPercentage: number; // Overall average achievement %
   rank: number;
+  teamRank?: number;
   isTie?: boolean;
   performanceBand: 'Excellent' | 'Very Good' | 'Good' | 'Needs Improvement';
+}
+
+export interface TeamStatsSummary {
+  totalMembers: number;
+  totalProjects: number;
+  totalRevenue: number;
+  totalUpsells: number;
+  avgClientRating: number;
+  totalFollowups: number;
+  totalRepeatClients: number;
+  avgTeamScore: number;
 }
 
 export interface LeaderboardData {
   month: string;
   year: number;
   periodFilter: string; // 'all' or periodId
+  teamFilter: TeamType;
   rankings: MemberPerformanceSummary[];
   winner?: MemberPerformanceSummary;
   top3: MemberPerformanceSummary[];
-  teamStats: {
-    totalMembers: number;
-    totalProjects: number;
-    totalRevenue: number;
-    totalUpsells: number;
-    avgClientRating: number;
-    totalFollowups: number;
-    totalRepeatClients: number;
-    avgTeamScore: number;
-  };
+  teamStats: TeamStatsSummary;
+  itTeamStats?: TeamStatsSummary;
+  smmTeamStats?: TeamStatsSummary;
+  itRankings?: MemberPerformanceSummary[];
+  smmRankings?: MemberPerformanceSummary[];
+  itWinner?: MemberPerformanceSummary;
+  smmWinner?: MemberPerformanceSummary;
 }
 
 export interface AuditLog {

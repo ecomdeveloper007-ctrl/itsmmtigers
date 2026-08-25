@@ -23,12 +23,23 @@ export const WinnerModal: React.FC = () => {
     isWinnerModalOpen,
     closeWinnerModal,
     leaderboardData,
+    itLeaderboardData,
+    smmLeaderboardData,
     selectedMonth,
     selectedYear,
     settings,
   } = useApp();
 
-  const { winner, top3, rankings } = leaderboardData;
+  const [activeWinnerDivision, setActiveWinnerDivision] = React.useState<'active' | 'it' | 'smm'>('active');
+
+  const currentDataset =
+    activeWinnerDivision === 'it'
+      ? itLeaderboardData
+      : activeWinnerDivision === 'smm'
+      ? smmLeaderboardData
+      : leaderboardData;
+
+  const { winner, top3, rankings } = currentDataset;
 
   useEffect(() => {
     if (isWinnerModalOpen) {
@@ -116,11 +127,49 @@ export const WinnerModal: React.FC = () => {
             </div>
 
             <h1 className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-orange-300 to-amber-400 uppercase tracking-tight">
-              WINNER OF THE MONTH
+              {activeWinnerDivision === 'it'
+                ? 'IT TEAM CHAMPION'
+                : activeWinnerDivision === 'smm'
+                ? 'SMM TEAM CHAMPION'
+                : 'WINNER OF THE MONTH'}
             </h1>
             <p className="text-sm text-slate-400 font-medium">
               Performance Period: <strong className="text-orange-400">{selectedMonth} {selectedYear}</strong>
             </p>
+
+            {/* Division Switching Buttons */}
+            <div className="flex items-center justify-center gap-2 pt-2 print:hidden">
+              <button
+                onClick={() => setActiveWinnerDivision('active')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeWinnerDivision === 'active'
+                    ? 'bg-orange-500 text-slate-950 shadow-md ring-1 ring-orange-400'
+                    : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                🌟 Overall Winner
+              </button>
+              <button
+                onClick={() => setActiveWinnerDivision('it')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeWinnerDivision === 'it'
+                    ? 'bg-cyan-500 text-slate-950 shadow-md ring-1 ring-cyan-400'
+                    : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                💻 IT Team Winner
+              </button>
+              <button
+                onClick={() => setActiveWinnerDivision('smm')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeWinnerDivision === 'smm'
+                    ? 'bg-pink-500 text-slate-950 shadow-md ring-1 ring-pink-400'
+                    : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                📱 SMM Team Winner
+              </button>
+            </div>
           </div>
 
           {winner ? (

@@ -12,48 +12,71 @@ import {
 } from 'lucide-react';
 
 export const KPISummaryCards: React.FC = () => {
-  const { leaderboardData, settings } = useApp();
+  const { leaderboardData, settings, selectedTeam } = useApp();
   const { teamStats, periodFilter, month, year } = leaderboardData;
+
+  const teamPrefix =
+    selectedTeam === 'it' ? 'IT Team ' : selectedTeam === 'smm' ? 'SMM Team ' : 'Total ';
 
   const cards = [
     {
-      title: 'Total Team Members',
+      title: `${teamPrefix}Members`,
       value: teamStats.totalMembers,
-      subtitle: 'Active Tiger Performers',
+      subtitle:
+        selectedTeam === 'it'
+          ? 'Active Tech Tigers'
+          : selectedTeam === 'smm'
+          ? 'Active Social Tigers'
+          : 'Active Tiger Performers',
       icon: Users,
       color: 'text-indigo-400',
       bgColor: 'from-indigo-500/10 to-indigo-950/30',
       borderColor: 'border-indigo-500/30',
     },
     {
-      title: 'Total Projects Closed',
+      title: `${teamPrefix}Projects Closed`,
       value: teamStats.totalProjects,
-      subtitle: 'Client Campaigns Delivered',
+      subtitle:
+        selectedTeam === 'it'
+          ? 'IT Solutions & Apps Delivered'
+          : selectedTeam === 'smm'
+          ? 'Client Campaigns Delivered'
+          : 'Total Projects Delivered',
       icon: Briefcase,
       color: 'text-orange-400',
       bgColor: 'from-orange-500/10 to-orange-950/30',
       borderColor: 'border-orange-500/30',
     },
     {
-      title: 'Total Revenue Generated',
+      title: `${teamPrefix}Revenue`,
       value: `${settings.currencySymbol || '$'}${teamStats.totalRevenue.toLocaleString()}`,
-      subtitle: 'Aggregate Team Billing',
+      subtitle:
+        selectedTeam === 'it'
+          ? 'IT Division Billing'
+          : selectedTeam === 'smm'
+          ? 'SMM Division Billing'
+          : 'Aggregate Team Billing',
       icon: DollarSign,
       color: 'text-emerald-400',
       bgColor: 'from-emerald-500/10 to-emerald-950/30',
       borderColor: 'border-emerald-500/30',
     },
     {
-      title: 'Total Upsells',
+      title: `${teamPrefix}Upsells`,
       value: teamStats.totalUpsells,
-      subtitle: 'Package & Retainer Expansions',
+      subtitle:
+        selectedTeam === 'it'
+          ? 'Tech Addons & Maintenance Expansions'
+          : selectedTeam === 'smm'
+          ? 'Package & Retainer Expansions'
+          : 'Upsell Expansions',
       icon: TrendingUp,
       color: 'text-cyan-400',
       bgColor: 'from-cyan-500/10 to-cyan-950/30',
       borderColor: 'border-cyan-500/30',
     },
     {
-      title: 'Average Client Rating',
+      title: `${teamPrefix}Avg Rating`,
       value: teamStats.avgClientRating > 0 ? `${teamStats.avgClientRating.toFixed(2)} ★` : '0.0 ★',
       subtitle: 'Out of 5.0 Star Satisfaction',
       icon: Star,
@@ -62,7 +85,7 @@ export const KPISummaryCards: React.FC = () => {
       borderColor: 'border-amber-500/30',
     },
     {
-      title: 'Total Follow-ups Completed',
+      title: `${teamPrefix}Follow-ups`,
       value: teamStats.totalFollowups,
       subtitle: 'Client Engagement Touches',
       icon: PhoneCall,
@@ -71,7 +94,7 @@ export const KPISummaryCards: React.FC = () => {
       borderColor: 'border-purple-500/30',
     },
     {
-      title: 'Total Repeat Clients',
+      title: `${teamPrefix}Repeat Clients`,
       value: teamStats.totalRepeatClients,
       subtitle: 'Recurring Account Retentions',
       icon: Repeat,
@@ -80,9 +103,9 @@ export const KPISummaryCards: React.FC = () => {
       borderColor: 'border-pink-500/30',
     },
     {
-      title: 'Average Team Score',
+      title: `${teamPrefix}Avg Score`,
       value: `${teamStats.avgTeamScore.toFixed(2)} / 100`,
-      subtitle: 'Overall Weighted Performance',
+      subtitle: 'Division Weighted Performance',
       icon: Award,
       color: 'text-amber-300',
       bgColor: 'from-amber-500/15 via-orange-950/40 to-slate-900',
