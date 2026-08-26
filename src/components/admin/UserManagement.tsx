@@ -57,6 +57,7 @@ export const UserManagement: React.FC = () => {
 
   // Pending role assignment mapping (userId -> UserRole)
   const [pendingApprovalRoles, setPendingApprovalRoles] = useState<Record<string, UserRole>>({});
+  const [approvingUserId, setApprovingUserId] = useState<string | null>(null);
 
   // Form State
   const [formName, setFormName] = useState<string>('');
@@ -156,12 +157,20 @@ export const UserManagement: React.FC = () => {
   };
 
   const handleApprove = async (user: UserProfile, role: UserRole = 'team_member') => {
-    await approveUser(user.uid, role);
-    addToast(
-      'success',
-      'Registration Approved',
-      `${user.name} (${user.userId}) is now active and can log in to submit weekly data.`
-    );
+    try {
+      setApprovingUserId(user.uid);
+      await approveUser(user.uid, role);
+      addToast(
+        'success',
+        'Registration Approved',
+        `${user.name} (${user.userId}) is now active and can log in to submit weekly data.`
+      );
+    } catch (e) {
+      console.error('Error approving user:', e);
+      addToast('error', 'Approval Failed', 'An error occurred while approving the member. Please try again.');
+    } finally {
+      setApprovingUserId(null);
+    }
   };
 
   const handleReject = async () => {
@@ -398,13 +407,23 @@ export const UserManagement: React.FC = () => {
                       </button>
 
                       <button
+                        disabled={approvingUserId === user.uid}
                         onClick={() =>
                           handleApprove(user, pendingApprovalRoles[user.uid] || 'team_member')
                         }
-                        className="px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-950/40 flex items-center gap-1.5 transition-all cursor-pointer"
+                        className="px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 shadow-lg shadow-emerald-950/40 flex items-center gap-1.5 transition-all cursor-pointer"
                       >
-                        <UserCheck className="w-4 h-4" />
-                        Approve as {(pendingApprovalRoles[user.uid] || 'team_member').replace('_', ' ')}
+                        {approvingUserId === user.uid ? (
+                          <>
+                            <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                            Approving...
+                          </>
+                        ) : (
+                          <>
+                            <UserCheck className="w-4 h-4" />
+                            Approve as {(pendingApprovalRoles[user.uid] || 'team_member').replace('_', ' ')}
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>

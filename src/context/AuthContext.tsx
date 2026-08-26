@@ -290,6 +290,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const approveUser = async (userId: string, assignedRole: UserRole = 'team_member') => {
     if (!currentUser) return;
+    setAllUsers((prev) =>
+      prev.map((u) =>
+        u.uid === userId || (u.userId && u.userId.toLowerCase() === userId.toLowerCase())
+          ? {
+              ...u,
+              status: 'active',
+              role: assignedRole,
+              approvedBy: currentUser.name,
+              approvedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }
+          : u
+      )
+    );
     await DataService.approveRegistration(userId, assignedRole, {
       id: currentUser.uid,
       name: currentUser.name,
@@ -300,6 +314,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const rejectUser = async (userId: string, reason: string = 'Declined by Super Admin') => {
     if (!currentUser) return;
+    setAllUsers((prev) =>
+      prev.map((u) =>
+        u.uid === userId || (u.userId && u.userId.toLowerCase() === userId.toLowerCase())
+          ? {
+              ...u,
+              status: 'rejected',
+              rejectionReason: reason,
+              updatedAt: new Date().toISOString(),
+            }
+          : u
+      )
+    );
     await DataService.rejectRegistration(userId, reason, {
       id: currentUser.uid,
       name: currentUser.name,

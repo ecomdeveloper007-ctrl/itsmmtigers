@@ -22,6 +22,7 @@ import {
   AuditLog,
   AppSettings,
   UserRole,
+  UserStatus,
 } from '../types';
 import { DEFAULT_KPIS, DEFAULT_SETTINGS, sanitizeNumber } from './calculationService';
 
@@ -1051,99 +1052,116 @@ export class DataService {
     saveToStorage(LS_KEYS.DELETED_USERS, updated);
   }
 
-  public static async getUsers(): Promise<UserProfile[]> {
+  public static consolidateUsers(rawUsers: (Partial<UserProfile> & { uid?: string; userId?: string; email?: string })[]): UserProfile[] {
     const deletedSet = this.getDeletedUserIds();
-    const isUserDeleted = (user: Partial<UserProfile> & { uid?: string; userId?: string; email?: string }) => {
-      if (!user) return true;
-      if (user.uid && deletedSet.has(user.uid.toLowerCase())) return true;
-      if (user.userId && deletedSet.has(user.userId.toLowerCase())) return true;
-      if (user.email && deletedSet.has(user.email.toLowerCase())) return true;
+    const isDeleted = (u: Partial<UserProfile> & { uid?: string; userId?: string; email?: string }) => {
+      if (!u) return true;
+      if (u.uid && deletedSet.has(u.uid.toLowerCase())) return true;
+      if (u.userId && deletedSet.has(u.userId.toLowerCase())) return true;
+      if (u.email && deletedSet.has(u.email.toLowerCase())) return true;
       return false;
     };
 
-    const userMap = new Map<string, UserProfile>();
+    const map = new Map<string, UserProfile>();
 
-    // Helper to add or merge user into map by unique key
-    const addOrMerge = (user: Partial<UserProfile> & { uid?: string; userId?: string; email?: string }) => {
-      if (!user || isUserDeleted(user)) return;
-      const rawUserId = (user.userId || user.uid || '').trim().toLowerCase();
-      const normalizedUserId = rawUserId || (user.email ? user.email.split('@')[0].trim().toLowerCase() : `user_${Date.now()}`);
-      const uid = user.uid || `user_${normalizedUserId.replace(/[^a-z0-9]/g, '_')}`;
+    for (const raw of rawUsers) {
+      if (!raw || isDeleted(raw)) continue;
+
+      const rawUserId = (raw.userId || raw.uid || '').trim().toLowerCase();
+      const normalizedUserId = rawUserId || (raw.email ? raw.email.split('@')[0].trim().toLowerCase() : `user_${Date.now()}`);
+      const uid = raw.uid || `user_${normalizedUserId.replace(/[^a-z0-9]/g, '_')}`;
 
       if (deletedSet.has(uid.toLowerCase()) || deletedSet.has(normalizedUserId.toLowerCase())) {
-        return;
+        continue;
       }
 
-      const cleanUser: UserProfile = {
+      const item: UserProfile = {
         uid,
         userId: normalizedUserId,
-        name: (user.name || normalizedUserId || 'Team Member').trim(),
-        email: (user.email || `${normalizedUserId}@itsmmtigers.com`).trim().toLowerCase(),
-        password: (user.password || '').trim() || 'tiger2026',
-        role: user.role || 'team_member',
-        status: user.status || 'active',
-        department: user.department || 'IT Team',
-        team: user.team || (user.department?.toLowerCase().includes('it') ? 'IT' : 'SMM'),
+        name: (raw.name || normalizedUserId || 'Team Member').trim(),
+        email: (raw.email || `${normalizedUserId}@itsmmtigers.com`).trim().toLowerCase(),
+        password: (raw.password || '').trim() || 'tiger2026',
+        role: raw.role || 'team_member',
+        status: raw.status || 'active',
+        department: raw.department || 'IT Team',
+        team: raw.team || (raw.department?.toLowerCase().includes('it') ? 'IT' : 'SMM'),
         avatarUrl:
-          user.avatarUrl ||
+          raw.avatarUrl ||
           'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        joiningDate: user.joiningDate || new Date().toISOString().split('T')[0],
-        createdAt: user.createdAt || new Date().toISOString(),
-        updatedAt: user.updatedAt || new Date().toISOString(),
-        registrationNotes: user.registrationNotes,
-        rejectionReason: user.rejectionReason,
-        approvedBy: user.approvedBy,
-        approvedAt: user.approvedAt,
-        lastLogin: user.lastLogin,
+        joiningDate: raw.joiningDate || new Date().toISOString().split('T')[0],
+        createdAt: raw.createdAt || new Date().toISOString(),
+        updatedAt: raw.updatedAt || new Date().toISOString(),
+        registrationNotes: raw.registrationNotes,
+        rejectionReason: raw.rejectionReason,
+        approvedBy: raw.approvedBy,
+        approvedAt: raw.approvedAt,
+        lastLogin: raw.lastLogin,
       };
 
-      // Check if already in map by normalized userId, email, or uid
-      const existingKey = Array.from(userMap.keys()).find((k) => {
-        const existing = userMap.get(k);
-        if (!existing) return false;
+      // Match existing by normalized keys
+      const existingKey = Array.from(map.keys()).find((k) => {
+        const ex = map.get(k);
+        if (!ex) return false;
         return (
-          existing.uid === cleanUser.uid ||
-          existing.userId.toLowerCase() === cleanUser.userId.toLowerCase() ||
-          existing.email.toLowerCase() === cleanUser.email.toLowerCase()
+          ex.uid === item.uid ||
+          ex.userId.toLowerCase() === item.userId.toLowerCase() ||
+          ex.email.toLowerCase() === item.email.toLowerCase()
         );
       });
 
       if (existingKey) {
-        const existing = userMap.get(existingKey)!;
+        const existing = map.get(existingKey)!;
+        // Status resolution: if either is active/approved, active takes precedence over pending_approval
+        let resolvedStatus: UserStatus = item.status;
+        if (existing.status === 'active' || item.status === 'active' || existing.approvedAt || item.approvedAt) {
+          resolvedStatus = 'active';
+        } else if (existing.status === 'disabled' || item.status === 'disabled') {
+          resolvedStatus = 'disabled';
+        } else if (existing.status === 'rejected' || item.status === 'rejected') {
+          resolvedStatus = 'rejected';
+        } else {
+          resolvedStatus = 'pending_approval';
+        }
+
         const merged: UserProfile = {
           ...existing,
-          ...cleanUser,
-          // Preserve password if set
+          ...item,
+          uid: existing.uid || item.uid,
+          userId: existing.userId || item.userId,
+          status: resolvedStatus,
+          approvedBy: item.approvedBy || existing.approvedBy,
+          approvedAt: item.approvedAt || existing.approvedAt,
+          role: item.role || existing.role || 'team_member',
           password:
-            cleanUser.password && cleanUser.password !== 'tiger2026'
-              ? cleanUser.password
-              : existing.password || cleanUser.password || 'tiger2026',
-          // Preserve active status if already active
-          status: cleanUser.status || existing.status || 'active',
+            item.password && item.password !== 'tiger2026'
+              ? item.password
+              : existing.password || item.password || 'tiger2026',
         };
-        userMap.set(existingKey, merged);
+        map.set(existingKey, merged);
       } else {
-        userMap.set(cleanUser.userId.toLowerCase(), cleanUser);
+        map.set(item.userId.toLowerCase(), item);
       }
-    };
+    }
+
+    return Array.from(map.values());
+  }
+
+  public static async getUsers(): Promise<UserProfile[]> {
+    const rawList: (Partial<UserProfile> & { uid?: string; userId?: string; email?: string })[] = [];
 
     // 1. Read existing local storage users if available
     const localUsers = getFromStorage<UserProfile[] | null>(LS_KEYS.USERS, null);
     if (localUsers && Array.isArray(localUsers) && localUsers.length > 0) {
-      for (const u of localUsers) {
-        addOrMerge(u);
-      }
+      rawList.push(...localUsers);
     } else {
-      // If local storage is empty, initialize only non-deleted baseline users
-      for (const u of INITIAL_USERS) {
-        addOrMerge(u);
-      }
+      rawList.push(...INITIAL_USERS);
     }
 
-    // 2. Merge Firestore users
+    // 2. Fetch Firestore users
     try {
       const snap = await getDocs(collection(db, 'users'));
       if (!snap.empty) {
+        const deletedSet = this.getDeletedUserIds();
         for (const docSnap of snap.docs) {
           const cloudData = docSnap.data() as Partial<UserProfile>;
           const cloudUser: Partial<UserProfile> = {
@@ -1151,11 +1169,14 @@ export class DataService {
             uid: cloudData.uid || docSnap.id,
             userId: cloudData.userId || docSnap.id,
           };
-          if (isUserDeleted(cloudUser) || deletedSet.has(docSnap.id.toLowerCase())) {
-            // Delete persistent ghost document from firestore
+          if (
+            deletedSet.has(docSnap.id.toLowerCase()) ||
+            (cloudUser.uid && deletedSet.has(cloudUser.uid.toLowerCase())) ||
+            (cloudUser.userId && deletedSet.has(cloudUser.userId.toLowerCase()))
+          ) {
             deleteDoc(docSnap.ref).catch(() => {});
           } else {
-            addOrMerge(cloudUser);
+            rawList.push(cloudUser);
           }
         }
       }
@@ -1163,8 +1184,7 @@ export class DataService {
       console.warn('Firestore getUsers error, fallback to resilient local cache:', e);
     }
 
-    const finalUsers = Array.from(userMap.values());
-    // Save consolidated filtered users to Local Storage
+    const finalUsers = this.consolidateUsers(rawList);
     saveToStorage(LS_KEYS.USERS, finalUsers);
     return finalUsers;
   }
@@ -1447,9 +1467,22 @@ export class DataService {
     assignedRole: UserRole,
     actor: { id: string; name: string; role: UserRole }
   ): Promise<void> {
+    const cleanUserId = (userId || '').trim().toLowerCase();
+    this.unmarkDeletedUserId(cleanUserId);
+
     const users = await this.getUsers();
-    const target = users.find((u) => u.uid === userId || u.userId === userId);
-    if (!target) return;
+    const target = users.find(
+      (u) =>
+        u.uid === userId ||
+        (u.uid && u.uid.toLowerCase() === cleanUserId) ||
+        (u.userId && u.userId.toLowerCase() === cleanUserId) ||
+        (u.email && u.email.toLowerCase() === cleanUserId)
+    );
+
+    if (!target) {
+      console.warn('approveRegistration: user not found for id:', userId);
+      return;
+    }
 
     const updatedUser: UserProfile = {
       ...target,
@@ -1460,26 +1493,67 @@ export class DataService {
       updatedAt: new Date().toISOString(),
     };
 
+    // 1. Immediately update Local Storage cache
+    const rawList = [...users];
+    const idx = rawList.findIndex((u) => u.uid === target.uid || u.userId.toLowerCase() === target.userId.toLowerCase());
+    if (idx >= 0) {
+      rawList[idx] = updatedUser;
+    } else {
+      rawList.push(updatedUser);
+    }
+    const consolidated = this.consolidateUsers(rawList);
+    saveToStorage(LS_KEYS.USERS, consolidated);
+
+    // 2. Persist to Firestore across potential document keys
     try {
-      await setDoc(doc(db, 'users', updatedUser.uid), updatedUser);
+      if (updatedUser.uid) {
+        await setDoc(doc(db, 'users', updatedUser.uid), updatedUser, { merge: true }).catch(() => {});
+      }
+      if (updatedUser.userId && updatedUser.userId !== updatedUser.uid) {
+        await setDoc(doc(db, 'users', updatedUser.userId), updatedUser, { merge: true }).catch(() => {});
+      }
+
+      // Query all matching docs in Firestore to ensure complete synchronization
+      const snap = await getDocs(collection(db, 'users'));
+      for (const docSnap of snap.docs) {
+        const d = docSnap.data() as Partial<UserProfile>;
+        const docIdLower = docSnap.id.toLowerCase();
+        const dUid = (d.uid || '').toLowerCase();
+        const dUserId = (d.userId || '').toLowerCase();
+        const dEmail = (d.email || '').toLowerCase();
+
+        if (
+          docIdLower === cleanUserId ||
+          docIdLower === target.uid.toLowerCase() ||
+          docIdLower === target.userId.toLowerCase() ||
+          dUid === cleanUserId ||
+          dUid === target.uid.toLowerCase() ||
+          dUserId === cleanUserId ||
+          dUserId === target.userId.toLowerCase() ||
+          (target.email && dEmail === target.email.toLowerCase())
+        ) {
+          await setDoc(docSnap.ref, updatedUser, { merge: true }).catch(() => {});
+        }
+      }
     } catch (e) {
       console.warn('Firestore approveRegistration error:', e);
     }
 
-    const idx = users.findIndex((u) => u.uid === updatedUser.uid);
-    if (idx >= 0) users[idx] = updatedUser;
-    saveToStorage(LS_KEYS.USERS, users);
-
-    await this.logAudit({
-      userId: actor.id,
-      userName: actor.name,
-      userRole: actor.role,
-      action: 'Registration Approved',
-      entityType: 'user',
-      entityId: updatedUser.uid,
-      details: `Super Admin ${actor.name} approved registration for ${updatedUser.name} (${updatedUser.userId}) with role ${assignedRole}`,
-      newValue: updatedUser,
-    });
+    // 3. Log Audit
+    try {
+      await this.logAudit({
+        userId: actor.id,
+        userName: actor.name,
+        userRole: actor.role,
+        action: 'Registration Approved',
+        entityType: 'user',
+        entityId: updatedUser.uid,
+        details: `Super Admin ${actor.name} approved registration for ${updatedUser.name} (${updatedUser.userId}) with role ${assignedRole}`,
+        newValue: updatedUser,
+      });
+    } catch (err) {
+      console.warn('Audit log error on approveRegistration:', err);
+    }
   }
 
   public static async rejectRegistration(
@@ -1487,9 +1561,20 @@ export class DataService {
     reason: string,
     actor: { id: string; name: string; role: UserRole }
   ): Promise<void> {
+    const cleanUserId = (userId || '').trim().toLowerCase();
     const users = await this.getUsers();
-    const target = users.find((u) => u.uid === userId || u.userId === userId);
-    if (!target) return;
+    const target = users.find(
+      (u) =>
+        u.uid === userId ||
+        (u.uid && u.uid.toLowerCase() === cleanUserId) ||
+        (u.userId && u.userId.toLowerCase() === cleanUserId) ||
+        (u.email && u.email.toLowerCase() === cleanUserId)
+    );
+
+    if (!target) {
+      console.warn('rejectRegistration: user not found for id:', userId);
+      return;
+    }
 
     const updatedUser: UserProfile = {
       ...target,
@@ -1498,26 +1583,66 @@ export class DataService {
       updatedAt: new Date().toISOString(),
     };
 
+    // 1. Immediately update Local Storage cache
+    const rawList = [...users];
+    const idx = rawList.findIndex((u) => u.uid === target.uid || u.userId.toLowerCase() === target.userId.toLowerCase());
+    if (idx >= 0) {
+      rawList[idx] = updatedUser;
+    } else {
+      rawList.push(updatedUser);
+    }
+    const consolidated = this.consolidateUsers(rawList);
+    saveToStorage(LS_KEYS.USERS, consolidated);
+
+    // 2. Persist to Firestore across potential document keys
     try {
-      await setDoc(doc(db, 'users', updatedUser.uid), updatedUser);
+      if (updatedUser.uid) {
+        await setDoc(doc(db, 'users', updatedUser.uid), updatedUser, { merge: true }).catch(() => {});
+      }
+      if (updatedUser.userId && updatedUser.userId !== updatedUser.uid) {
+        await setDoc(doc(db, 'users', updatedUser.userId), updatedUser, { merge: true }).catch(() => {});
+      }
+
+      const snap = await getDocs(collection(db, 'users'));
+      for (const docSnap of snap.docs) {
+        const d = docSnap.data() as Partial<UserProfile>;
+        const docIdLower = docSnap.id.toLowerCase();
+        const dUid = (d.uid || '').toLowerCase();
+        const dUserId = (d.userId || '').toLowerCase();
+        const dEmail = (d.email || '').toLowerCase();
+
+        if (
+          docIdLower === cleanUserId ||
+          docIdLower === target.uid.toLowerCase() ||
+          docIdLower === target.userId.toLowerCase() ||
+          dUid === cleanUserId ||
+          dUid === target.uid.toLowerCase() ||
+          dUserId === cleanUserId ||
+          dUserId === target.userId.toLowerCase() ||
+          (target.email && dEmail === target.email.toLowerCase())
+        ) {
+          await setDoc(docSnap.ref, updatedUser, { merge: true }).catch(() => {});
+        }
+      }
     } catch (e) {
       console.warn('Firestore rejectRegistration error:', e);
     }
 
-    const idx = users.findIndex((u) => u.uid === updatedUser.uid);
-    if (idx >= 0) users[idx] = updatedUser;
-    saveToStorage(LS_KEYS.USERS, users);
-
-    await this.logAudit({
-      userId: actor.id,
-      userName: actor.name,
-      userRole: actor.role,
-      action: 'Registration Rejected',
-      entityType: 'user',
-      entityId: updatedUser.uid,
-      details: `Registration for ${updatedUser.name} (${updatedUser.userId}) was rejected: ${reason}`,
-      newValue: updatedUser,
-    });
+    // 3. Log Audit
+    try {
+      await this.logAudit({
+        userId: actor.id,
+        userName: actor.name,
+        userRole: actor.role,
+        action: 'Registration Rejected',
+        entityType: 'user',
+        entityId: updatedUser.uid,
+        details: `Registration for ${updatedUser.name} (${updatedUser.userId}) was rejected: ${reason}`,
+        newValue: updatedUser,
+      });
+    } catch (err) {
+      console.warn('Audit log error on rejectRegistration:', err);
+    }
   }
 
   // ================= KPIS =================
@@ -2198,47 +2323,30 @@ export class DataService {
       return onSnapshot(
         collection(db, 'users'),
         (snapshot) => {
-          const deletedSet = this.getDeletedUserIds();
+          const rawList: (Partial<UserProfile> & { uid?: string; userId?: string; email?: string })[] = [];
           if (!snapshot.empty) {
-            const users = snapshot.docs
-              .map((d) => {
-                const data = d.data() as UserProfile;
-                return {
-                  ...data,
-                  uid: data.uid || d.id,
-                  userId: data.userId || d.id,
-                };
-              })
-              .filter(
-                (u) =>
-                  !deletedSet.has((u.uid || '').toLowerCase()) &&
-                  !deletedSet.has((u.userId || '').toLowerCase()) &&
-                  !(u.email && deletedSet.has(u.email.toLowerCase()))
-              );
-            saveToStorage(LS_KEYS.USERS, users);
-            callback(users);
+            for (const d of snapshot.docs) {
+              const data = d.data() as UserProfile;
+              rawList.push({
+                ...data,
+                uid: data.uid || d.id,
+                userId: data.userId || d.id,
+              });
+            }
           } else {
-            const cached = getFromStorage<UserProfile[]>(LS_KEYS.USERS, []);
-            const filtered = cached.filter(
-              (u) =>
-                !deletedSet.has((u.uid || '').toLowerCase()) &&
-                !deletedSet.has((u.userId || '').toLowerCase()) &&
-                !(u.email && deletedSet.has(u.email.toLowerCase()))
-            );
-            callback(filtered);
+            const cached = getFromStorage<UserProfile[]>(LS_KEYS.USERS, INITIAL_USERS);
+            rawList.push(...cached);
           }
+
+          const consolidated = this.consolidateUsers(rawList);
+          saveToStorage(LS_KEYS.USERS, consolidated);
+          callback(consolidated);
         },
         (error) => {
           console.warn('Real-time users subscription warning:', error);
-          const deletedSet = this.getDeletedUserIds();
-          const cached = getFromStorage<UserProfile[]>(LS_KEYS.USERS, []);
-          const filtered = cached.filter(
-            (u) =>
-              !deletedSet.has((u.uid || '').toLowerCase()) &&
-              !deletedSet.has((u.userId || '').toLowerCase()) &&
-              !(u.email && deletedSet.has(u.email.toLowerCase()))
-          );
-          callback(filtered);
+          const cached = getFromStorage<UserProfile[]>(LS_KEYS.USERS, INITIAL_USERS);
+          const consolidated = this.consolidateUsers(cached);
+          callback(consolidated);
         }
       );
     } catch (e) {
