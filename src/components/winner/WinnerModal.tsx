@@ -28,6 +28,7 @@ export const WinnerModal: React.FC = () => {
     selectedMonth,
     selectedYear,
     settings,
+    kpis,
   } = useApp();
 
   const [activeWinnerDivision, setActiveWinnerDivision] = React.useState<'active' | 'it' | 'smm'>('active');
@@ -243,63 +244,57 @@ export const WinnerModal: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Champion KPI Metric Cards */}
+                {/* Champion KPI Metric Cards (Dynamically computed from backend active KPIs) */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mt-6 pt-6 border-t border-amber-500/20">
-                  <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-center">
-                    <Briefcase className="w-4 h-4 text-orange-400 mx-auto mb-1" />
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Projects Closed</p>
-                    <p className="text-lg font-black text-white">{winner.projectClosed}</p>
-                    <span className="text-[10px] text-emerald-400 font-semibold">
-                      Target: {winner.breakdown['kpi_projects']?.target ?? 25}
-                    </span>
-                  </div>
+                  {kpis.filter((k) => k.active).map((kpi) => {
+                    const itemBreakdown = winner.breakdown[kpi.id] || {
+                      actual: (winner as unknown as Record<string, number>)[kpi.key] ?? 0,
+                      target: kpi.defaultTarget,
+                      score: 0,
+                      achievementPercentage: 0,
+                    };
+                    const isCurrency = kpi.unit === '$' || kpi.key === 'revenueGenerated';
+                    const isRating = kpi.unit === 'Stars' || kpi.key === 'clientRating';
 
-                  <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-center">
-                    <DollarSign className="w-4 h-4 text-emerald-400 mx-auto mb-1" />
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Revenue</p>
-                    <p className="text-lg font-black text-emerald-400">
-                      ${winner.revenueGenerated.toLocaleString()}
-                    </p>
-                    <span className="text-[10px] text-emerald-400 font-semibold">
-                      Target: ${Number(winner.breakdown['kpi_revenue']?.target ?? 10000).toLocaleString()}
-                    </span>
-                  </div>
+                    let IconComponent = Award;
+                    let colorClass = 'text-amber-400';
+                    if (kpi.key === 'projectClosed') {
+                      IconComponent = Briefcase;
+                      colorClass = 'text-orange-400';
+                    } else if (kpi.key === 'revenueGenerated') {
+                      IconComponent = DollarSign;
+                      colorClass = 'text-emerald-400';
+                    } else if (kpi.key === 'upsells') {
+                      IconComponent = TrendingUp;
+                      colorClass = 'text-cyan-400';
+                    } else if (kpi.key === 'clientRating') {
+                      IconComponent = Star;
+                      colorClass = 'text-amber-400';
+                    } else if (kpi.key === 'followupsCompleted') {
+                      IconComponent = Users;
+                      colorClass = 'text-purple-400';
+                    } else if (kpi.key === 'repeatClients') {
+                      IconComponent = Repeat;
+                      colorClass = 'text-pink-400';
+                    }
 
-                  <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-center">
-                    <TrendingUp className="w-4 h-4 text-cyan-400 mx-auto mb-1" />
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Upsells</p>
-                    <p className="text-lg font-black text-white">{winner.upsells}</p>
-                    <span className="text-[10px] text-cyan-400 font-semibold">
-                      Target: {winner.breakdown['kpi_upsells']?.target ?? 10}
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-center">
-                    <Star className="w-4 h-4 text-amber-400 fill-amber-400 mx-auto mb-1" />
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Client Rating</p>
-                    <p className="text-lg font-black text-amber-400">
-                      {winner.clientRating > 0 ? `${winner.clientRating.toFixed(1)}/5` : '0/5'}
-                    </p>
-                    <span className="text-[10px] text-amber-400 font-semibold">Target: 5.0</span>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-center">
-                    <Users className="w-4 h-4 text-purple-400 mx-auto mb-1" />
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Follow-ups</p>
-                    <p className="text-lg font-black text-white">{winner.followupsCompleted}</p>
-                    <span className="text-[10px] text-purple-400 font-semibold">
-                      Target: {winner.breakdown['kpi_followup']?.target ?? 50}
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-center">
-                    <Repeat className="w-4 h-4 text-pink-400 mx-auto mb-1" />
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Repeat Clients</p>
-                    <p className="text-lg font-black text-white">{winner.repeatClients}</p>
-                    <span className="text-[10px] text-pink-400 font-semibold">
-                      Target: {winner.breakdown['kpi_repeat']?.target ?? 10}
-                    </span>
-                  </div>
+                    return (
+                      <div key={kpi.id} className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-center">
+                        <IconComponent className={`w-4 h-4 ${colorClass} mx-auto mb-1`} />
+                        <p className="text-[10px] text-slate-400 uppercase font-bold truncate">{kpi.name}</p>
+                        <p className="text-lg font-black text-white">
+                          {isCurrency
+                            ? `${settings.currencySymbol || '$'}${itemBreakdown.actual.toLocaleString()}`
+                            : isRating
+                            ? `${Number(itemBreakdown.actual).toFixed(1)}/5`
+                            : itemBreakdown.actual}
+                        </p>
+                        <span className="text-[10px] text-emerald-400 font-semibold block truncate">
+                          Target: {isCurrency ? `${settings.currencySymbol || '$'}${Number(itemBreakdown.target).toLocaleString()}` : itemBreakdown.target}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

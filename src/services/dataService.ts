@@ -10,6 +10,8 @@ import {
   where,
   orderBy,
   limit,
+  onSnapshot,
+  Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import {
@@ -1222,6 +1224,47 @@ export class DataService {
     }
   }
 
+  public static async deleteUser(
+    userId: string,
+    actor: { id: string; name: string; role: UserRole }
+  ): Promise<void> {
+    const users = getFromStorage<UserProfile[]>(LS_KEYS.USERS, INITIAL_USERS);
+    const targetUser = users.find((x) => x.uid === userId || x.userId.toLowerCase() === userId.toLowerCase());
+
+    // 1. Remove from local storage cache immediately
+    const updatedUsers = users.filter((x) => x.uid !== userId && x.userId.toLowerCase() !== userId.toLowerCase());
+    saveToStorage(LS_KEYS.USERS, updatedUsers);
+
+    // 2. Delete from Firestore if exists
+    try {
+      if (targetUser?.uid) {
+        await deleteDoc(doc(db, 'users', targetUser.uid));
+      } else {
+        await deleteDoc(doc(db, 'users', userId));
+      }
+    } catch (e) {
+      console.warn('Firestore deleteUser error:', e);
+    }
+
+    // 3. Log Audit
+    if (targetUser) {
+      try {
+        await this.logAudit({
+          userId: actor.id,
+          userName: actor.name,
+          userRole: actor.role,
+          action: 'User Deleted',
+          entityType: 'user',
+          entityId: targetUser.uid,
+          details: `Permanently deleted member profile: ${targetUser.name} (${targetUser.userId}, Role: ${targetUser.role})`,
+          oldValue: targetUser,
+        });
+      } catch (err) {
+        console.warn('Audit log save error:', err);
+      }
+    }
+  }
+
   public static async registerUser(registrationData: {
     name: string;
     userId: string;
@@ -1914,5 +1957,160 @@ export class DataService {
         invalidCount: invalidRows.length,
       },
     };
+  }
+
+  // ================= REAL-TIME BACKEND SUBSCRIPTIONS =================
+
+  public static subscribeToRecords(callback: (records: PerformanceRecord[]) => void): Unsubscribe {
+    try {
+      return onSnapshot(
+        collection(db, 'performanceRecords'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const records = snapshot.docs.map((d) => d.data() as PerformanceRecord);
+            const sorted = records.sort(
+              (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+            );
+            saveToStorage(LS_KEYS.RECORDS, sorted);
+            callback(sorted);
+          } else {
+            // If backend collection is empty, load cached/baseline
+            const cached = getFromStorage<PerformanceRecord[]>(LS_KEYS.RECORDS, INITIAL_RECORDS);
+            callback(cached);
+          }
+        },
+        (error) => {
+          console.warn('Real-time records subscription warning:', error);
+          const cached = getFromStorage<PerformanceRecord[]>(LS_KEYS.RECORDS, INITIAL_RECORDS);
+          callback(cached);
+        }
+      );
+    } catch (e) {
+      console.warn('Failed to attach records listener:', e);
+      return () => {};
+    }
+  }
+
+  public static subscribeToPeriods(callback: (periods: PerformancePeriod[]) => void): Unsubscribe {
+    try {
+      return onSnapshot(
+        collection(db, 'performancePeriods'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const periods = snapshot.docs.map((d) => d.data() as PerformancePeriod);
+            const sorted = periods.sort((a, b) => b.year - a.year || a.weekNumber - b.weekNumber);
+            saveToStorage(LS_KEYS.PERIODS, sorted);
+            callback(sorted);
+          } else {
+            const cached = getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, INITIAL_PERIODS);
+            callback(cached);
+          }
+        },
+        (error) => {
+          console.warn('Real-time periods subscription warning:', error);
+          const cached = getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, INITIAL_PERIODS);
+          callback(cached);
+        }
+      );
+    } catch (e) {
+      console.warn('Failed to attach periods listener:', e);
+      return () => {};
+    }
+  }
+
+  public static subscribeToKPIs(callback: (kpis: KPIConfig[]) => void): Unsubscribe {
+    try {
+      return onSnapshot(
+        collection(db, 'kpiSettings'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const kpis = snapshot.docs
+              .map((d) => d.data() as KPIConfig)
+              .sort((a, b) => a.order - b.order);
+            saveToStorage(LS_KEYS.KPIS, kpis);
+            callback(kpis);
+          } else {
+            const cached = getFromStorage<KPIConfig[]>(LS_KEYS.KPIS, DEFAULT_KPIS);
+            callback(cached);
+          }
+        },
+        (error) => {
+          console.warn('Real-time KPIs subscription warning:', error);
+          const cached = getFromStorage<KPIConfig[]>(LS_KEYS.KPIS, DEFAULT_KPIS);
+          callback(cached);
+        }
+      );
+    } catch (e) {
+      console.warn('Failed to attach KPIs listener:', e);
+      return () => {};
+    }
+  }
+
+  public static subscribeToSettings(callback: (settings: AppSettings) => void): Unsubscribe {
+    try {
+      return onSnapshot(
+        doc(db, 'settings', 'global'),
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const settings = snapshot.data() as AppSettings;
+            saveToStorage(LS_KEYS.SETTINGS, settings);
+            callback(settings);
+          } else {
+            const cached = getFromStorage<AppSettings>(LS_KEYS.SETTINGS, DEFAULT_SETTINGS);
+            callback(cached);
+          }
+        },
+        (error) => {
+          console.warn('Real-time settings subscription warning:', error);
+          const cached = getFromStorage<AppSettings>(LS_KEYS.SETTINGS, DEFAULT_SETTINGS);
+          callback(cached);
+        }
+      );
+    } catch (e) {
+      console.warn('Failed to attach settings listener:', e);
+      return () => {};
+    }
+  }
+
+  public static subscribeToAuditLogs(callback: (logs: AuditLog[]) => void): Unsubscribe {
+    try {
+      return onSnapshot(
+        query(collection(db, 'auditLogs'), orderBy('timestamp', 'desc'), limit(100)),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const logs = snapshot.docs.map((d) => d.data() as AuditLog);
+            saveToStorage(LS_KEYS.AUDIT, logs);
+            callback(logs);
+          }
+        },
+        (error) => {
+          console.warn('Real-time audit log subscription warning:', error);
+        }
+      );
+    } catch (e) {
+      console.warn('Failed to attach audit listener:', e);
+      return () => {};
+    }
+  }
+
+  public static subscribeToUsers(callback: (users: UserProfile[]) => void): Unsubscribe {
+    try {
+      return onSnapshot(
+        collection(db, 'users'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const users = snapshot.docs.map((d) => d.data() as UserProfile);
+            saveToStorage(LS_KEYS.USERS, users);
+            callback(users);
+          }
+        },
+        (error) => {
+          console.warn('Real-time users subscription warning:', error);
+        }
+      );
+    } catch (e) {
+      console.warn('Failed to attach users listener:', e);
+      return () => {};
+    }
   }
 }

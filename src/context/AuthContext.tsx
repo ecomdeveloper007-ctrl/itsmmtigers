@@ -18,6 +18,7 @@ interface AuthContextType {
   }) => Promise<{ success: boolean; message?: string }>;
   approveUser: (userId: string, assignedRole?: UserRole) => Promise<void>;
   rejectUser: (userId: string, reason?: string) => Promise<void>;
+  deleteUser: (userId: string) => Promise<void>;
   logout: () => void;
   switchUser: (userId: string) => void;
   updateCurrentUserProfile: (profile: Partial<UserProfile>) => void;
@@ -64,6 +65,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     loadUsersAndSession();
+    const unsub = DataService.subscribeToUsers((users) => {
+      if (users && users.length > 0) {
+        setAllUsers(users);
+        const savedUid = localStorage.getItem(CURRENT_USER_KEY);
+        if (savedUid) {
+          const matched = users.find(
+            (u) => u.uid === savedUid || u.userId === savedUid || u.email === savedUid
+          );
+          if (matched && matched.status === 'active') {
+            setCurrentUser(matched);
+          }
+        }
+      }
+    });
+    return () => unsub();
   }, []);
 
   const refreshUsers = async () => {
@@ -292,6 +308,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await refreshUsers();
   };
 
+  const deleteUser = async (userId: string) => {
+    if (!currentUser) return;
+    await DataService.deleteUser(userId, {
+      id: currentUser.uid,
+      name: currentUser.name,
+      role: currentUser.role,
+    });
+    await refreshUsers();
+  };
+
   const logout = () => {
     setCurrentUser(null);
     localStorage.removeItem(CURRENT_USER_KEY);
@@ -339,6 +365,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         register,
         approveUser,
         rejectUser,
+        deleteUser,
         logout,
         switchUser,
         updateCurrentUserProfile,

@@ -25,6 +25,8 @@ import {
   Camera,
   Upload,
   ExternalLink,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { UserProfile, UserRole, UserStatus } from '../../types';
 import { DataService } from '../../services/dataService';
@@ -40,7 +42,7 @@ const PRESET_AVATARS = [
 ];
 
 export const UserManagement: React.FC = () => {
-  const { currentUser, allUsers, refreshUsers, approveUser, rejectUser, pendingUsers, pendingCount, isSuperAdmin } = useAuth();
+  const { currentUser, allUsers, refreshUsers, approveUser, rejectUser, deleteUser, pendingUsers, pendingCount, isSuperAdmin } = useAuth();
   const { addToast } = useApp();
 
   const [activeSubTab, setActiveSubTab] = useState<'all' | 'pending'>('pending');
@@ -50,6 +52,8 @@ export const UserManagement: React.FC = () => {
   const [resetPasswordUser, setResetPasswordUser] = useState<UserProfile | null>(null);
   const [newPassword, setNewPassword] = useState<string>('');
   const [inspectingUser, setInspectingUser] = useState<UserProfile | null>(null);
+  const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   // Pending role assignment mapping (userId -> UserRole)
   const [pendingApprovalRoles, setPendingApprovalRoles] = useState<Record<string, UserRole>>({});
@@ -211,6 +215,30 @@ export const UserManagement: React.FC = () => {
     );
     setResetPasswordUser(null);
     setNewPassword('');
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingUser || !currentUser) return;
+    if (deletingUser.uid === currentUser.uid) {
+      addToast('error', 'Cannot delete self', 'You cannot delete your own active administrator account.');
+      setDeletingUser(null);
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      await deleteUser(deletingUser.uid);
+      addToast(
+        'success',
+        'Member Profile Deleted',
+        `${deletingUser.name} (${deletingUser.userId}) was permanently deleted from team database.`
+      );
+      setDeletingUser(null);
+    } catch (err) {
+      addToast('error', 'Delete failed', 'Failed to delete member profile. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -540,21 +568,31 @@ export const UserManagement: React.FC = () => {
                               <KeyRound className="w-3.5 h-3.5" />
                             </button>
                             {user.uid !== currentUser?.uid && (
-                              <button
-                                onClick={() => handleToggleStatus(user)}
-                                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                                  user.status === 'active'
-                                    ? 'bg-slate-800 hover:bg-rose-900/50 text-slate-400 hover:text-rose-300'
-                                    : 'bg-slate-800 hover:bg-emerald-900/50 text-slate-400 hover:text-emerald-300'
-                                }`}
-                                title={user.status === 'active' ? 'Disable Account' : 'Enable Account'}
-                              >
-                                {user.status === 'active' ? (
-                                  <XCircle className="w-3.5 h-3.5" />
-                                ) : (
-                                  <CheckCircle className="w-3.5 h-3.5" />
-                                )}
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => handleToggleStatus(user)}
+                                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                    user.status === 'active'
+                                      ? 'bg-slate-800 hover:bg-rose-900/50 text-slate-400 hover:text-rose-300'
+                                      : 'bg-slate-800 hover:bg-emerald-900/50 text-slate-400 hover:text-emerald-300'
+                                  }`}
+                                  title={user.status === 'active' ? 'Disable Account' : 'Enable Account'}
+                                >
+                                  {user.status === 'active' ? (
+                                    <XCircle className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <CheckCircle className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+
+                                <button
+                                  onClick={() => setDeletingUser(user)}
+                                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600/20 text-slate-400 hover:text-rose-400 border border-transparent hover:border-rose-500/30 transition-colors cursor-pointer"
+                                  title="Delete Member Profile"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
                             )}
                           </>
                         )}
@@ -943,6 +981,70 @@ export const UserManagement: React.FC = () => {
           member={inspectingUser}
           onClose={() => setInspectingUser(null)}
         />
+      )}
+
+      {/* Delete Member Confirmation Modal */}
+      {deletingUser && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-800 bg-rose-500/10 flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Delete Member Profile</h3>
+                <p className="text-xs text-rose-300">Permanent Action Warning</p>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <p className="text-slate-300 leading-relaxed">
+                Are you sure you want to permanently delete{' '}
+                <strong className="text-white font-bold">{deletingUser.name}</strong> (
+                <span className="font-mono text-orange-400">{deletingUser.userId}</span>)?
+              </p>
+
+              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Email:</span>
+                  <span className="font-mono text-slate-300">{deletingUser.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Department:</span>
+                  <span className="text-slate-300">{deletingUser.department || 'IT Team'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Role:</span>
+                  <span className="text-slate-300 capitalize">{deletingUser.role.replace('_', ' ')}</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-800/40 text-[11px] text-rose-300">
+                ⚠️ This will permanently remove their credentials and access profile from both local storage and cloud Firestore database.
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setDeletingUser(null)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleConfirmDelete}
+                  className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {isDeleting ? 'Deleting...' : 'Permanently Delete Member'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

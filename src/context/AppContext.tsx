@@ -149,6 +149,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   useEffect(() => {
     refreshAllData();
+
+    // Attach real-time subscriptions to backend Firestore collections
+    const unsubRecords = DataService.subscribeToRecords((liveRecords) => {
+      if (liveRecords) setRecords(liveRecords);
+    });
+
+    const unsubPeriods = DataService.subscribeToPeriods((livePeriods) => {
+      if (livePeriods) setPeriods(livePeriods);
+    });
+
+    const unsubKPIs = DataService.subscribeToKPIs((liveKPIs) => {
+      if (liveKPIs) setKpis(liveKPIs);
+    });
+
+    const unsubSettings = DataService.subscribeToSettings((liveSettings) => {
+      if (liveSettings) setSettings(liveSettings);
+    });
+
+    const unsubAudit = DataService.subscribeToAuditLogs((liveLogs) => {
+      if (liveLogs) setAuditLogs(liveLogs);
+    });
+
+    return () => {
+      unsubRecords();
+      unsubPeriods();
+      unsubKPIs();
+      unsubSettings();
+      unsubAudit();
+    };
   }, []);
 
   // Compute available months & years from periods and records

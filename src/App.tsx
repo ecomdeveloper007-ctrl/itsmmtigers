@@ -23,7 +23,7 @@ import { Trophy, Crown, Sparkles, ArrowRight, Flame } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading, currentUser, isAdmin, isSuperAdmin } = useAuth();
-  const { activeTab, setActiveTab, openWinnerModal, leaderboardData, selectedTeam } = useApp();
+  const { activeTab, setActiveTab, openWinnerModal, leaderboardData, selectedTeam, settings } = useApp();
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
 
   // Security Guard: Prevent non-super-admin users from accessing protected admin tabs
@@ -143,7 +143,7 @@ const AppContent: React.FC = () => {
                       </div>
 
                       <div className="text-[11px] text-slate-400 flex justify-between px-2">
-                        <span>Rev: ${top3[1].revenueGenerated.toLocaleString()}</span>
+                        <span>Rev: {settings.currencySymbol || '$'}{top3[1].revenueGenerated.toLocaleString()}</span>
                         <span>Projects: {top3[1].projectClosed}</span>
                       </div>
                     </div>
@@ -186,11 +186,11 @@ const AppContent: React.FC = () => {
                       <div className="grid grid-cols-2 gap-2 text-xs font-bold pt-1 text-slate-300">
                         <div className="p-1.5 rounded-lg bg-slate-950 border border-slate-800">
                           <span className="text-[10px] text-slate-500 block">Revenue</span>
-                          <span className="text-emerald-400">${top3[0].revenueGenerated.toLocaleString()}</span>
+                          <span className="text-emerald-400">{settings.currencySymbol || '$'}{top3[0].revenueGenerated.toLocaleString()}</span>
                         </div>
                         <div className="p-1.5 rounded-lg bg-slate-950 border border-slate-800">
                           <span className="text-[10px] text-slate-500 block">Projects</span>
-                          <span className="text-white">{top3[0].projectClosed} / 25</span>
+                          <span className="text-white">{top3[0].projectClosed} / {top3[0].breakdown['kpi_projects']?.target ?? 25}</span>
                         </div>
                       </div>
                     </div>
@@ -226,7 +226,7 @@ const AppContent: React.FC = () => {
                       </div>
 
                       <div className="text-[11px] text-slate-400 flex justify-between px-2">
-                        <span>Rev: ${top3[2].revenueGenerated.toLocaleString()}</span>
+                        <span>Rev: {settings.currencySymbol || '$'}{top3[2].revenueGenerated.toLocaleString()}</span>
                         <span>Projects: {top3[2].projectClosed}</span>
                       </div>
                     </div>
