@@ -14,9 +14,11 @@ import {
   Lock,
   CheckCircle,
   FileText,
+  RotateCw,
+  Sparkles,
 } from 'lucide-react';
 import { PerformanceRecord } from '../../types';
-import { DataService } from '../../services/dataService';
+import { DataService, INITIAL_RECORDS } from '../../services/dataService';
 
 interface DataManagementProps {
   onOpenImportModal: () => void;
@@ -34,11 +36,33 @@ export const DataManagement: React.FC<DataManagementProps> = ({ onOpenImportModa
     selectedMonth,
     selectedYear,
     addToast,
+    refreshAllData,
   } = useApp();
 
   const [search, setSearch] = useState<string>('');
   const [filterWeek, setFilterWeek] = useState<string>('all');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isResetting, setIsResetting] = useState<boolean>(false);
+
+  const handleRestoreDefaultRecords = async () => {
+    setIsResetting(true);
+    try {
+      for (const rec of INITIAL_RECORDS) {
+        await DataService.saveRecord(rec, {
+          id: 'super_admin_restore',
+          name: 'Super Admin',
+          role: 'super_admin',
+        });
+      }
+      await refreshAllData();
+      addToast('success', 'Data Restored Successfully', 'All team performance records and initial user data have been reloaded.');
+    } catch (e) {
+      console.error(e);
+      addToast('error', 'Restore failed', 'Please try again.');
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   // Filter records
   const filteredRecords = useMemo(() => {
@@ -99,13 +123,25 @@ export const DataManagement: React.FC<DataManagementProps> = ({ onOpenImportModa
 
         <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
           {isSuperAdmin && (
-            <button
-              onClick={onOpenImportModal}
-              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Upload className="w-4 h-4 text-orange-400" />
-              Import CSV
-            </button>
+            <>
+              <button
+                onClick={handleRestoreDefaultRecords}
+                disabled={isResetting}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                title="Reload full initial team dataset and entered submissions into active view"
+              >
+                <RotateCw className={`w-4 h-4 text-amber-400 ${isResetting ? 'animate-spin' : ''}`} />
+                {isResetting ? 'Restoring...' : 'Restore Team Data'}
+              </button>
+
+              <button
+                onClick={onOpenImportModal}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Upload className="w-4 h-4 text-orange-400" />
+                Import CSV
+              </button>
+            </>
           )}
 
           <button

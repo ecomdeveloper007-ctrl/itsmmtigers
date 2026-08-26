@@ -26,6 +26,14 @@ const AppContent: React.FC = () => {
   const { activeTab, setActiveTab, openWinnerModal, leaderboardData, selectedTeam } = useApp();
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
 
+  // Security Guard: Prevent non-super-admin users from accessing protected admin tabs
+  React.useEffect(() => {
+    const adminOnlyTabs = ['admin-data', 'user-management', 'kpi-settings', 'period-management', 'audit-logs'];
+    if (!isSuperAdmin && adminOnlyTabs.includes(activeTab)) {
+      setActiveTab('my-performance');
+    }
+  }, [activeTab, isSuperAdmin, setActiveTab]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white space-y-4">
@@ -283,8 +291,8 @@ const AppContent: React.FC = () => {
         {/* MY PERFORMANCE TAB */}
         {activeTab === 'my-performance' && <MemberDashboard />}
 
-        {/* ADMIN DATA MANAGEMENT TAB */}
-        {activeTab === 'admin-data' && isAdmin && (
+        {/* ADMIN DATA MANAGEMENT TAB (Super Admin Only) */}
+        {activeTab === 'admin-data' && isSuperAdmin && (
           <DataManagement onOpenImportModal={() => setIsImportModalOpen(true)} />
         )}
 

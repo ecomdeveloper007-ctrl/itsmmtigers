@@ -1,0 +1,141 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with role, team and status",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "password": { "type": "string" },
+        "role": { "type": "string", "enum": ["super_admin", "admin", "team_member"] },
+        "status": { "type": "string", "enum": ["active", "pending_approval", "rejected", "disabled"] },
+        "department": { "type": "string" },
+        "team": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "joiningDate": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "userId", "name", "email", "role", "status"]
+    },
+    "KPIConfig": {
+      "title": "KPIConfig",
+      "description": "KPI metric configuration and targets",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "key": { "type": "string" },
+        "name": { "type": "string" },
+        "unit": { "type": "string" },
+        "weight": { "type": "number" },
+        "defaultTarget": { "type": "number" },
+        "active": { "type": "boolean" },
+        "order": { "type": "number" }
+      },
+      "required": ["id", "key", "name", "weight", "defaultTarget"]
+    },
+    "PerformancePeriod": {
+      "title": "PerformancePeriod",
+      "description": "Weekly performance period and lock status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "month": { "type": "string" },
+        "year": { "type": "number" },
+        "weekName": { "type": "string" },
+        "weekNumber": { "type": "number" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "locked"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "month", "year", "weekName", "status"]
+    },
+    "PerformanceRecord": {
+      "title": "PerformanceRecord",
+      "description": "Individual member weekly KPI performance submission",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "periodId": { "type": "string" },
+        "month": { "type": "string" },
+        "year": { "type": "number" },
+        "weekName": { "type": "string" },
+        "projectClosed": { "type": "number" },
+        "revenueGenerated": { "type": "number" },
+        "upsells": { "type": "number" },
+        "clientRating": { "type": "number" },
+        "followupsCompleted": { "type": "number" },
+        "repeatClients": { "type": "number" },
+        "notes": { "type": "string" },
+        "submittedBy": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "userName", "periodId", "month", "year", "weekName"]
+    },
+    "AppSettings": {
+      "title": "AppSettings",
+      "description": "Global scoring thresholds and reward tier configs",
+      "type": "object",
+      "properties": {
+        "topPerformerBonusPercent": { "type": "number" },
+        "runnerUpBonusPercent": { "type": "number" },
+        "monthlyTargetBonusPercent": { "type": "number" },
+        "consistencyBonusPercent": { "type": "number" },
+        "currencySymbol": { "type": "string" },
+        "companyName": { "type": "string" },
+        "allowSelfSubmission": { "type": "boolean" },
+        "autoLockAfterDays": { "type": "number" }
+      }
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "System audit trail entries",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userRole": { "type": "string" },
+        "action": { "type": "string" },
+        "entityType": { "type": "string" },
+        "entityId": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "userId", "userName", "action", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles and credentials"
+    },
+    "/kpiSettings/{kpiId}": {
+      "schema": "KPIConfig",
+      "description": "KPI metrics and weights"
+    },
+    "/performancePeriods/{periodId}": {
+      "schema": "PerformancePeriod",
+      "description": "Weekly performance cycles"
+    },
+    "/performanceRecords/{recordId}": {
+      "schema": "PerformanceRecord",
+      "description": "Weekly performance data"
+    },
+    "/settings/{settingId}": {
+      "schema": "AppSettings",
+      "description": "Application settings"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Audit trail records"
+    }
+  }
+}

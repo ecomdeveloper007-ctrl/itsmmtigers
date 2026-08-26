@@ -20,6 +20,11 @@ export const DEFAULT_KPIS: KPIConfig[] = [
     key: 'projectClosed',
     weight: 20,
     defaultTarget: 25,
+    weeklyTarget: 6.25,
+    itMonthlyTarget: 15,
+    itWeeklyTarget: 3.75,
+    smmMonthlyTarget: 25,
+    smmWeeklyTarget: 6.25,
     unit: 'Projects',
     min: 0,
     active: true,
@@ -31,6 +36,11 @@ export const DEFAULT_KPIS: KPIConfig[] = [
     key: 'revenueGenerated',
     weight: 30,
     defaultTarget: 10000,
+    weeklyTarget: 2500,
+    itMonthlyTarget: 12000,
+    itWeeklyTarget: 3000,
+    smmMonthlyTarget: 10000,
+    smmWeeklyTarget: 2500,
     unit: '$',
     isCurrency: true,
     min: 0,
@@ -43,6 +53,11 @@ export const DEFAULT_KPIS: KPIConfig[] = [
     key: 'upsells',
     weight: 15,
     defaultTarget: 10,
+    weeklyTarget: 2.5,
+    itMonthlyTarget: 8,
+    itWeeklyTarget: 2,
+    smmMonthlyTarget: 10,
+    smmWeeklyTarget: 2.5,
     unit: 'Upsells',
     min: 0,
     active: true,
@@ -54,6 +69,11 @@ export const DEFAULT_KPIS: KPIConfig[] = [
     key: 'clientRating',
     weight: 10,
     defaultTarget: 5,
+    weeklyTarget: 5,
+    itMonthlyTarget: 5,
+    itWeeklyTarget: 5,
+    smmMonthlyTarget: 5,
+    smmWeeklyTarget: 5,
     unit: '★',
     isRating: true,
     min: 0,
@@ -67,6 +87,11 @@ export const DEFAULT_KPIS: KPIConfig[] = [
     key: 'followupsCompleted',
     weight: 10,
     defaultTarget: 50,
+    weeklyTarget: 12.5,
+    itMonthlyTarget: 30,
+    itWeeklyTarget: 7.5,
+    smmMonthlyTarget: 50,
+    smmWeeklyTarget: 12.5,
     unit: 'Follow-ups',
     min: 0,
     active: true,
@@ -78,6 +103,11 @@ export const DEFAULT_KPIS: KPIConfig[] = [
     key: 'repeatClients',
     weight: 15,
     defaultTarget: 10,
+    weeklyTarget: 2.5,
+    itMonthlyTarget: 6,
+    itWeeklyTarget: 1.5,
+    smmMonthlyTarget: 10,
+    smmWeeklyTarget: 2.5,
     unit: 'Clients',
     min: 0,
     active: true,
@@ -120,6 +150,101 @@ export function sanitizeNumber(value: any, isRating = false): number {
     return 5;
   }
   return parsed;
+}
+
+export interface KPITargetContext {
+  month?: string;
+  year?: number;
+  periodId?: string; // If 'all' or undefined, this is a monthly evaluation; if specific, this is a weekly evaluation
+  weekName?: string;
+  team?: 'IT' | 'SMM' | 'Operations' | 'Leadership';
+  isWeekly?: boolean;
+}
+
+/**
+ * Dynamically resolves the effective target for any KPI based on:
+ * - Monthly vs Weekly cadence
+ * - Period overrides (specific month or specific week)
+ * - Team division (IT vs SMM)
+ * - Default baselines
+ */
+export function getEffectiveKPITarget(
+  kpi: KPIConfig,
+  context?: KPITargetContext
+): number {
+  const isWeekly = (context?.periodId && context?.periodId !== 'all') || context?.isWeekly;
+  const team = context?.team;
+  const month = context?.month;
+  const year = context?.year;
+  const weekName = context?.weekName;
+  const periodId = context?.periodId;
+  const pt = kpi.periodTargets || {};
+
+  // 1. Direct Period ID Override (e.g. period_2026-08-w1)
+  if (periodId && periodId !== 'all') {
+    if (pt[`period_${periodId}`] !== undefined && pt[`period_${periodId}`] !== null) {
+      return sanitizeNumber(pt[`period_${periodId}`]);
+    }
+  }
+
+  // 2. Weekly evaluation context
+  if (isWeekly) {
+    // Week + Month + Year + Team override
+    if (weekName && month && year && team) {
+      const teamKey = `week_${month}_${year}_${weekName}_${team.toLowerCase()}`;
+      if (pt[teamKey] !== undefined && pt[teamKey] !== null) {
+        return sanitizeNumber(pt[teamKey]);
+      }
+    }
+    // Week + Month + Year override
+    if (weekName && month && year) {
+      const weekKey = `week_${month}_${year}_${weekName}`;
+      if (pt[weekKey] !== undefined && pt[weekKey] !== null) {
+        return sanitizeNumber(pt[weekKey]);
+      }
+    }
+    // Team weekly target
+    if (team === 'IT' && kpi.itWeeklyTarget !== undefined && kpi.itWeeklyTarget > 0) {
+      return sanitizeNumber(kpi.itWeeklyTarget);
+    }
+    if (team === 'SMM' && kpi.smmWeeklyTarget !== undefined && kpi.smmWeeklyTarget > 0) {
+      return sanitizeNumber(kpi.smmWeeklyTarget);
+    }
+    // General weekly target
+    if (kpi.weeklyTarget !== undefined && kpi.weeklyTarget > 0) {
+      return sanitizeNumber(kpi.weeklyTarget);
+    }
+    // Fallback: Monthly default / 4 (except rating which is constant)
+    if (kpi.isRating) {
+      return sanitizeNumber(kpi.defaultTarget, true) || 5;
+    }
+    return Math.round((sanitizeNumber(kpi.defaultTarget) / 4) * 100) / 100;
+  }
+
+  // 3. Monthly evaluation context
+  // Month + Year + Team override
+  if (month && year && team) {
+    const monthTeamKey = `month_${month}_${year}_${team.toLowerCase()}`;
+    if (pt[monthTeamKey] !== undefined && pt[monthTeamKey] !== null) {
+      return sanitizeNumber(pt[monthTeamKey]);
+    }
+  }
+  // Month + Year override
+  if (month && year) {
+    const monthKey = `month_${month}_${year}`;
+    if (pt[monthKey] !== undefined && pt[monthKey] !== null) {
+      return sanitizeNumber(pt[monthKey]);
+    }
+  }
+  // Team monthly target
+  if (team === 'IT' && kpi.itMonthlyTarget !== undefined && kpi.itMonthlyTarget > 0) {
+    return sanitizeNumber(kpi.itMonthlyTarget);
+  }
+  if (team === 'SMM' && kpi.smmMonthlyTarget !== undefined && kpi.smmMonthlyTarget > 0) {
+    return sanitizeNumber(kpi.smmMonthlyTarget);
+  }
+  // Default monthly target
+  return sanitizeNumber(kpi.defaultTarget);
 }
 
 /**
@@ -170,7 +295,8 @@ export function calculateKPIScore(
 export function aggregateMemberRecords(
   records: PerformanceRecord[],
   kpis: KPIConfig[] = DEFAULT_KPIS,
-  settings: AppSettings = DEFAULT_SETTINGS
+  settings: AppSettings = DEFAULT_SETTINGS,
+  context?: KPITargetContext
 ): {
   totals: {
     projectClosed: number;
@@ -257,9 +383,11 @@ export function aggregateMemberRecords(
         actual = 0;
     }
 
+    const effectiveTarget = getEffectiveKPITarget(kpi, context);
+
     const { capped, raw } = calculateAchievementPercentage(
       actual,
-      kpi.defaultTarget,
+      effectiveTarget,
       settings.achievementCap
     );
 
@@ -272,7 +400,7 @@ export function aggregateMemberRecords(
       kpiId: kpi.id,
       kpiName: kpi.name,
       actual,
-      target: kpi.defaultTarget,
+      target: effectiveTarget,
       weight: kpi.weight,
       achievementPercentage: capped,
       rawAchievementPercentage: raw,
@@ -492,6 +620,8 @@ export function calculateLeaderboard(
       userRecords = userRecords.filter((r) => r.periodId === filterPeriodId);
     }
 
+    const userTeam = resolveUserTeam(user);
+
     const {
       totals,
       weeksSubmitted,
@@ -499,9 +629,13 @@ export function calculateLeaderboard(
       finalScore,
       finalScoreDisplay,
       overallAchievement,
-    } = aggregateMemberRecords(userRecords, kpis, settings);
-
-    const userTeam = resolveUserTeam(user);
+    } = aggregateMemberRecords(userRecords, kpis, settings, {
+      month: filterMonth || 'August',
+      year: filterYear || 2026,
+      periodId: filterPeriodId,
+      team: userTeam,
+      isWeekly: filterPeriodId !== undefined && filterPeriodId !== 'all',
+    });
 
     return {
       userId: user.uid || user.userId,

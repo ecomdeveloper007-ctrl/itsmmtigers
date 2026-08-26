@@ -20,7 +20,7 @@ import {
 import { DataService } from '../../services/dataService';
 
 export const MonthlyReportView: React.FC = () => {
-  const { allUsers } = useAuth();
+  const { allUsers, isSuperAdmin } = useAuth();
   const {
     leaderboardData,
     selectedMonth,
@@ -38,6 +38,10 @@ export const MonthlyReportView: React.FC = () => {
   };
 
   const handleExportCSV = () => {
+    if (!isSuperAdmin) {
+      addToast('error', 'Unauthorized', 'Only Super Admin is authorized to export raw team data.');
+      return;
+    }
     try {
       const csv = DataService.generateCSV(records, allUsers, kpis);
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -75,13 +79,15 @@ export const MonthlyReportView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleExportCSV}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <Download className="w-4 h-4 text-emerald-400" />
-            Export Data
-          </button>
+          {isSuperAdmin && (
+            <button
+              onClick={handleExportCSV}
+              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-emerald-400" />
+              Export CSV Data
+            </button>
+          )}
           <button
             onClick={handlePrint}
             className="px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 flex items-center gap-1.5 shadow-lg shadow-orange-500/30 transition-all cursor-pointer"

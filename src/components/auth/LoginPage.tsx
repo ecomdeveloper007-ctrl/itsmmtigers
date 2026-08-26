@@ -28,6 +28,9 @@ import {
   ChevronRight,
   ShieldCheck,
   Clock,
+  Camera,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 const AVATAR_OPTIONS = [
@@ -61,7 +64,27 @@ export const LoginPage: React.FC = () => {
   const [regConfirmPassword, setRegConfirmPassword] = useState<string>('');
   const [regDepartment, setRegDepartment] = useState<string>('IT Team');
   const [regAvatar, setRegAvatar] = useState<string>(AVATAR_OPTIONS[0]);
+  const [regAvatarMode, setRegAvatarMode] = useState<'presets' | 'upload' | 'url'>('presets');
+  const [regCustomAvatarUrl, setRegCustomAvatarUrl] = useState<string>('');
   const [regNotes, setRegNotes] = useState<string>('');
+  const regFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleRegAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setErrorMessage('Please select a valid image file (PNG, JPG, WEBP).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const res = uploadEvent.target?.result as string;
+      if (res) {
+        setRegAvatar(res);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Handle Sign In
   const handleSignIn = async (e: React.FormEvent) => {
@@ -501,27 +524,122 @@ export const LoginPage: React.FC = () => {
                     >
                       <option value="IT Team">💻 IT Team</option>
                       <option value="SMM Team">📱 SMM Team</option>
+                      <option value="Operations">⚙️ Operations</option>
+                      <option value="Leadership & Ops">👑 Leadership & Ops</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
-                      Select Avatar
-                    </label>
-                    <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-                      {AVATAR_OPTIONS.map((url, idx) => (
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                        Profile Picture
+                      </label>
+                      <div className="flex gap-1 text-[10px]">
                         <button
-                          key={idx}
                           type="button"
-                          onClick={() => setRegAvatar(url)}
-                          className={`relative rounded-xl overflow-hidden shrink-0 ring-2 transition-all ${
-                            regAvatar === url ? 'ring-orange-500 scale-105' : 'ring-slate-800 opacity-60'
+                          onClick={() => setRegAvatarMode('presets')}
+                          className={`px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
+                            regAvatarMode === 'presets'
+                              ? 'bg-orange-500 text-slate-950'
+                              : 'text-slate-400 hover:text-white bg-slate-950'
                           }`}
                         >
-                          <img src={url} alt={`avatar-${idx}`} className="w-8 h-8 object-cover" />
+                          Presets
                         </button>
-                      ))}
+                        <button
+                          type="button"
+                          onClick={() => setRegAvatarMode('upload')}
+                          className={`px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
+                            regAvatarMode === 'upload'
+                              ? 'bg-orange-500 text-slate-950'
+                              : 'text-slate-400 hover:text-white bg-slate-950'
+                          }`}
+                        >
+                          Upload
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRegAvatarMode('url')}
+                          className={`px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
+                            regAvatarMode === 'url'
+                              ? 'bg-orange-500 text-slate-950'
+                              : 'text-slate-400 hover:text-white bg-slate-950'
+                          }`}
+                        >
+                          URL
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Presets mode */}
+                    {regAvatarMode === 'presets' && (
+                      <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                        {AVATAR_OPTIONS.map((url, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setRegAvatar(url)}
+                            className={`relative rounded-xl overflow-hidden shrink-0 ring-2 transition-all cursor-pointer ${
+                              regAvatar === url ? 'ring-orange-500 scale-105 shadow-md shadow-orange-500/20' : 'ring-slate-800 opacity-60'
+                            }`}
+                          >
+                            <img src={url} alt={`avatar-${idx}`} className="w-8 h-8 object-cover" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Upload File mode */}
+                    {regAvatarMode === 'upload' && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="file"
+                          ref={regFileInputRef}
+                          onChange={handleRegAvatarUpload}
+                          accept="image/*"
+                          className="hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => regFileInputRef.current?.click()}
+                          className="flex-1 py-2 px-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-orange-500/50 text-slate-300 hover:text-white text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-orange-400" />
+                          <span>Choose image file...</span>
+                        </button>
+                        {regAvatar && (
+                          <img
+                            src={regAvatar}
+                            alt="preview"
+                            className="w-8 h-8 rounded-xl object-cover ring-2 ring-orange-500 shrink-0"
+                          />
+                        )}
+                      </div>
+                    )}
+
+                    {/* Custom URL mode */}
+                    {regAvatarMode === 'url' && (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="url"
+                          placeholder="Paste image URL (https://...)"
+                          value={regCustomAvatarUrl}
+                          onChange={(e) => setRegCustomAvatarUrl(e.target.value)}
+                          className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (regCustomAvatarUrl.trim()) {
+                              setRegAvatar(regCustomAvatarUrl.trim());
+                            }
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl bg-orange-500 text-slate-950 text-xs font-bold hover:bg-orange-400 cursor-pointer shrink-0"
+                        >
+                          Set
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 

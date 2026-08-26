@@ -10,11 +10,12 @@ import {
   AlertTriangle,
   X,
   Save,
+  Target,
 } from 'lucide-react';
 import { PerformancePeriod, PeriodStatus } from '../../types';
 
 export const PeriodManagement: React.FC = () => {
-  const { periods, savePeriod, togglePeriodLock, addToast } = useApp();
+  const { periods, savePeriod, togglePeriodLock, addToast, setActiveTab, setSelectedMonth, setSelectedYear } = useApp();
 
   const [isAddOpen, setIsAddOpen] = useState<boolean>(false);
   const [formMonth, setFormMonth] = useState<string>('August');
@@ -107,7 +108,19 @@ export const PeriodManagement: React.FC = () => {
                       </span>
                     )}
                   </td>
-                  <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                  <td className="py-3.5 px-4 text-right whitespace-nowrap space-x-2">
+                    <button
+                      onClick={() => {
+                        setSelectedMonth(p.month);
+                        setSelectedYear(p.year);
+                        setActiveTab('kpi-settings');
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-orange-400 border border-slate-700 hover:bg-slate-700 transition-all cursor-pointer"
+                      title="Set weekly or monthly targets for this period"
+                    >
+                      <Target className="w-3.5 h-3.5" />
+                      Set Targets
+                    </button>
                     <button
                       onClick={() =>
                         togglePeriodLock(p.id, p.status === 'locked' ? 'active' : 'locked')

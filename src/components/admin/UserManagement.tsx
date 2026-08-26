@@ -19,12 +19,28 @@ import {
   UserCheck,
   Sparkles,
   AlertCircle,
+  Copy,
+  Eye,
+  CheckCheck,
+  Camera,
+  Upload,
+  ExternalLink,
 } from 'lucide-react';
 import { UserProfile, UserRole, UserStatus } from '../../types';
 import { DataService } from '../../services/dataService';
+import { MemberProfileAdminModal } from './MemberProfileAdminModal';
+
+const PRESET_AVATARS = [
+  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+];
 
 export const UserManagement: React.FC = () => {
-  const { currentUser, allUsers, refreshUsers, approveUser, rejectUser, pendingUsers, pendingCount } = useAuth();
+  const { currentUser, allUsers, refreshUsers, approveUser, rejectUser, pendingUsers, pendingCount, isSuperAdmin } = useAuth();
   const { addToast } = useApp();
 
   const [activeSubTab, setActiveSubTab] = useState<'all' | 'pending'>('pending');
@@ -33,6 +49,10 @@ export const UserManagement: React.FC = () => {
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<UserProfile | null>(null);
   const [newPassword, setNewPassword] = useState<string>('');
+  const [inspectingUser, setInspectingUser] = useState<UserProfile | null>(null);
+
+  // Pending role assignment mapping (userId -> UserRole)
+  const [pendingApprovalRoles, setPendingApprovalRoles] = useState<Record<string, UserRole>>({});
 
   // Form State
   const [formName, setFormName] = useState<string>('');
@@ -42,10 +62,14 @@ export const UserManagement: React.FC = () => {
   const [formRole, setFormRole] = useState<UserRole>('team_member');
   const [formDepartment, setFormDepartment] = useState<string>('IT Team');
   const [formStatus, setFormStatus] = useState<UserStatus>('active');
+  const [formAvatarUrl, setFormAvatarUrl] = useState<string>(PRESET_AVATARS[0]);
+  const formFileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Reject modal state
   const [rejectingUser, setRejectingUser] = useState<UserProfile | null>(null);
   const [rejectReason, setRejectReason] = useState<string>('Incomplete details or unverified member');
+
+  const [viewCredentialsUser, setViewCredentialsUser] = useState<UserProfile | null>(null);
 
   const filteredUsers = allUsers.filter(
     (u) =>
@@ -61,8 +85,9 @@ export const UserManagement: React.FC = () => {
     setFormEmail('');
     setFormPassword('tiger2026');
     setFormRole('team_member');
-    setFormDepartment('SMM Growth');
+    setFormDepartment('IT Team');
     setFormStatus('active');
+    setFormAvatarUrl(PRESET_AVATARS[0]);
     setIsAddUserOpen(true);
   };
 
@@ -73,8 +98,9 @@ export const UserManagement: React.FC = () => {
     setFormEmail(user.email);
     setFormPassword(user.password || 'tiger2026');
     setFormRole(user.role);
-    setFormDepartment(user.department || 'SMM Growth');
+    setFormDepartment(user.department || 'IT Team');
     setFormStatus(user.status);
+    setFormAvatarUrl(user.avatarUrl || PRESET_AVATARS[0]);
     setIsAddUserOpen(true);
   };
 
@@ -92,19 +118,19 @@ export const UserManagement: React.FC = () => {
     const assignedTeam: 'IT' | 'SMM' =
       formDepartment && formDepartment.toLowerCase().includes('it') ? 'IT' : 'SMM';
 
+    const cleanPassword = formPassword.trim() || 'tiger2026';
+
     const userToSave: UserProfile = {
       uid: editingUser?.uid || `user_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       userId: formUserId.trim().toLowerCase(),
       name: formName.trim(),
       email,
-      password: formPassword.trim() || 'tiger2026',
+      password: cleanPassword,
       role: formRole,
       status: formStatus,
       department: formDepartment,
       team: assignedTeam,
-      avatarUrl:
-        editingUser?.avatarUrl ||
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      avatarUrl: formAvatarUrl || editingUser?.avatarUrl || PRESET_AVATARS[0],
       joiningDate: editingUser?.joiningDate || new Date().toISOString().split('T')[0],
       createdAt: editingUser?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -120,8 +146,8 @@ export const UserManagement: React.FC = () => {
     setIsAddUserOpen(false);
     addToast(
       'success',
-      editingUser ? 'User Updated' : 'User Created',
-      `${userToSave.name} (${userToSave.userId}) has been saved successfully.`
+      editingUser ? 'User Updated' : 'Direct Member Created',
+      `${userToSave.name} saved! Login User ID: "${userToSave.userId}" | Password: "${cleanPassword}"`
     );
   };
 
@@ -314,22 +340,43 @@ export const UserManagement: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <button
-                      onClick={() => setRejectingUser(user)}
-                      className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-rose-950 text-slate-300 hover:text-rose-300 border border-slate-700 hover:border-rose-700/50 flex items-center gap-1.5 transition-all cursor-pointer"
-                    >
-                      <Ban className="w-3.5 h-3.5" />
-                      Decline
-                    </button>
+                  <div className="space-y-2 pt-1 border-t border-slate-800">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold text-slate-400">Assign Role on Approval:</span>
+                      <select
+                        value={pendingApprovalRoles[user.uid] || 'team_member'}
+                        onChange={(e) =>
+                          setPendingApprovalRoles((prev) => ({
+                            ...prev,
+                            [user.uid]: e.target.value as UserRole,
+                          }))
+                        }
+                        className="bg-slate-950 border border-slate-700 text-xs text-orange-300 font-bold rounded-lg px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
+                      >
+                        <option value="team_member">Team Member</option>
+                        <option value="viewer">Viewer (Read-Only)</option>
+                        <option value="admin">Admin</option>
+                        <option value="super_admin">Super Admin</option>
+                      </select>
+                    </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center justify-between gap-2 pt-1">
                       <button
-                        onClick={() => handleApprove(user, 'team_member')}
+                        onClick={() => setRejectingUser(user)}
+                        className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-rose-950 text-slate-300 hover:text-rose-300 border border-slate-700 hover:border-rose-700/50 flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <Ban className="w-3.5 h-3.5" />
+                        Decline
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          handleApprove(user, pendingApprovalRoles[user.uid] || 'team_member')
+                        }
                         className="px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-950/40 flex items-center gap-1.5 transition-all cursor-pointer"
                       >
                         <UserCheck className="w-4 h-4" />
-                        Approve Access
+                        Approve as {(pendingApprovalRoles[user.uid] || 'team_member').replace('_', ' ')}
                       </button>
                     </div>
                   </div>
@@ -412,6 +459,11 @@ export const UserManagement: React.FC = () => {
                             <User className="w-3 h-3" /> Team Member
                           </span>
                         )}
+                        {user.role === 'viewer' && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                            <Eye className="w-3 h-3" /> Viewer (Read-Only)
+                          </span>
+                        )}
                       </td>
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         {user.status === 'active' && (
@@ -454,6 +506,22 @@ export const UserManagement: React.FC = () => {
                           </button>
                         ) : (
                           <>
+                            {isSuperAdmin && (
+                              <button
+                                onClick={() => setInspectingUser(user)}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-indigo-500/20 text-slate-300 hover:text-indigo-400 transition-colors cursor-pointer"
+                                title="Inspect Member Profile"
+                              >
+                                <User className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setViewCredentialsUser(user)}
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-orange-500/20 text-slate-300 hover:text-orange-400 transition-colors cursor-pointer"
+                              title="View & Copy Login Credentials"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
                             <button
                               onClick={() => openEditModal(user)}
                               className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
@@ -582,12 +650,78 @@ export const UserManagement: React.FC = () => {
                     value={formRole}
                     onChange={(e) => setFormRole(e.target.value as UserRole)}
                     aria-label="Select Assigned Role"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-bold"
                   >
-                    <option value="team_member">Team Member</option>
+                    <option value="team_member">Team Member (Data Entry)</option>
+                    <option value="viewer">Viewer (Read-Only / Stakeholder)</option>
                     <option value="admin">Admin</option>
                     <option value="super_admin">Super Admin</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Profile Picture Selector in Modal */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Profile Picture
+                </label>
+                <div className="flex items-center gap-3 bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                  <img
+                    src={formAvatarUrl || PRESET_AVATARS[0]}
+                    alt="avatar-preview"
+                    className="w-12 h-12 rounded-xl object-cover ring-2 ring-orange-500/50 shrink-0"
+                  />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+                      {PRESET_AVATARS.map((url, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setFormAvatarUrl(url)}
+                          className={`relative rounded-lg overflow-hidden shrink-0 ring-2 transition-all cursor-pointer ${
+                            formAvatarUrl === url ? 'ring-orange-500 scale-105' : 'ring-slate-800 opacity-60'
+                          }`}
+                        >
+                          <img src={url} alt={`avatar-${idx}`} className="w-7 h-7 object-cover" />
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        ref={formFileInputRef}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            if (ev.target?.result) {
+                              setFormAvatarUrl(ev.target.result as string);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => formFileInputRef.current?.click()}
+                        className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Upload className="w-3 h-3 text-orange-400" />
+                        <span>Upload Custom Photo</span>
+                      </button>
+                      <input
+                        type="url"
+                        placeholder="or paste image URL"
+                        value={formAvatarUrl.startsWith('data:') ? '' : formAvatarUrl}
+                        onChange={(e) => setFormAvatarUrl(e.target.value)}
+                        className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -731,6 +865,84 @@ export const UserManagement: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* View & Copy Credentials Modal */}
+      {viewCredentialsUser && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-orange-500/20 text-orange-400">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Member Login Credentials</h3>
+                  <p className="text-xs text-slate-400">{viewCredentialsUser.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewCredentialsUser(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs">
+              <div className="flex items-center justify-between py-1 border-b border-slate-800/80">
+                <span className="text-slate-400">User ID (Username):</span>
+                <span className="font-mono font-bold text-orange-400">{viewCredentialsUser.userId}</span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-slate-800/80">
+                <span className="text-slate-400">Email Address:</span>
+                <span className="font-mono font-semibold text-slate-200">{viewCredentialsUser.email}</span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-slate-800/80">
+                <span className="text-slate-400">Login Password:</span>
+                <span className="font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                  {viewCredentialsUser.password || 'tiger2026'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-slate-800/80">
+                <span className="text-slate-400">Assigned Team:</span>
+                <span className="font-semibold text-slate-200">{viewCredentialsUser.department || 'IT Team'}</span>
+              </div>
+              <div className="flex items-center justify-between py-1">
+                <span className="text-slate-400">Account Status:</span>
+                <span className="font-bold text-emerald-400 uppercase text-[10px]">
+                  {viewCredentialsUser.status || 'active'}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-[11px] text-blue-300">
+              💡 <strong>Login Tip:</strong> The member can log in using either their <strong>User ID</strong> (<code>{viewCredentialsUser.userId}</code>) or <strong>Email</strong> (<code>{viewCredentialsUser.email}</code>) and their assigned password.
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <button
+                onClick={() => {
+                  const creds = `IT SMM Tigers Login Credentials:\nName: ${viewCredentialsUser.name}\nUser ID: ${viewCredentialsUser.userId}\nEmail: ${viewCredentialsUser.email}\nPassword: ${viewCredentialsUser.password || 'tiger2026'}\nTeam: ${viewCredentialsUser.department || 'IT Team'}`;
+                  navigator.clipboard.writeText(creds);
+                  addToast('success', 'Copied to Clipboard', 'Credentials copied to clipboard!');
+                }}
+                className="w-full py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 flex items-center justify-center gap-1.5 shadow-lg shadow-orange-500/20 cursor-pointer"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                Copy Credentials Message
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Super Admin Restricted Member Profile Modal */}
+      {inspectingUser && (
+        <MemberProfileAdminModal
+          member={inspectingUser}
+          onClose={() => setInspectingUser(null)}
+        />
       )}
     </div>
   );

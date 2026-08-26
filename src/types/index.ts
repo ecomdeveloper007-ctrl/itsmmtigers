@@ -1,4 +1,4 @@
-export type UserRole = 'super_admin' | 'admin' | 'team_member';
+export type UserRole = 'super_admin' | 'admin' | 'team_member' | 'viewer';
 
 export type UserStatus = 'active' | 'disabled' | 'pending_approval' | 'rejected';
 
@@ -30,7 +30,12 @@ export interface KPIConfig {
   name: string;
   key: string;
   weight: number; // e.g. 20 for 20%
-  defaultTarget: number;
+  defaultTarget: number; // default monthly target
+  weeklyTarget?: number; // default weekly target (e.g. defaultTarget / 4)
+  itMonthlyTarget?: number; // target for IT team
+  smmMonthlyTarget?: number; // target for SMM team
+  itWeeklyTarget?: number; // weekly target for IT team
+  smmWeeklyTarget?: number; // weekly target for SMM team
   unit: string; // e.g. 'projects', '$', 'rating', 'clients', 'upsells'
   isCurrency?: boolean;
   isRating?: boolean;
@@ -38,6 +43,7 @@ export interface KPIConfig {
   max?: number;
   active: boolean;
   order: number;
+  periodTargets?: Record<string, number>; // key: "month_August_2026" or "period_2026-08-w1" or "week_August_2026_Week 1"
 }
 
 export type PeriodStatus = 'active' | 'locked' | 'completed';

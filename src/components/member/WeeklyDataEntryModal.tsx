@@ -90,8 +90,10 @@ export const WeeklyDataEntryModal: React.FC = () => {
   const currentPeriod = periods.find((p) => p.id === selectedPeriodId);
   const isLocked = currentPeriod?.status === 'locked' && !isSuperAdmin;
 
-  // Selected Target User
-  const targetUser = allUsers.find((u) => u.uid === selectedUserId || u.userId === selectedUserId) || currentUser;
+  // Selected Target User (Only Super Admin can log/edit on behalf of other members)
+  const targetUser = isSuperAdmin
+    ? allUsers.find((u) => u.uid === selectedUserId || u.userId === selectedUserId) || currentUser
+    : currentUser;
 
   // Live Score Calculation
   const liveCalculations = useMemo(() => {
@@ -244,12 +246,12 @@ export const WeeklyDataEntryModal: React.FC = () => {
 
           {/* Period & Member Selectors */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Team Member Selection (Admin only or disabled for Member) */}
+            {/* Team Member Selection (Super Admin only or locked for Member) */}
             <div>
               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                 Team Member
               </label>
-              {isAdmin ? (
+              {isSuperAdmin ? (
                 <select
                   value={selectedUserId}
                   onChange={(e) => setSelectedUserId(e.target.value)}
@@ -266,8 +268,9 @@ export const WeeklyDataEntryModal: React.FC = () => {
                     ))}
                 </select>
               ) : (
-                <div className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white">
-                  {targetUser?.name}
+                <div className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white flex items-center justify-between">
+                  <span>{currentUser?.name}</span>
+                  <span className="text-[11px] font-mono text-orange-400 font-medium">({currentUser?.userId})</span>
                 </div>
               )}
             </div>

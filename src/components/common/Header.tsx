@@ -20,10 +20,14 @@ import {
   Menu,
   X,
   Flame,
+  Camera,
+  Edit3,
+  Eye,
 } from 'lucide-react';
+import { EditProfileModal } from './EditProfileModal';
 
 export const Header: React.FC = () => {
-  const { currentUser, logout, switchUser, allUsers, isSuperAdmin, isAdmin, isTeamMember, pendingCount } = useAuth();
+  const { currentUser, logout, switchUser, allUsers, isSuperAdmin, isAdmin, isTeamMember, isViewer, pendingCount } = useAuth();
   const {
     selectedMonth,
     setSelectedMonth,
@@ -43,6 +47,7 @@ export const Header: React.FC = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isDemoSwitchOpen, setIsDemoSwitchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   const currentPeriod = periods.find((p) => p.id === selectedPeriodId);
   const isCurrentLocked = currentPeriod?.status === 'locked';
@@ -59,6 +64,12 @@ export const Header: React.FC = () => {
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40">
             <Shield className="w-3 h-3" /> Admin
+          </span>
+        );
+      case 'viewer':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+            <Eye className="w-3 h-3" /> Viewer (Read-Only)
           </span>
         );
       case 'team_member':
@@ -102,26 +113,29 @@ export const Header: React.FC = () => {
           </button>
         )}
 
-        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
-          <span className="hidden sm:inline text-[11px] text-slate-400 mr-1">Switch View:</span>
-          {allUsers
-            .filter((u) => u.status === 'active')
-            .slice(0, 4)
-            .map((user) => (
-              <button
-                key={user.uid}
-                onClick={() => switchUser(user.uid)}
-                className={`px-2 py-0.5 rounded-md font-medium text-xs transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer ${
-                  currentUser?.uid === user.uid
-                    ? 'bg-orange-500 text-white shadow-sm shadow-orange-500/30'
-                    : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white'
-                }`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                {user.name.split(' ')[0]} ({user.role === 'super_admin' ? 'Super' : user.role === 'admin' ? 'Admin' : 'Member'})
-              </button>
-            ))}
-        </div>
+        {/* Super Admin Switch View Tool (Strictly restricted to Super Admin) */}
+        {isSuperAdmin && (
+          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+            <span className="hidden sm:inline text-[11px] text-slate-400 mr-1">Super Admin Switch:</span>
+            {allUsers
+              .filter((u) => u.status === 'active')
+              .slice(0, 4)
+              .map((user) => (
+                <button
+                  key={user.uid}
+                  onClick={() => switchUser(user.uid)}
+                  className={`px-2 py-0.5 rounded-md font-medium text-xs transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer ${
+                    currentUser?.uid === user.uid
+                      ? 'bg-orange-500 text-white shadow-sm shadow-orange-500/30'
+                      : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  {user.name.split(' ')[0]} ({user.role === 'super_admin' ? 'Super' : user.role === 'admin' ? 'Admin' : 'Member'})
+                </button>
+              ))}
+          </div>
+        )}
       </div>
 
       {/* Main Header Navbar */}
@@ -230,6 +244,14 @@ export const Header: React.FC = () => {
               </button>
             )}
 
+            {/* View-Only Indicator Badge for Viewers */}
+            {isViewer && (
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-500/10 text-purple-300 border border-purple-500/30">
+                <Eye className="w-3.5 h-3.5 text-purple-400" />
+                <span>View-Only Access</span>
+              </div>
+            )}
+
             {/* Announce Winner Button for Admins & Super Admins */}
             {isAdmin && (
               <button
@@ -273,6 +295,16 @@ export const Header: React.FC = () => {
                     <p className="text-sm font-bold text-white">{currentUser?.name}</p>
                     <p className="text-xs text-slate-400 truncate">{currentUser?.email}</p>
                     <div className="mt-2">{getRoleBadge(currentUser?.role)}</div>
+                    <button
+                      onClick={() => {
+                        setIsEditProfileOpen(true);
+                        setIsProfileOpen(false);
+                      }}
+                      className="mt-2.5 w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 border border-orange-500/30 transition-all cursor-pointer"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      Edit Profile & Photo
+                    </button>
                   </div>
 
                   <div className="py-2 space-y-1">
@@ -430,7 +462,7 @@ export const Header: React.FC = () => {
             My Performance
           </button>
 
-          {isAdmin && (
+          {isSuperAdmin && (
             <button
               onClick={() => setActiveTab('admin-data')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
@@ -601,7 +633,7 @@ export const Header: React.FC = () => {
               >
                 <FileText className="w-4 h-4 text-purple-400" /> R&R Report
               </button>
-              {isAdmin && (
+              {isSuperAdmin && (
                 <button
                   onClick={() => {
                     setActiveTab('admin-data');
@@ -654,6 +686,10 @@ export const Header: React.FC = () => {
               )}
             </div>
           </div>
+        )}
+        {/* Edit Profile Modal */}
+        {isEditProfileOpen && (
+          <EditProfileModal onClose={() => setIsEditProfileOpen(false)} />
         )}
       </div>
     </header>

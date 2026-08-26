@@ -202,6 +202,22 @@ export const INITIAL_USERS: UserProfile[] = [
     createdAt: '2025-06-20T00:00:00.000Z',
     updatedAt: '2026-08-25T00:00:00.000Z',
   },
+  // --- VIEW-ONLY GUEST / EXECUTIVE VIEWER ---
+  {
+    uid: 'user_viewer_guest',
+    userId: 'viewer',
+    name: 'Executive Stakeholder',
+    email: 'viewer@itsmmtigers.com',
+    password: 'tiger2026viewer',
+    role: 'viewer',
+    status: 'active',
+    department: 'Executive Review',
+    team: 'Leadership',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    joiningDate: '2026-01-01',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-08-25T00:00:00.000Z',
+  },
 ];
 
 // Initial Performance Periods (August 2026 Week 1-4)
@@ -1003,48 +1019,174 @@ export class DataService {
   // ================= USERS =================
 
   public static async getUsers(): Promise<UserProfile[]> {
+    const localUsers = getFromStorage<UserProfile[]>(LS_KEYS.USERS, INITIAL_USERS);
+    const userMap = new Map<string, UserProfile>();
+
+    // Helper to add or merge user into map by unique key
+    const addOrMerge = (user: Partial<UserProfile> & { uid?: string; userId?: string }) => {
+      if (!user) return;
+      const rawUserId = (user.userId || user.uid || '').trim().toLowerCase();
+      const normalizedUserId = rawUserId || (user.email ? user.email.split('@')[0].trim().toLowerCase() : `user_${Date.now()}`);
+      const uid = user.uid || `user_${normalizedUserId.replace(/[^a-z0-9]/g, '_')}`;
+
+      const cleanUser: UserProfile = {
+        uid,
+        userId: normalizedUserId,
+        name: (user.name || normalizedUserId || 'Team Member').trim(),
+        email: (user.email || `${normalizedUserId}@itsmmtigers.com`).trim().toLowerCase(),
+        password: (user.password || '').trim() || 'tiger2026',
+        role: user.role || 'team_member',
+        status: user.status || 'active',
+        department: user.department || 'IT Team',
+        team: user.team || (user.department?.toLowerCase().includes('it') ? 'IT' : 'SMM'),
+        avatarUrl:
+          user.avatarUrl ||
+          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        joiningDate: user.joiningDate || new Date().toISOString().split('T')[0],
+        createdAt: user.createdAt || new Date().toISOString(),
+        updatedAt: user.updatedAt || new Date().toISOString(),
+        registrationNotes: user.registrationNotes,
+        rejectionReason: user.rejectionReason,
+        approvedBy: user.approvedBy,
+        approvedAt: user.approvedAt,
+        lastLogin: user.lastLogin,
+      };
+
+      // Check if already in map by normalized userId, email, or uid
+      const existingKey = Array.from(userMap.keys()).find((k) => {
+        const existing = userMap.get(k);
+        if (!existing) return false;
+        return (
+          existing.uid === cleanUser.uid ||
+          existing.userId.toLowerCase() === cleanUser.userId.toLowerCase() ||
+          existing.email.toLowerCase() === cleanUser.email.toLowerCase()
+        );
+      });
+
+      if (existingKey) {
+        const existing = userMap.get(existingKey)!;
+        const merged: UserProfile = {
+          ...existing,
+          ...cleanUser,
+          // Preserve password if set
+          password:
+            cleanUser.password && cleanUser.password !== 'tiger2026'
+              ? cleanUser.password
+              : existing.password || cleanUser.password || 'tiger2026',
+          // Preserve active status if already active
+          status: cleanUser.status || existing.status || 'active',
+        };
+        userMap.set(existingKey, merged);
+      } else {
+        userMap.set(cleanUser.userId.toLowerCase(), cleanUser);
+      }
+    };
+
+    // 1. Seed baseline users first
+    for (const u of INITIAL_USERS) {
+      addOrMerge(u);
+    }
+
+    // 2. Merge local storage users
+    for (const u of localUsers) {
+      addOrMerge(u);
+    }
+
+    // 3. Merge Firestore users
     try {
       const snap = await getDocs(collection(db, 'users'));
       if (!snap.empty) {
-        const users = snap.docs.map((d) => d.data() as UserProfile);
-        saveToStorage(LS_KEYS.USERS, users);
-        return users;
+        for (const docSnap of snap.docs) {
+          const cloudData = docSnap.data() as Partial<UserProfile>;
+          const cloudUser: Partial<UserProfile> = {
+            ...cloudData,
+            uid: cloudData.uid || docSnap.id,
+            userId: cloudData.userId || docSnap.id,
+          };
+          addOrMerge(cloudUser);
+        }
+      } else {
+        // If firestore is empty, seed it with baseline users
+        for (const u of INITIAL_USERS) {
+          try {
+            await setDoc(doc(db, 'users', u.uid), u);
+          } catch (err) {
+            // silent ignore
+          }
+        }
       }
     } catch (e) {
-      console.warn('Firestore getUsers error, using cache:', e);
+      console.warn('Firestore getUsers error, fallback to resilient local cache:', e);
     }
-    return getFromStorage<UserProfile[]>(LS_KEYS.USERS, INITIAL_USERS);
+
+    const finalUsers = Array.from(userMap.values());
+    // Save consolidated users to Local Storage
+    saveToStorage(LS_KEYS.USERS, finalUsers);
+    return finalUsers;
   }
 
   public static async saveUser(user: UserProfile, actor: { id: string; name: string; role: UserRole }): Promise<void> {
-    try {
-      await setDoc(doc(db, 'users', user.uid), user);
-    } catch (e) {
-      console.warn('Firestore saveUser error:', e);
-    }
+    const rawUserId = (user.userId || user.uid || '').trim().toLowerCase();
+    const normalizedUserId = rawUserId || (user.email ? user.email.split('@')[0].trim().toLowerCase() : `user_${Date.now()}`);
+    const uid = user.uid || `user_${normalizedUserId.replace(/[^a-z0-9]/g, '_')}_${Date.now()}`;
 
-    // Local Storage update
+    const cleanUser: UserProfile = {
+      ...user,
+      uid,
+      userId: normalizedUserId,
+      name: (user.name || normalizedUserId).trim(),
+      email: (user.email || `${normalizedUserId}@itsmmtigers.com`).trim().toLowerCase(),
+      password: (user.password || '').trim() || 'tiger2026',
+      status: user.status || 'active',
+      role: user.role || 'team_member',
+      department: user.department || 'IT Team',
+      team: user.team || (user.department?.toLowerCase().includes('it') ? 'IT' : 'SMM'),
+      avatarUrl:
+        user.avatarUrl ||
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      joiningDate: user.joiningDate || new Date().toISOString().split('T')[0],
+      createdAt: user.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // 1. Immediately update Local Storage cache for instantaneous availability
     const users = getFromStorage<UserProfile[]>(LS_KEYS.USERS, INITIAL_USERS);
-    const idx = users.findIndex((u) => u.uid === user.uid || u.userId === user.userId);
+    const idx = users.findIndex(
+      (u) =>
+        u.uid === cleanUser.uid ||
+        (u.userId && u.userId.toLowerCase() === cleanUser.userId.toLowerCase()) ||
+        (u.email && u.email.toLowerCase() === cleanUser.email.toLowerCase())
+    );
     const isNew = idx < 0;
     if (idx >= 0) {
-      users[idx] = user;
+      users[idx] = cleanUser;
     } else {
-      users.push(user);
+      users.push(cleanUser);
     }
     saveToStorage(LS_KEYS.USERS, users);
 
-    // Audit Log
-    await this.logAudit({
-      userId: actor.id,
-      userName: actor.name,
-      userRole: actor.role,
-      action: isNew ? 'User Created' : 'User Updated',
-      entityType: 'user',
-      entityId: user.uid,
-      details: `${isNew ? 'Created' : 'Updated'} user ${user.name} (${user.userId}, Role: ${user.role}, Status: ${user.status})`,
-      newValue: user,
-    });
+    // 2. Persist to Firestore
+    try {
+      await setDoc(doc(db, 'users', cleanUser.uid), cleanUser, { merge: true });
+    } catch (e) {
+      console.warn('Firestore saveUser error, stored locally:', e);
+    }
+
+    // 3. Audit Log (non-blocking)
+    try {
+      await this.logAudit({
+        userId: actor.id,
+        userName: actor.name,
+        userRole: actor.role,
+        action: isNew ? 'User Created' : 'User Updated',
+        entityType: 'user',
+        entityId: cleanUser.uid,
+        details: `${isNew ? 'Created' : 'Updated'} user ${cleanUser.name} (${cleanUser.userId}, Role: ${cleanUser.role}, Status: ${cleanUser.status})`,
+        newValue: cleanUser,
+      });
+    } catch (err) {
+      console.warn('Audit log save error:', err);
+    }
   }
 
   public static async toggleUserStatus(
@@ -1280,19 +1422,42 @@ export class DataService {
   // ================= PERIODS =================
 
   public static async getPeriods(): Promise<PerformancePeriod[]> {
+    const localPeriods = getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, INITIAL_PERIODS);
+    const periodMap = new Map<string, PerformancePeriod>();
+
+    // 1. Baseline periods
+    for (const p of INITIAL_PERIODS) {
+      periodMap.set(p.id, { ...p });
+    }
+
+    // 2. Local storage periods
+    for (const p of localPeriods) {
+      if (p.id) periodMap.set(p.id, { ...p });
+    }
+
+    // 3. Firestore periods
     try {
       const snap = await getDocs(collection(db, 'performancePeriods'));
       if (!snap.empty) {
-        const periods = snap.docs
-          .map((d) => d.data() as PerformancePeriod)
-          .sort((a, b) => b.year - a.year || a.weekNumber - b.weekNumber);
-        saveToStorage(LS_KEYS.PERIODS, periods);
-        return periods;
+        for (const docSnap of snap.docs) {
+          const cloudPeriod = docSnap.data() as PerformancePeriod;
+          periodMap.set(cloudPeriod.id, cloudPeriod);
+        }
+      } else {
+        // Seed firestore with initial periods
+        for (const p of INITIAL_PERIODS) {
+          await setDoc(doc(db, 'performancePeriods', p.id), p);
+        }
       }
     } catch (e) {
       console.warn('Firestore getPeriods error:', e);
     }
-    return getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, INITIAL_PERIODS);
+
+    const finalPeriods = Array.from(periodMap.values()).sort(
+      (a, b) => b.year - a.year || a.weekNumber - b.weekNumber
+    );
+    saveToStorage(LS_KEYS.PERIODS, finalPeriods);
+    return finalPeriods;
   }
 
   public static async savePeriod(
@@ -1360,17 +1525,42 @@ export class DataService {
   // ================= RECORDS =================
 
   public static async getRecords(): Promise<PerformanceRecord[]> {
+    const localRecords = getFromStorage<PerformanceRecord[]>(LS_KEYS.RECORDS, INITIAL_RECORDS);
+    const recordMap = new Map<string, PerformanceRecord>();
+
+    // 1. Baseline records
+    for (const r of INITIAL_RECORDS) {
+      recordMap.set(r.id, { ...r });
+    }
+
+    // 2. Local storage records
+    for (const r of localRecords) {
+      if (r.id) recordMap.set(r.id, { ...r });
+    }
+
+    // 3. Firestore records
     try {
       const snap = await getDocs(collection(db, 'performanceRecords'));
       if (!snap.empty) {
-        const records = snap.docs.map((d) => d.data() as PerformanceRecord);
-        saveToStorage(LS_KEYS.RECORDS, records);
-        return records;
+        for (const docSnap of snap.docs) {
+          const cloudRecord = docSnap.data() as PerformanceRecord;
+          recordMap.set(cloudRecord.id, cloudRecord);
+        }
+      } else {
+        // Seed firestore with initial records
+        for (const r of INITIAL_RECORDS) {
+          await setDoc(doc(db, 'performanceRecords', r.id), r);
+        }
       }
     } catch (e) {
-      console.warn('Firestore getRecords error:', e);
+      console.warn('Firestore getRecords error, fallback to resilient local cache:', e);
     }
-    return getFromStorage<PerformanceRecord[]>(LS_KEYS.RECORDS, INITIAL_RECORDS);
+
+    const finalRecords = Array.from(recordMap.values()).sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+    saveToStorage(LS_KEYS.RECORDS, finalRecords);
+    return finalRecords;
   }
 
   public static async saveRecord(
