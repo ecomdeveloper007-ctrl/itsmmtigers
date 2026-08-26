@@ -28,6 +28,7 @@ import { DEFAULT_KPIS, DEFAULT_SETTINGS, sanitizeNumber } from './calculationSer
 // Fallback Local Storage Keys for resilience & speed
 const LS_KEYS = {
   USERS: 'tiger_users_v2',
+  DELETED_USERS: 'tiger_deleted_users_v2',
   KPIS: 'tiger_kpis_v2',
   PERIODS: 'tiger_periods_v2',
   RECORDS: 'tiger_records_v2',
@@ -997,7 +998,14 @@ export class DataService {
 
     // Ensure LocalStorage is populated
     if (!localStorage.getItem(LS_KEYS.USERS)) {
-      saveToStorage(LS_KEYS.USERS, INITIAL_USERS);
+      const deletedSet = this.getDeletedUserIds();
+      const initialNonDeleted = INITIAL_USERS.filter(
+        (u) =>
+          !deletedSet.has(u.uid.toLowerCase()) &&
+          !deletedSet.has(u.userId.toLowerCase()) &&
+          !deletedSet.has(u.email.toLowerCase())
+      );
+      saveToStorage(LS_KEYS.USERS, initialNonDeleted);
     }
     if (!localStorage.getItem(LS_KEYS.KPIS)) {
       saveToStorage(LS_KEYS.KPIS, DEFAULT_KPIS);
@@ -1020,16 +1028,51 @@ export class DataService {
 
   // ================= USERS =================
 
+  public static getDeletedUserIds(): Set<string> {
+    const raw = getFromStorage<string[]>(LS_KEYS.DELETED_USERS, []);
+    return new Set((raw || []).map((id) => String(id).trim().toLowerCase()).filter(Boolean));
+  }
+
+  public static addDeletedUserIds(ids: string[]) {
+    const current = getFromStorage<string[]>(LS_KEYS.DELETED_USERS, []);
+    const set = new Set((current || []).map((id) => String(id).trim().toLowerCase()).filter(Boolean));
+    for (const id of ids) {
+      if (id && id.trim()) {
+        set.add(id.trim().toLowerCase());
+      }
+    }
+    saveToStorage(LS_KEYS.DELETED_USERS, Array.from(set));
+  }
+
+  public static unmarkDeletedUserId(id: string) {
+    const current = getFromStorage<string[]>(LS_KEYS.DELETED_USERS, []);
+    const clean = (id || '').trim().toLowerCase();
+    const updated = (current || []).filter((x) => String(x).trim().toLowerCase() !== clean);
+    saveToStorage(LS_KEYS.DELETED_USERS, updated);
+  }
+
   public static async getUsers(): Promise<UserProfile[]> {
-    const localUsers = getFromStorage<UserProfile[]>(LS_KEYS.USERS, INITIAL_USERS);
+    const deletedSet = this.getDeletedUserIds();
+    const isUserDeleted = (user: Partial<UserProfile> & { uid?: string; userId?: string; email?: string }) => {
+      if (!user) return true;
+      if (user.uid && deletedSet.has(user.uid.toLowerCase())) return true;
+      if (user.userId && deletedSet.has(user.userId.toLowerCase())) return true;
+      if (user.email && deletedSet.has(user.email.toLowerCase())) return true;
+      return false;
+    };
+
     const userMap = new Map<string, UserProfile>();
 
     // Helper to add or merge user into map by unique key
-    const addOrMerge = (user: Partial<UserProfile> & { uid?: string; userId?: string }) => {
-      if (!user) return;
+    const addOrMerge = (user: Partial<UserProfile> & { uid?: string; userId?: string; email?: string }) => {
+      if (!user || isUserDeleted(user)) return;
       const rawUserId = (user.userId || user.uid || '').trim().toLowerCase();
       const normalizedUserId = rawUserId || (user.email ? user.email.split('@')[0].trim().toLowerCase() : `user_${Date.now()}`);
       const uid = user.uid || `user_${normalizedUserId.replace(/[^a-z0-9]/g, '_')}`;
+
+      if (deletedSet.has(uid.toLowerCase()) || deletedSet.has(normalizedUserId.toLowerCase())) {
+        return;
+      }
 
       const cleanUser: UserProfile = {
         uid,
@@ -1084,17 +1127,20 @@ export class DataService {
       }
     };
 
-    // 1. Seed baseline users first
-    for (const u of INITIAL_USERS) {
-      addOrMerge(u);
+    // 1. Read existing local storage users if available
+    const localUsers = getFromStorage<UserProfile[] | null>(LS_KEYS.USERS, null);
+    if (localUsers && Array.isArray(localUsers) && localUsers.length > 0) {
+      for (const u of localUsers) {
+        addOrMerge(u);
+      }
+    } else {
+      // If local storage is empty, initialize only non-deleted baseline users
+      for (const u of INITIAL_USERS) {
+        addOrMerge(u);
+      }
     }
 
-    // 2. Merge local storage users
-    for (const u of localUsers) {
-      addOrMerge(u);
-    }
-
-    // 3. Merge Firestore users
+    // 2. Merge Firestore users
     try {
       const snap = await getDocs(collection(db, 'users'));
       if (!snap.empty) {
@@ -1105,15 +1151,11 @@ export class DataService {
             uid: cloudData.uid || docSnap.id,
             userId: cloudData.userId || docSnap.id,
           };
-          addOrMerge(cloudUser);
-        }
-      } else {
-        // If firestore is empty, seed it with baseline users
-        for (const u of INITIAL_USERS) {
-          try {
-            await setDoc(doc(db, 'users', u.uid), u);
-          } catch (err) {
-            // silent ignore
+          if (isUserDeleted(cloudUser) || deletedSet.has(docSnap.id.toLowerCase())) {
+            // Delete persistent ghost document from firestore
+            deleteDoc(docSnap.ref).catch(() => {});
+          } else {
+            addOrMerge(cloudUser);
           }
         }
       }
@@ -1122,7 +1164,7 @@ export class DataService {
     }
 
     const finalUsers = Array.from(userMap.values());
-    // Save consolidated users to Local Storage
+    // Save consolidated filtered users to Local Storage
     saveToStorage(LS_KEYS.USERS, finalUsers);
     return finalUsers;
   }
@@ -1131,6 +1173,11 @@ export class DataService {
     const rawUserId = (user.userId || user.uid || '').trim().toLowerCase();
     const normalizedUserId = rawUserId || (user.email ? user.email.split('@')[0].trim().toLowerCase() : `user_${Date.now()}`);
     const uid = user.uid || `user_${normalizedUserId.replace(/[^a-z0-9]/g, '_')}_${Date.now()}`;
+
+    // Remove from deleted list if intentionally saving/updating
+    this.unmarkDeletedUserId(normalizedUserId);
+    this.unmarkDeletedUserId(uid);
+    if (user.email) this.unmarkDeletedUserId(user.email);
 
     const cleanUser: UserProfile = {
       ...user,
@@ -1228,25 +1275,74 @@ export class DataService {
     userId: string,
     actor: { id: string; name: string; role: UserRole }
   ): Promise<void> {
-    const users = getFromStorage<UserProfile[]>(LS_KEYS.USERS, INITIAL_USERS);
-    const targetUser = users.find((x) => x.uid === userId || x.userId.toLowerCase() === userId.toLowerCase());
+    const rawUsers = getFromStorage<UserProfile[]>(LS_KEYS.USERS, []);
+    const targetUser = rawUsers.find(
+      (x) =>
+        x.uid === userId ||
+        (x.userId && x.userId.toLowerCase() === userId.toLowerCase()) ||
+        (x.email && x.email.toLowerCase() === userId.toLowerCase())
+    );
 
-    // 1. Remove from local storage cache immediately
-    const updatedUsers = users.filter((x) => x.uid !== userId && x.userId.toLowerCase() !== userId.toLowerCase());
+    // 1. Record in persistent tombstone blacklist so they are never re-seeded
+    const idsToTombstone: string[] = [userId];
+    if (targetUser) {
+      if (targetUser.uid) idsToTombstone.push(targetUser.uid);
+      if (targetUser.userId) idsToTombstone.push(targetUser.userId);
+      if (targetUser.email) idsToTombstone.push(targetUser.email);
+    }
+    this.addDeletedUserIds(idsToTombstone);
+
+    // 2. Remove immediately from local storage cache
+    const updatedUsers = rawUsers.filter(
+      (x) =>
+        x.uid !== userId &&
+        x.userId?.toLowerCase() !== userId.toLowerCase() &&
+        x.email?.toLowerCase() !== userId.toLowerCase() &&
+        (targetUser ? x.uid !== targetUser.uid && x.userId?.toLowerCase() !== targetUser.userId.toLowerCase() : true)
+    );
     saveToStorage(LS_KEYS.USERS, updatedUsers);
 
-    // 2. Delete from Firestore if exists
+    // 3. Purge thoroughly from Firestore
     try {
       if (targetUser?.uid) {
-        await deleteDoc(doc(db, 'users', targetUser.uid));
-      } else {
-        await deleteDoc(doc(db, 'users', userId));
+        await deleteDoc(doc(db, 'users', targetUser.uid)).catch(() => {});
+      }
+      if (targetUser?.userId) {
+        await deleteDoc(doc(db, 'users', targetUser.userId)).catch(() => {});
+      }
+      await deleteDoc(doc(db, 'users', userId)).catch(() => {});
+
+      // Query and purge all matching Firestore documents in 'users' collection
+      const snap = await getDocs(collection(db, 'users'));
+      for (const docSnap of snap.docs) {
+        const d = docSnap.data() as Partial<UserProfile>;
+        const docIdLower = docSnap.id.toLowerCase();
+        const dUid = (d.uid || '').toLowerCase();
+        const dUserId = (d.userId || '').toLowerCase();
+        const dEmail = (d.email || '').toLowerCase();
+        const searchLower = userId.toLowerCase();
+        const targetUidLower = (targetUser?.uid || '').toLowerCase();
+        const targetUserIdLower = (targetUser?.userId || '').toLowerCase();
+        const targetEmailLower = (targetUser?.email || '').toLowerCase();
+
+        if (
+          docIdLower === searchLower ||
+          (targetUidLower && docIdLower === targetUidLower) ||
+          (targetUserIdLower && docIdLower === targetUserIdLower) ||
+          dUid === searchLower ||
+          (targetUidLower && dUid === targetUidLower) ||
+          dUserId === searchLower ||
+          (targetUserIdLower && dUserId === targetUserIdLower) ||
+          (dEmail && (dEmail === searchLower || (targetEmailLower && dEmail === targetEmailLower)))
+        ) {
+          await deleteDoc(docSnap.ref).catch(() => {});
+        }
       }
     } catch (e) {
       console.warn('Firestore deleteUser error:', e);
     }
 
-    // 3. Log Audit
+    // 4. Log Audit
     if (targetUser) {
       try {
         await this.logAudit({
@@ -1276,6 +1372,10 @@ export class DataService {
   }): Promise<{ success: boolean; user?: UserProfile; message?: string }> {
     const cleanUserId = registrationData.userId.trim().toLowerCase();
     const cleanEmail = registrationData.email.trim().toLowerCase();
+
+    // If re-registering, unmark from deleted
+    this.unmarkDeletedUserId(cleanUserId);
+    this.unmarkDeletedUserId(cleanEmail);
 
     const users = await this.getUsers();
     const existing = users.find(
@@ -2098,14 +2198,47 @@ export class DataService {
       return onSnapshot(
         collection(db, 'users'),
         (snapshot) => {
+          const deletedSet = this.getDeletedUserIds();
           if (!snapshot.empty) {
-            const users = snapshot.docs.map((d) => d.data() as UserProfile);
+            const users = snapshot.docs
+              .map((d) => {
+                const data = d.data() as UserProfile;
+                return {
+                  ...data,
+                  uid: data.uid || d.id,
+                  userId: data.userId || d.id,
+                };
+              })
+              .filter(
+                (u) =>
+                  !deletedSet.has((u.uid || '').toLowerCase()) &&
+                  !deletedSet.has((u.userId || '').toLowerCase()) &&
+                  !(u.email && deletedSet.has(u.email.toLowerCase()))
+              );
             saveToStorage(LS_KEYS.USERS, users);
             callback(users);
+          } else {
+            const cached = getFromStorage<UserProfile[]>(LS_KEYS.USERS, []);
+            const filtered = cached.filter(
+              (u) =>
+                !deletedSet.has((u.uid || '').toLowerCase()) &&
+                !deletedSet.has((u.userId || '').toLowerCase()) &&
+                !(u.email && deletedSet.has(u.email.toLowerCase()))
+            );
+            callback(filtered);
           }
         },
         (error) => {
           console.warn('Real-time users subscription warning:', error);
+          const deletedSet = this.getDeletedUserIds();
+          const cached = getFromStorage<UserProfile[]>(LS_KEYS.USERS, []);
+          const filtered = cached.filter(
+            (u) =>
+              !deletedSet.has((u.uid || '').toLowerCase()) &&
+              !deletedSet.has((u.userId || '').toLowerCase()) &&
+              !(u.email && deletedSet.has(u.email.toLowerCase()))
+          );
+          callback(filtered);
         }
       );
     } catch (e) {
