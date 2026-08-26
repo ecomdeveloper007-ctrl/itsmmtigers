@@ -33,6 +33,7 @@ const LS_KEYS = {
   KPIS: 'tiger_kpis_v2',
   PERIODS: 'tiger_periods_v2',
   RECORDS: 'tiger_records_v2',
+  DELETED_RECORDS: 'tiger_deleted_records_v2',
   SETTINGS: 'tiger_settings_v2',
   AUDIT: 'tiger_audit_v2',
 };
@@ -1015,7 +1016,11 @@ export class DataService {
       saveToStorage(LS_KEYS.PERIODS, INITIAL_PERIODS);
     }
     if (!localStorage.getItem(LS_KEYS.RECORDS)) {
-      saveToStorage(LS_KEYS.RECORDS, INITIAL_RECORDS);
+      const deletedRecordSet = this.getDeletedRecordIds();
+      const initialNonDeletedRecords = INITIAL_RECORDS.filter(
+        (r) => !deletedRecordSet.has(r.id.toLowerCase())
+      );
+      saveToStorage(LS_KEYS.RECORDS, initialNonDeletedRecords);
     }
     if (!localStorage.getItem(LS_KEYS.SETTINGS)) {
       saveToStorage(LS_KEYS.SETTINGS, DEFAULT_SETTINGS);
@@ -1792,41 +1797,126 @@ export class DataService {
 
   // ================= RECORDS =================
 
+  public static getDeletedRecordIds(): Set<string> {
+    const raw = getFromStorage<string[]>(LS_KEYS.DELETED_RECORDS, []);
+    return new Set((raw || []).map((id) => String(id).trim().toLowerCase()).filter(Boolean));
+  }
+
+  public static addDeletedRecordIds(ids: string[]) {
+    const current = getFromStorage<string[]>(LS_KEYS.DELETED_RECORDS, []);
+    const set = new Set((current || []).map((id) => String(id).trim().toLowerCase()).filter(Boolean));
+    for (const id of ids) {
+      if (id && id.trim()) {
+        set.add(id.trim().toLowerCase());
+      }
+    }
+    saveToStorage(LS_KEYS.DELETED_RECORDS, Array.from(set));
+  }
+
+  public static unmarkDeletedRecordId(id: string) {
+    const current = getFromStorage<string[]>(LS_KEYS.DELETED_RECORDS, []);
+    const clean = (id || '').trim().toLowerCase();
+    const updated = (current || []).filter((x) => String(x).trim().toLowerCase() !== clean);
+    saveToStorage(LS_KEYS.DELETED_RECORDS, updated);
+  }
+
+  public static consolidateRecords(rawRecords: (Partial<PerformanceRecord> & { id?: string })[]): PerformanceRecord[] {
+    const deletedSet = this.getDeletedRecordIds();
+    const map = new Map<string, PerformanceRecord>();
+
+    for (const raw of rawRecords) {
+      if (!raw || !raw.id) continue;
+      const recId = String(raw.id).trim();
+      const recIdLower = recId.toLowerCase();
+
+      if (deletedSet.has(recIdLower)) {
+        continue;
+      }
+
+      const item: PerformanceRecord = {
+        id: recId,
+        userId: raw.userId || '',
+        userName: raw.userName || 'Team Member',
+        periodId: raw.periodId || '',
+        month: raw.month || 'August',
+        year: raw.year || 2026,
+        weekName: raw.weekName || 'Week 1',
+        projectClosed: sanitizeNumber(raw.projectClosed),
+        revenueGenerated: sanitizeNumber(raw.revenueGenerated),
+        upsells: sanitizeNumber(raw.upsells),
+        clientRating: sanitizeNumber(raw.clientRating, true),
+        followupsCompleted: sanitizeNumber(raw.followupsCompleted),
+        repeatClients: sanitizeNumber(raw.repeatClients),
+        notes: raw.notes || '',
+        submittedBy: raw.submittedBy || 'system',
+        createdAt: raw.createdAt || new Date().toISOString(),
+        updatedAt: raw.updatedAt || new Date().toISOString(),
+      };
+
+      const existing = map.get(recIdLower);
+      if (existing) {
+        const existingTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
+        const incomingTime = new Date(item.updatedAt || item.createdAt || 0).getTime();
+        if (incomingTime >= existingTime) {
+          map.set(recIdLower, { ...existing, ...item });
+        }
+      } else {
+        map.set(recIdLower, item);
+      }
+    }
+
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+  }
+
   public static async getRecords(): Promise<PerformanceRecord[]> {
-    const localRecords = getFromStorage<PerformanceRecord[]>(LS_KEYS.RECORDS, INITIAL_RECORDS);
-    const recordMap = new Map<string, PerformanceRecord>();
+    const rawList: (Partial<PerformanceRecord> & { id?: string })[] = [];
+    const deletedSet = this.getDeletedRecordIds();
 
-    // 1. Baseline records
-    for (const r of INITIAL_RECORDS) {
-      recordMap.set(r.id, { ...r });
+    // 1. Read existing local storage records
+    const localRecords = getFromStorage<PerformanceRecord[] | null>(LS_KEYS.RECORDS, null);
+    if (localRecords && Array.isArray(localRecords)) {
+      for (const r of localRecords) {
+        if (r && r.id && !deletedSet.has(String(r.id).trim().toLowerCase())) {
+          rawList.push(r);
+        }
+      }
+    } else {
+      // First time initialization: use INITIAL_RECORDS that are not deleted
+      for (const r of INITIAL_RECORDS) {
+        if (!deletedSet.has(r.id.toLowerCase())) {
+          rawList.push(r);
+        }
+      }
     }
 
-    // 2. Local storage records
-    for (const r of localRecords) {
-      if (r.id) recordMap.set(r.id, { ...r });
-    }
-
-    // 3. Firestore records
+    // 2. Query Firestore records
     try {
       const snap = await getDocs(collection(db, 'performanceRecords'));
       if (!snap.empty) {
         for (const docSnap of snap.docs) {
-          const cloudRecord = docSnap.data() as PerformanceRecord;
-          recordMap.set(cloudRecord.id, cloudRecord);
-        }
-      } else {
-        // Seed firestore with initial records
-        for (const r of INITIAL_RECORDS) {
-          await setDoc(doc(db, 'performanceRecords', r.id), r);
+          const cloudRecord = docSnap.data() as Partial<PerformanceRecord>;
+          const recId = cloudRecord.id || docSnap.id;
+          const recIdLower = String(recId || '').trim().toLowerCase();
+          const docIdLower = docSnap.id.trim().toLowerCase();
+
+          if (deletedSet.has(recIdLower) || deletedSet.has(docIdLower)) {
+            // Actively purge ghost document from firestore
+            deleteDoc(docSnap.ref).catch(() => {});
+          } else {
+            rawList.push({
+              ...cloudRecord,
+              id: recId,
+            });
+          }
         }
       }
     } catch (e) {
       console.warn('Firestore getRecords error, fallback to resilient local cache:', e);
     }
 
-    const finalRecords = Array.from(recordMap.values()).sort(
-      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-    );
+    const finalRecords = this.consolidateRecords(rawList);
     saveToStorage(LS_KEYS.RECORDS, finalRecords);
     return finalRecords;
   }
@@ -1835,9 +1925,13 @@ export class DataService {
     record: PerformanceRecord,
     actor: { id: string; name: string; role: UserRole }
   ): Promise<void> {
+    const cleanId = String(record.id).trim();
+    this.unmarkDeletedRecordId(cleanId);
+
     // Sanitize all numeric fields automatically to guarantee 0 for empty/NaN
     const cleanRecord: PerformanceRecord = {
       ...record,
+      id: cleanId,
       projectClosed: sanitizeNumber(record.projectClosed),
       revenueGenerated: sanitizeNumber(record.revenueGenerated),
       upsells: sanitizeNumber(record.upsells),
@@ -1848,63 +1942,91 @@ export class DataService {
       createdAt: record.createdAt || new Date().toISOString(),
     };
 
+    // 1. Immediately update local storage
+    const currentRecords = getFromStorage<PerformanceRecord[]>(LS_KEYS.RECORDS, []);
+    const cleanIdLower = cleanId.toLowerCase();
+    const rawList = [...currentRecords.filter((r) => String(r.id).trim().toLowerCase() !== cleanIdLower), cleanRecord];
+    const consolidated = this.consolidateRecords(rawList);
+    saveToStorage(LS_KEYS.RECORDS, consolidated);
+
+    // 2. Persist to Firestore
     try {
       await setDoc(doc(db, 'performanceRecords', cleanRecord.id), cleanRecord);
     } catch (e) {
       console.warn('Firestore saveRecord error:', e);
     }
 
-    const records = getFromStorage<PerformanceRecord[]>(LS_KEYS.RECORDS, INITIAL_RECORDS);
-    const idx = records.findIndex((r) => r.id === cleanRecord.id);
-    const isNew = idx < 0;
-    const oldVal = idx >= 0 ? records[idx] : undefined;
+    // 3. Log Audit
+    const isNew = !currentRecords.some((r) => String(r.id).trim().toLowerCase() === cleanIdLower);
+    const oldVal = currentRecords.find((r) => String(r.id).trim().toLowerCase() === cleanIdLower);
 
-    if (idx >= 0) {
-      records[idx] = cleanRecord;
-    } else {
-      records.push(cleanRecord);
+    try {
+      await this.logAudit({
+        userId: actor.id,
+        userName: actor.name,
+        userRole: actor.role,
+        action: isNew ? 'Performance Record Created' : 'Performance Record Updated',
+        entityType: 'performance',
+        entityId: cleanRecord.id,
+        details: `${isNew ? 'Added' : 'Updated'} data for ${cleanRecord.userName} (${cleanRecord.weekName}): Projects: ${cleanRecord.projectClosed}, Rev: $${cleanRecord.revenueGenerated}, Upsells: ${cleanRecord.upsells}, Rating: ${cleanRecord.clientRating}, Follow-ups: ${cleanRecord.followupsCompleted}, Repeat: ${cleanRecord.repeatClients}`,
+        oldValue: oldVal,
+        newValue: cleanRecord,
+      });
+    } catch (err) {
+      console.warn('Audit log error on saveRecord:', err);
     }
-    saveToStorage(LS_KEYS.RECORDS, records);
-
-    await this.logAudit({
-      userId: actor.id,
-      userName: actor.name,
-      userRole: actor.role,
-      action: isNew ? 'Performance Record Created' : 'Performance Record Updated',
-      entityType: 'performance',
-      entityId: cleanRecord.id,
-      details: `${isNew ? 'Added' : 'Updated'} data for ${cleanRecord.userName} (${cleanRecord.weekName}): Projects: ${cleanRecord.projectClosed}, Rev: $${cleanRecord.revenueGenerated}, Upsells: ${cleanRecord.upsells}, Rating: ${cleanRecord.clientRating}, Follow-ups: ${cleanRecord.followupsCompleted}, Repeat: ${cleanRecord.repeatClients}`,
-      oldValue: oldVal,
-      newValue: cleanRecord,
-    });
   }
 
   public static async deleteRecord(
     recordId: string,
     actor: { id: string; name: string; role: UserRole }
   ): Promise<void> {
+    const cleanId = String(recordId || '').trim();
+    const cleanIdLower = cleanId.toLowerCase();
+
+    // 1. Mark as deleted in tombstone storage
+    this.addDeletedRecordIds([cleanId]);
+
+    // 2. Immediately update local storage
+    const currentRecords = getFromStorage<PerformanceRecord[]>(LS_KEYS.RECORDS, []);
+    const existing = currentRecords.find((r) => String(r.id).trim().toLowerCase() === cleanIdLower);
+    const filtered = currentRecords.filter((r) => String(r.id).trim().toLowerCase() !== cleanIdLower);
+    const consolidated = this.consolidateRecords(filtered);
+    saveToStorage(LS_KEYS.RECORDS, consolidated);
+
+    // 3. Multi-doc Firestore deletion to eliminate any matching doc IDs or data IDs
     try {
-      await deleteDoc(doc(db, 'performanceRecords', recordId));
+      if (cleanId) {
+        await deleteDoc(doc(db, 'performanceRecords', cleanId)).catch(() => {});
+      }
+      const snap = await getDocs(collection(db, 'performanceRecords'));
+      for (const docSnap of snap.docs) {
+        const d = docSnap.data() as Partial<PerformanceRecord>;
+        const dId = String(d.id || '').trim().toLowerCase();
+        if (docSnap.id.toLowerCase() === cleanIdLower || dId === cleanIdLower) {
+          await deleteDoc(docSnap.ref).catch(() => {});
+        }
+      }
     } catch (e) {
       console.warn('Firestore deleteRecord error:', e);
     }
 
-    const records = getFromStorage<PerformanceRecord[]>(LS_KEYS.RECORDS, INITIAL_RECORDS);
-    const existing = records.find((r) => r.id === recordId);
-    const filtered = records.filter((r) => r.id !== recordId);
-    saveToStorage(LS_KEYS.RECORDS, filtered);
-
+    // 4. Log Audit
     if (existing) {
-      await this.logAudit({
-        userId: actor.id,
-        userName: actor.name,
-        userRole: actor.role,
-        action: 'Performance Record Deleted',
-        entityType: 'performance',
-        entityId: recordId,
-        details: `Deleted record of ${existing.userName} for ${existing.weekName} ${existing.month} ${existing.year}`,
-        oldValue: existing,
-      });
+      try {
+        await this.logAudit({
+          userId: actor.id,
+          userName: actor.name,
+          userRole: actor.role,
+          action: 'Performance Record Deleted',
+          entityType: 'performance',
+          entityId: cleanId,
+          details: `Deleted record of ${existing.userName} for ${existing.weekName} ${existing.month} ${existing.year}`,
+          oldValue: existing,
+        });
+      } catch (err) {
+        console.warn('Audit log error on deleteRecord:', err);
+      }
     }
   }
 
@@ -2191,23 +2313,44 @@ export class DataService {
       return onSnapshot(
         collection(db, 'performanceRecords'),
         (snapshot) => {
+          const rawList: (Partial<PerformanceRecord> & { id?: string })[] = [];
+          const deletedSet = this.getDeletedRecordIds();
+
           if (!snapshot.empty) {
-            const records = snapshot.docs.map((d) => d.data() as PerformanceRecord);
-            const sorted = records.sort(
-              (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-            );
-            saveToStorage(LS_KEYS.RECORDS, sorted);
-            callback(sorted);
+            for (const d of snapshot.docs) {
+              const cloudRecord = d.data() as Partial<PerformanceRecord>;
+              const recId = cloudRecord.id || d.id;
+              const recIdLower = String(recId || '').trim().toLowerCase();
+              const docIdLower = d.id.trim().toLowerCase();
+
+              if (
+                deletedSet.has(recIdLower) ||
+                deletedSet.has(docIdLower) ||
+                (cloudRecord.id && deletedSet.has(String(cloudRecord.id).trim().toLowerCase()))
+              ) {
+                // Delete persistent ghost document from firestore
+                deleteDoc(d.ref).catch(() => {});
+              } else {
+                rawList.push({
+                  ...cloudRecord,
+                  id: recId,
+                });
+              }
+            }
           } else {
-            // If backend collection is empty, load cached/baseline
-            const cached = getFromStorage<PerformanceRecord[]>(LS_KEYS.RECORDS, INITIAL_RECORDS);
-            callback(cached);
+            const cached = getFromStorage<PerformanceRecord[]>(LS_KEYS.RECORDS, []);
+            rawList.push(...cached);
           }
+
+          const consolidated = this.consolidateRecords(rawList);
+          saveToStorage(LS_KEYS.RECORDS, consolidated);
+          callback(consolidated);
         },
         (error) => {
           console.warn('Real-time records subscription warning:', error);
-          const cached = getFromStorage<PerformanceRecord[]>(LS_KEYS.RECORDS, INITIAL_RECORDS);
-          callback(cached);
+          const cached = getFromStorage<PerformanceRecord[]>(LS_KEYS.RECORDS, []);
+          const consolidated = this.consolidateRecords(cached);
+          callback(consolidated);
         }
       );
     } catch (e) {

@@ -301,6 +301,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const deletePerformanceRecord = async (recordId: string): Promise<boolean> => {
     if (!currentUser) return false;
     try {
+      // Optimistically update local records state
+      setRecords((prev) => prev.filter((r) => r.id !== recordId && String(r.id).trim().toLowerCase() !== String(recordId).trim().toLowerCase()));
+
       await DataService.deleteRecord(recordId, {
         id: currentUser.uid,
         name: currentUser.name,
@@ -312,7 +315,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const updatedLogs = await DataService.getAuditLogs();
       setAuditLogs(updatedLogs);
 
-      addToast('info', 'Record Deleted', 'The performance record was removed.');
+      addToast('info', 'Record Deleted', 'The performance record was permanently removed.');
       return true;
     } catch (e) {
       console.error(e);

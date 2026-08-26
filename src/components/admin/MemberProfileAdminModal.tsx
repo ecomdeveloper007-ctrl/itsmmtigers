@@ -21,6 +21,8 @@ import {
   KeyRound,
   ExternalLink,
   Award,
+  Trash2,
+  Edit,
 } from 'lucide-react';
 
 interface MemberProfileAdminModalProps {
@@ -37,7 +39,8 @@ export const MemberProfileAdminModal: React.FC<MemberProfileAdminModalProps> = (
   onEditUser,
 }) => {
   const { isSuperAdmin, allUsers } = useAuth();
-  const { selectedMonth, selectedYear, records, isPeriodLocked } = useApp();
+  const { selectedMonth, selectedYear, records, isPeriodLocked, deletePerformanceRecord, openDataEntryModal } = useApp();
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
 
   if (!isSuperAdmin) {
     return (
@@ -236,6 +239,7 @@ export const MemberProfileAdminModal: React.FC<MemberProfileAdminModalProps> = (
                       <th className="py-2.5 px-3">Rating</th>
                       <th className="py-2.5 px-3">Follow-ups</th>
                       <th className="py-2.5 px-3">Repeat</th>
+                      <th className="py-2.5 px-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 text-slate-200">
@@ -248,6 +252,45 @@ export const MemberProfileAdminModal: React.FC<MemberProfileAdminModalProps> = (
                         <td className="py-2 px-3 font-semibold text-amber-400">{r.clientRating.toFixed(1)} ★</td>
                         <td className="py-2 px-3">{r.followupsCompleted}</td>
                         <td className="py-2 px-3">{r.repeatClients}</td>
+                        <td className="py-2 px-3 text-right whitespace-nowrap space-x-1.5">
+                          <button
+                            onClick={() => {
+                              onClose();
+                              openDataEntryModal(r, r.periodId);
+                            }}
+                            className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                            title="Edit Submission"
+                          >
+                            <Edit className="w-3 h-3" />
+                          </button>
+                          {deleteConfirmId === r.id ? (
+                            <div className="inline-flex items-center gap-1">
+                              <button
+                                onClick={async () => {
+                                  await deletePerformanceRecord(r.id);
+                                  setDeleteConfirmId(null);
+                                }}
+                                className="px-1.5 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-[9px]"
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirmId(null)}
+                                className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px]"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setDeleteConfirmId(r.id)}
+                              className="p-1 rounded-lg bg-slate-800 hover:bg-rose-900/50 text-slate-400 hover:text-rose-300 transition-colors cursor-pointer"
+                              title="Delete Submission"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
