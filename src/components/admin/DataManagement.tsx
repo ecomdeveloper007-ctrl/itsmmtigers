@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { PerformanceRecord } from '../../types';
 import { DataService, INITIAL_RECORDS } from '../../services/dataService';
+import { Database, AlertTriangle } from 'lucide-react';
 
 interface DataManagementProps {
   onOpenImportModal: () => void;
@@ -32,6 +33,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ onOpenImportModa
     kpis,
     allUsers,
     deletePerformanceRecord,
+    purgeAllPerformanceRecords,
     openDataEntryModal,
     selectedMonth,
     selectedYear,
@@ -43,6 +45,21 @@ export const DataManagement: React.FC<DataManagementProps> = ({ onOpenImportModa
   const [filterWeek, setFilterWeek] = useState<string>('all');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState<boolean>(false);
+  const [showPurgeModal, setShowPurgeModal] = useState<boolean>(false);
+  const [isPurging, setIsPurging] = useState<boolean>(false);
+
+  const handlePurgeAll = async () => {
+    setIsPurging(true);
+    try {
+      await purgeAllPerformanceRecords();
+      setShowPurgeModal(false);
+    } catch (e) {
+      console.error(e);
+      addToast('error', 'Purge Failed', 'Could not clear records.');
+    } finally {
+      setIsPurging(false);
+    }
+  };
 
   const handleRestoreDefaultRecords = async () => {
     setIsResetting(true);
@@ -115,6 +132,10 @@ export const DataManagement: React.FC<DataManagementProps> = ({ onOpenImportModa
               <FileSpreadsheet className="w-5 h-5" />
             </span>
             <h2 className="text-lg font-bold text-white">Team Performance Submissions & Data</h2>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Firestore Database Live
+            </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
             Master records for {selectedMonth} {selectedYear} ({filteredRecords.length} records found)
@@ -125,13 +146,12 @@ export const DataManagement: React.FC<DataManagementProps> = ({ onOpenImportModa
           {isSuperAdmin && (
             <>
               <button
-                onClick={handleRestoreDefaultRecords}
-                disabled={isResetting}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                title="Reload full initial team dataset and entered submissions into active view"
+                onClick={() => setShowPurgeModal(true)}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Wipe and purge all dummy or submitted performance records from the database"
               >
-                <RotateCw className={`w-4 h-4 text-amber-400 ${isResetting ? 'animate-spin' : ''}`} />
-                {isResetting ? 'Restoring...' : 'Restore Team Data'}
+                <Trash2 className="w-4 h-4 text-rose-400" />
+                Clear All Records
               </button>
 
               <button
@@ -286,6 +306,60 @@ export const DataManagement: React.FC<DataManagementProps> = ({ onOpenImportModa
           </div>
         )}
       </div>
+
+      {/* Purge All Records Confirmation Modal */}
+      {showPurgeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-rose-500/30 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="p-3 bg-rose-500/10 rounded-2xl border border-rose-500/20">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Clear All Performance Data</h3>
+                <p className="text-xs text-rose-400 font-medium">Permanent Database Action</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              This will permanently delete all performance submissions across all weeks, months, and team members from both Cloud Firestore and local cache.
+            </p>
+
+            <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
+              <p>• Database Collection: <span className="font-mono text-slate-200">performanceRecords</span></p>
+              <p>• Total records to purge: <span className="font-bold text-rose-400">{records.length}</span></p>
+              <p>• User accounts and KPI targets will remain intact.</p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                onClick={() => setShowPurgeModal(false)}
+                disabled={isPurging}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePurgeAll}
+                disabled={isPurging}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 shadow-lg shadow-rose-600/30 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {isPurging ? (
+                  <>
+                    <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                    Clearing Database...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Confirm & Purge Everything
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

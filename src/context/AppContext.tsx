@@ -64,6 +64,7 @@ interface AppContextType {
   // Actions
   savePerformanceRecord: (record: PerformanceRecord) => Promise<boolean>;
   deletePerformanceRecord: (recordId: string) => Promise<boolean>;
+  purgeAllPerformanceRecords: () => Promise<boolean>;
   saveKPIConfig: (kpis: KPIConfig[]) => Promise<{ success: boolean; message?: string }>;
   saveAppSettings: (settings: AppSettings) => Promise<boolean>;
   savePeriod: (period: PerformancePeriod) => Promise<boolean>;
@@ -324,6 +325,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const purgeAllPerformanceRecords = async (): Promise<boolean> => {
+    if (!currentUser) return false;
+    try {
+      setRecords([]);
+      await DataService.purgeAllPerformanceRecords({
+        id: currentUser.uid,
+        name: currentUser.name,
+        role: currentUser.role,
+      });
+      const updated = await DataService.getRecords();
+      setRecords(updated);
+      const updatedLogs = await DataService.getAuditLogs();
+      setAuditLogs(updatedLogs);
+      addToast('success', 'Database Cleared', 'All performance submissions have been permanently erased.');
+      return true;
+    } catch (e) {
+      console.error(e);
+      addToast('error', 'Failed to clear records');
+      return false;
+    }
+  };
+
   const saveKPIConfig = async (
     newKpis: KPIConfig[]
   ): Promise<{ success: boolean; message?: string }> => {
@@ -452,6 +475,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         targetPeriodIdForEntry,
         savePerformanceRecord,
         deletePerformanceRecord,
+        purgeAllPerformanceRecords,
         saveKPIConfig,
         saveAppSettings,
         savePeriod,
