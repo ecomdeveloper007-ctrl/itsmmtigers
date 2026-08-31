@@ -199,22 +199,22 @@ export const MemberDashboard: React.FC = () => {
                 <span className="text-xs font-bold text-white">Revenue Generated (Weight: 30%)</span>
               </div>
               <span className="text-xs font-bold text-emerald-400">
-                ${summary?.revenueGenerated.toLocaleString() || 0} / $
-                {Number(summary?.breakdown['kpi_revenue']?.target ?? 10000).toLocaleString()}
+                ${(summary?.revenueGenerated ?? 0).toLocaleString()} / $
+                {Number(summary?.breakdown?.['kpi_revenue']?.target ?? 10000).toLocaleString()}
               </span>
             </div>
             <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-slate-800">
               <div
                 className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500"
                 style={{
-                  width: `${Math.min(summary?.breakdown['kpi_revenue']?.achievementPercentage || 0, 100)}%`,
+                  width: `${Math.min(summary?.breakdown?.['kpi_revenue']?.achievementPercentage || 0, 100)}%`,
                 }}
               ></div>
             </div>
             <div className="flex justify-between text-[11px] text-slate-400">
-              <span>Progress: {summary?.breakdown['kpi_revenue']?.achievementPercentage.toFixed(2) || '0.00'}%</span>
+              <span>Progress: {summary?.breakdown?.['kpi_revenue']?.achievementPercentage?.toFixed(2) || '0.00'}%</span>
               <span className="text-amber-400 font-semibold">
-                Score: {summary?.breakdown['kpi_revenue']?.score.toFixed(2) || '0.00'} / 30 pts
+                Score: {summary?.breakdown?.['kpi_revenue']?.score?.toFixed(2) || '0.00'} / 30 pts
               </span>
             </div>
           </div>
@@ -239,9 +239,9 @@ export const MemberDashboard: React.FC = () => {
               ></div>
             </div>
             <div className="flex justify-between text-[11px] text-slate-400">
-              <span>Progress: {summary?.breakdown['kpi_projects']?.achievementPercentage.toFixed(2) || '0.00'}%</span>
+              <span>Progress: {summary?.breakdown?.['kpi_projects']?.achievementPercentage?.toFixed(2) || '0.00'}%</span>
               <span className="text-amber-400 font-semibold">
-                Score: {summary?.breakdown['kpi_projects']?.score.toFixed(2) || '0.00'} / 20 pts
+                Score: {summary?.breakdown?.['kpi_projects']?.score?.toFixed(2) || '0.00'} / 20 pts
               </span>
             </div>
           </div>
@@ -254,21 +254,21 @@ export const MemberDashboard: React.FC = () => {
                 <span className="text-xs font-bold text-white">Upsells (Weight: 15%)</span>
               </div>
               <span className="text-xs font-bold text-cyan-400">
-                {summary?.upsells || 0} / {summary?.breakdown['kpi_upsells']?.target ?? 10} Upsells
+                {summary?.upsells || 0} / {summary?.breakdown?.['kpi_upsells']?.target ?? 10} Upsells
               </span>
             </div>
             <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-slate-800">
               <div
                 className="h-full bg-gradient-to-r from-cyan-500 to-blue-400 rounded-full transition-all duration-500"
                 style={{
-                  width: `${Math.min(summary?.breakdown['kpi_upsells']?.achievementPercentage || 0, 100)}%`,
+                  width: `${Math.min(summary?.breakdown?.['kpi_upsells']?.achievementPercentage || 0, 100)}%`,
                 }}
               ></div>
             </div>
             <div className="flex justify-between text-[11px] text-slate-400">
-              <span>Progress: {summary?.breakdown['kpi_upsells']?.achievementPercentage.toFixed(2) || '0.00'}%</span>
+              <span>Progress: {summary?.breakdown?.['kpi_upsells']?.achievementPercentage?.toFixed(2) || '0.00'}%</span>
               <span className="text-amber-400 font-semibold">
-                Score: {summary?.breakdown['kpi_upsells']?.score.toFixed(2) || '0.00'} / 15 pts
+                Score: {summary?.breakdown?.['kpi_upsells']?.score?.toFixed(2) || '0.00'} / 15 pts
               </span>
             </div>
           </div>
@@ -288,14 +288,14 @@ export const MemberDashboard: React.FC = () => {
               <div
                 className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-500"
                 style={{
-                  width: `${Math.min(summary?.breakdown['kpi_rating']?.achievementPercentage || 0, 100)}%`,
+                  width: `${Math.min(summary?.breakdown?.['kpi_rating']?.achievementPercentage || 0, 100)}%`,
                 }}
               ></div>
             </div>
             <div className="flex justify-between text-[11px] text-slate-400">
-              <span>Progress: {summary?.breakdown['kpi_rating']?.achievementPercentage.toFixed(2) || '0.00'}%</span>
+              <span>Progress: {summary?.breakdown?.['kpi_rating']?.achievementPercentage?.toFixed(2) || '0.00'}%</span>
               <span className="text-amber-400 font-semibold">
-                Score: {summary?.breakdown['kpi_rating']?.score.toFixed(2) || '0.00'} / 10 pts
+                Score: {summary?.breakdown?.['kpi_rating']?.score?.toFixed(2) || '0.00'} / 10 pts
               </span>
             </div>
           </div>
@@ -308,21 +308,21 @@ export const MemberDashboard: React.FC = () => {
                 <span className="text-xs font-bold text-white">Follow-ups Completed (Weight: 10%)</span>
               </div>
               <span className="text-xs font-bold text-purple-400">
-                {summary?.followupsCompleted || 0} / {summary?.breakdown['kpi_followup']?.target ?? 50}
+                {summary?.followupsCompleted || 0} / {summary?.breakdown?.['kpi_followup']?.target ?? 50}
               </span>
             </div>
             <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-slate-800">
               <div
                 className="h-full bg-gradient-to-r from-purple-500 to-indigo-400 rounded-full transition-all duration-500"
                 style={{
-                  width: `${Math.min(summary?.breakdown['kpi_followup']?.achievementPercentage || 0, 100)}%`,
+                  width: `${Math.min(summary?.breakdown?.['kpi_followup']?.achievementPercentage || 0, 100)}%`,
                 }}
               ></div>
             </div>
             <div className="flex justify-between text-[11px] text-slate-400">
-              <span>Progress: {summary?.breakdown['kpi_followup']?.achievementPercentage.toFixed(2) || '0.00'}%</span>
+              <span>Progress: {summary?.breakdown?.['kpi_followup']?.achievementPercentage?.toFixed(2) || '0.00'}%</span>
               <span className="text-amber-400 font-semibold">
-                Score: {summary?.breakdown['kpi_followup']?.score.toFixed(2) || '0.00'} / 10 pts
+                Score: {summary?.breakdown?.['kpi_followup']?.score?.toFixed(2) || '0.00'} / 10 pts
               </span>
             </div>
           </div>
@@ -335,21 +335,21 @@ export const MemberDashboard: React.FC = () => {
                 <span className="text-xs font-bold text-white">Repeat Clients (Weight: 15%)</span>
               </div>
               <span className="text-xs font-bold text-pink-400">
-                {summary?.repeatClients || 0} / {summary?.breakdown['kpi_repeat']?.target ?? 10} Clients
+                {summary?.repeatClients || 0} / {summary?.breakdown?.['kpi_repeat']?.target ?? 10} Clients
               </span>
             </div>
             <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-slate-800">
               <div
                 className="h-full bg-gradient-to-r from-pink-500 to-rose-400 rounded-full transition-all duration-500"
                 style={{
-                  width: `${Math.min(summary?.breakdown['kpi_repeat']?.achievementPercentage || 0, 100)}%`,
+                  width: `${Math.min(summary?.breakdown?.['kpi_repeat']?.achievementPercentage || 0, 100)}%`,
                 }}
               ></div>
             </div>
             <div className="flex justify-between text-[11px] text-slate-400">
-              <span>Progress: {summary?.breakdown['kpi_repeat']?.achievementPercentage.toFixed(2) || '0.00'}%</span>
+              <span>Progress: {summary?.breakdown?.['kpi_repeat']?.achievementPercentage?.toFixed(2) || '0.00'}%</span>
               <span className="text-amber-400 font-semibold">
-                Score: {summary?.breakdown['kpi_repeat']?.score.toFixed(2) || '0.00'} / 15 pts
+                Score: {summary?.breakdown?.['kpi_repeat']?.score?.toFixed(2) || '0.00'} / 15 pts
               </span>
             </div>
           </div>
@@ -399,7 +399,7 @@ export const MemberDashboard: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-slate-200">{rec.projectClosed}</td>
                     <td className="py-3.5 px-4 font-bold text-emerald-400">
-                      ${rec.revenueGenerated.toLocaleString()}
+                      ${(rec.revenueGenerated ?? 0).toLocaleString()}
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-cyan-400">{rec.upsells}</td>
                     <td className="py-3.5 px-4 font-semibold text-amber-400">

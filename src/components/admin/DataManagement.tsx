@@ -235,7 +235,18 @@ export const DataManagement: React.FC<DataManagementProps> = ({ onOpenImportModa
               {filteredRecords.map((rec) => (
                 <tr key={rec.id} className="hover:bg-slate-800/40 transition-colors">
                   <td className="py-3.5 px-4 font-bold text-white whitespace-nowrap">
-                    {rec.userName}
+                    <div className="flex items-center gap-2">
+                      <span>{rec.userName}</span>
+                      <span
+                        className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${
+                          ['PR', 'WR', 'HW'].includes(rec.profileCode || '')
+                            ? 'bg-blue-900/60 text-blue-300 border border-blue-700/50'
+                            : 'bg-purple-900/60 text-purple-300 border border-purple-700/50'
+                        }`}
+                      >
+                        {rec.profileCode || 'PR'}
+                      </span>
+                    </div>
                   </td>
                   <td className="py-3.5 px-4 whitespace-nowrap">
                     <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-semibold text-[11px]">
@@ -243,8 +254,13 @@ export const DataManagement: React.FC<DataManagementProps> = ({ onOpenImportModa
                     </span>
                   </td>
                   <td className="py-3.5 px-4 font-semibold text-slate-200">{rec.projectClosed}</td>
-                  <td className="py-3.5 px-4 font-bold text-emerald-400">
-                    ${rec.revenueGenerated.toLocaleString()}
+                  <td className="py-3.5 px-4 whitespace-nowrap">
+                    <div className="font-bold text-emerald-400">
+                      ${Math.round(rec.revenueGenerated * 0.8).toLocaleString()} net
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      ${rec.revenueGenerated.toLocaleString()} gross (-20%)
+                    </div>
                   </td>
                   <td className="py-3.5 px-4 font-semibold text-cyan-400">{rec.upsells}</td>
                   <td className="py-3.5 px-4 font-semibold text-amber-400">

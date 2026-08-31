@@ -27,8 +27,21 @@ import {
   ExternalLink,
   Trash2,
   AlertTriangle,
+  Briefcase,
+  Layers,
+  Building2,
+  ArrowRight,
 } from 'lucide-react';
-import { UserProfile, UserRole, UserStatus } from '../../types';
+import {
+  UserProfile,
+  UserRole,
+  UserStatus,
+  ProfileCode,
+  ALL_PROFILES,
+  ALL_PROFILES_LIST,
+  PROFILE_DEPARTMENT_PRESETS,
+  getDefaultDepartmentForProfile,
+} from '../../types';
 import { DataService } from '../../services/dataService';
 import { MemberProfileAdminModal } from './MemberProfileAdminModal';
 
@@ -42,10 +55,22 @@ const PRESET_AVATARS = [
 ];
 
 export const UserManagement: React.FC = () => {
-  const { currentUser, allUsers, refreshUsers, approveUser, rejectUser, deleteUser, pendingUsers, pendingCount, isSuperAdmin } = useAuth();
+  const {
+    currentUser,
+    allUsers,
+    refreshUsers,
+    approveUser,
+    rejectUser,
+    deleteUser,
+    pendingUsers,
+    pendingCount,
+    isSuperAdmin,
+    updateUserDepartmentAndProfile,
+  } = useAuth();
   const { addToast } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState<'all' | 'pending'>('pending');
+  const [activeSubTab, setActiveSubTab] = useState<'profile_wise' | 'all' | 'pending'>('profile_wise');
+  const [selectedProfileFilter, setSelectedProfileFilter] = useState<ProfileCode | 'ALL'>('ALL');
   const [search, setSearch] = useState<string>('');
   const [isAddUserOpen, setIsAddUserOpen] = useState<boolean>(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
@@ -54,6 +79,13 @@ export const UserManagement: React.FC = () => {
   const [inspectingUser, setInspectingUser] = useState<UserProfile | null>(null);
   const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+  // Quick Department Modal state
+  const [quickDeptUser, setQuickDeptUser] = useState<UserProfile | null>(null);
+  const [quickDeptProfileCode, setQuickDeptProfileCode] = useState<ProfileCode>('PR');
+  const [quickDepartment, setQuickDepartment] = useState<string>('');
+  const [isCustomDept, setIsCustomDept] = useState<boolean>(false);
+  const [isSavingQuickDept, setIsSavingQuickDept] = useState<boolean>(false);
 
   // Pending role assignment mapping (userId -> UserRole)
   const [pendingApprovalRoles, setPendingApprovalRoles] = useState<Record<string, UserRole>>({});
@@ -65,7 +97,8 @@ export const UserManagement: React.FC = () => {
   const [formEmail, setFormEmail] = useState<string>('');
   const [formPassword, setFormPassword] = useState<string>('');
   const [formRole, setFormRole] = useState<UserRole>('team_member');
-  const [formDepartment, setFormDepartment] = useState<string>('IT Team');
+  const [formProfileCode, setFormProfileCode] = useState<ProfileCode>('PR');
+  const [formDepartment, setFormDepartment] = useState<string>('IT Solutions & Product Delivery (PR)');
   const [formStatus, setFormStatus] = useState<UserStatus>('active');
   const [formAvatarUrl, setFormAvatarUrl] = useState<string>(PRESET_AVATARS[0]);
   const formFileInputRef = React.useRef<HTMLInputElement>(null);
@@ -83,6 +116,62 @@ export const UserManagement: React.FC = () => {
       u.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  const openQuickDeptModal = (user: UserProfile) => {
+    const code: ProfileCode =
+      user.profileCode ||
+      (user.team === 'IT' || user.department?.toLowerCase().includes('it') ? 'PR' : 'RR');
+    setQuickDeptUser(user);
+    setQuickDeptProfileCode(code);
+    setQuickDepartment(user.department || getDefaultDepartmentForProfile(code));
+    setIsCustomDept(false);
+  };
+
+  const handleQuickSaveDept = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickDeptUser) return;
+    if (!quickDepartment.trim()) {
+      addToast('error', 'Department Required', 'Please choose or type a department.');
+      return;
+    }
+    setIsSavingQuickDept(true);
+    try {
+      const success = await updateUserDepartmentAndProfile(
+        quickDeptUser.uid,
+        quickDepartment.trim(),
+        quickDeptProfileCode
+      );
+      if (success) {
+        addToast(
+          'success',
+          'Department & Profile Updated',
+          `${quickDeptUser.name} reassigned to ${quickDeptProfileCode} profile in "${quickDepartment.trim()}".`
+        );
+        setQuickDeptUser(null);
+      } else {
+        addToast('error', 'Update Failed', 'Could not update user department.');
+      }
+    } catch (err) {
+      addToast('error', 'Error', 'Failed to update department.');
+    } finally {
+      setIsSavingQuickDept(false);
+    }
+  };
+
+  const handleInlineDeptChange = async (user: UserProfile, newProfileCode: ProfileCode, newDept: string) => {
+    try {
+      const success = await updateUserDepartmentAndProfile(user.uid, newDept, newProfileCode);
+      if (success) {
+        addToast(
+          'success',
+          'Department Updated',
+          `${user.name} updated to ${newProfileCode}: "${newDept}".`
+        );
+      }
+    } catch (err) {
+      addToast('error', 'Failed', 'Could not update department.');
+    }
+  };
+
   const openAddModal = () => {
     setEditingUser(null);
     setFormName('');
@@ -90,7 +179,8 @@ export const UserManagement: React.FC = () => {
     setFormEmail('');
     setFormPassword('tiger2026');
     setFormRole('team_member');
-    setFormDepartment('IT Team');
+    setFormProfileCode('PR');
+    setFormDepartment(getDefaultDepartmentForProfile('PR'));
     setFormStatus('active');
     setFormAvatarUrl(PRESET_AVATARS[0]);
     setIsAddUserOpen(true);
@@ -103,7 +193,11 @@ export const UserManagement: React.FC = () => {
     setFormEmail(user.email);
     setFormPassword(user.password || 'tiger2026');
     setFormRole(user.role);
-    setFormDepartment(user.department || 'IT Team');
+    const resolvedCode: ProfileCode =
+      user.profileCode ||
+      (user.team === 'IT' || user.department?.toLowerCase().includes('it') ? 'PR' : 'RR');
+    setFormProfileCode(resolvedCode);
+    setFormDepartment(user.department || getDefaultDepartmentForProfile(resolvedCode));
     setFormStatus(user.status);
     setFormAvatarUrl(user.avatarUrl || PRESET_AVATARS[0]);
     setIsAddUserOpen(true);
@@ -120,8 +214,7 @@ export const UserManagement: React.FC = () => {
 
     const email = formEmail.trim() || `${formUserId.toLowerCase().replace(/\s+/g, '.')}@itsmmtigers.com`;
 
-    const assignedTeam: 'IT' | 'SMM' =
-      formDepartment && formDepartment.toLowerCase().includes('it') ? 'IT' : 'SMM';
+    const assignedTeam: 'IT' | 'SMM' = ['PR', 'WR', 'HW'].includes(formProfileCode) ? 'IT' : 'SMM';
 
     const cleanPassword = formPassword.trim() || 'tiger2026';
 
@@ -133,7 +226,8 @@ export const UserManagement: React.FC = () => {
       password: cleanPassword,
       role: formRole,
       status: formStatus,
-      department: formDepartment,
+      department: formDepartment.trim(),
+      profileCode: formProfileCode,
       team: assignedTeam,
       avatarUrl: formAvatarUrl || editingUser?.avatarUrl || PRESET_AVATARS[0],
       joiningDate: editingUser?.joiningDate || new Date().toISOString().split('T')[0],
@@ -152,7 +246,7 @@ export const UserManagement: React.FC = () => {
     addToast(
       'success',
       editingUser ? 'User Updated' : 'Direct Member Created',
-      `${userToSave.name} saved! Login User ID: "${userToSave.userId}" | Password: "${cleanPassword}"`
+      `${userToSave.name} saved! Profile: ${userToSave.profileCode} | Department: "${userToSave.department}"`
     );
   };
 
@@ -284,30 +378,23 @@ export const UserManagement: React.FC = () => {
         </button>
       </div>
 
-      {/* Tabs Bar: Pending Approvals vs All Users */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+      {/* Tabs Bar: Profile-Wise vs Pending Approvals vs All Users */}
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
         <button
-          onClick={() => setActiveSubTab('pending')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-            activeSubTab === 'pending'
-              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+          onClick={() => setActiveSubTab('profile_wise')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+            activeSubTab === 'profile_wise'
+              ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 shadow-sm'
               : 'text-slate-400 hover:text-white hover:bg-slate-900'
           }`}
         >
-          <Clock className="w-3.5 h-3.5" />
-          <span>Pending Registration Requests</span>
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-              pendingCount > 0 ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400'
-            }`}
-          >
-            {pendingCount}
-          </span>
+          <Layers className="w-3.5 h-3.5" />
+          <span>Profile-Wise Department Manager</span>
         </button>
 
         <button
           onClick={() => setActiveSubTab('all')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeSubTab === 'all'
               ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40 shadow-sm'
               : 'text-slate-400 hover:text-white hover:bg-slate-900'
@@ -316,7 +403,289 @@ export const UserManagement: React.FC = () => {
           <Users className="w-3.5 h-3.5" />
           <span>All Registered Members ({allUsers.length})</span>
         </button>
+
+        <button
+          onClick={() => setActiveSubTab('pending')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+            activeSubTab === 'pending'
+              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+          }`}
+        >
+          <Clock className="w-3.5 h-3.5" />
+          <span>Pending Requests</span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+              pendingCount > 0 ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+            }`}
+          >
+            {pendingCount}
+          </span>
+        </button>
       </div>
+
+      {/* VIEW 0: Profile-Wise Department Manager */}
+      {activeSubTab === 'profile_wise' && (
+        <div className="space-y-6">
+          {/* Explanatory Banner & Quick Stats */}
+          <div className="bg-gradient-to-r from-blue-950/40 via-slate-900/60 to-purple-950/40 border border-slate-800 rounded-3xl p-5 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                  <Layers className="w-5 h-5" />
+                </span>
+                <h3 className="text-base font-bold text-white">
+                  Profile-Wise Department & Role Matrix
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 max-w-2xl">
+                Organize members by their profile specializations (PR, WR, HW for IT Team; RR, DR for SMM Team). You can update each member's department assignment directly using the presets or custom designations below.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 self-stretch md:self-auto bg-slate-950/60 p-2 rounded-2xl border border-slate-800 shrink-0">
+              <div className="text-center px-3 py-1 border-r border-slate-800">
+                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">IT Profiles</div>
+                <div className="text-sm font-black text-blue-400">
+                  {allUsers.filter((u) => ['PR', 'WR', 'HW'].includes(u.profileCode || (u.team === 'IT' || u.department?.toLowerCase().includes('it') ? 'PR' : 'RR'))).length}
+                </div>
+              </div>
+              <div className="text-center px-3 py-1">
+                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">SMM Profiles</div>
+                <div className="text-sm font-black text-purple-400">
+                  {allUsers.filter((u) => ['RR', 'DR'].includes(u.profileCode || (u.team === 'IT' || u.department?.toLowerCase().includes('it') ? 'PR' : 'RR'))).length}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Profile Filter Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <button
+              onClick={() => setSelectedProfileFilter('ALL')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                selectedProfileFilter === 'ALL'
+                  ? 'bg-orange-500 text-slate-950 font-black shadow-md shadow-orange-500/20'
+                  : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              All Profiles ({allUsers.length})
+            </button>
+            {(['PR', 'WR', 'HW', 'RR', 'DR'] as ProfileCode[]).map((code) => {
+              const count = allUsers.filter(
+                (u) =>
+                  (u.profileCode ||
+                    (u.team === 'IT' || u.department?.toLowerCase().includes('it') ? 'PR' : 'RR')) === code
+              ).length;
+              const isSelected = selectedProfileFilter === code;
+              const isIT = ['PR', 'WR', 'HW'].includes(code);
+              return (
+                <button
+                  key={code}
+                  onClick={() => setSelectedProfileFilter(code)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+                    isSelected
+                      ? isIT
+                        ? 'bg-blue-600 text-white font-black shadow-md shadow-blue-500/30'
+                        : 'bg-purple-600 text-white font-black shadow-md shadow-purple-500/30'
+                      : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>{isIT ? '💻' : '📱'}</span>
+                  <span>{code} Profile</span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                      isSelected ? 'bg-black/30 text-white' : 'bg-slate-800 text-slate-300'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Profile Groups */}
+          <div className="space-y-6">
+            {(['PR', 'WR', 'HW', 'RR', 'DR'] as ProfileCode[])
+              .filter((code) => selectedProfileFilter === 'ALL' || selectedProfileFilter === code)
+              .map((code) => {
+                const prof = ALL_PROFILES[code];
+                const isIT = ['PR', 'WR', 'HW'].includes(code);
+                const members = allUsers.filter(
+                  (u) =>
+                    (u.profileCode ||
+                      (u.team === 'IT' || u.department?.toLowerCase().includes('it') ? 'PR' : 'RR')) === code
+                );
+
+                return (
+                  <div
+                    key={code}
+                    className="rounded-3xl border border-slate-800 bg-slate-900/70 overflow-hidden shadow-xl"
+                  >
+                    {/* Profile Header */}
+                    <div
+                      className={`p-4 sm:p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        isIT ? 'bg-blue-950/20' : 'bg-purple-950/20'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider ${
+                            isIT
+                              ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                              : 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                          }`}
+                        >
+                          {code} Profile
+                        </span>
+                        <div>
+                          <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                            {prof?.title || code}
+                            <span
+                              className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                                isIT
+                                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+                                  : 'bg-pink-500/10 text-pink-400 border border-pink-500/20'
+                              }`}
+                            >
+                              {isIT ? 'IT Solutions' : 'SMM Strategy'}
+                            </span>
+                          </h4>
+                          <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">
+                            {prof?.description || ''}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        <span className="text-xs text-slate-400 font-medium">
+                          {members.length} {members.length === 1 ? 'member' : 'members'} assigned
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Members List in this profile */}
+                    {members.length === 0 ? (
+                      <div className="p-8 text-center space-y-2">
+                        <p className="text-xs text-slate-500">
+                          No team members are currently assigned to {code} ({prof?.title}).
+                        </p>
+                        <p className="text-[11px] text-slate-600">
+                          Use "Direct Add Member" or reassign existing members from other profiles.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-800/60">
+                        {members.map((user) => (
+                          <div
+                            key={user.uid}
+                            className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-800/30 transition-colors"
+                          >
+                            {/* Member Identifiers */}
+                            <div className="flex items-center gap-3.5 min-w-0 sm:min-w-[240px]">
+                              <img
+                                src={user.avatarUrl || PRESET_AVATARS[0]}
+                                alt={user.name}
+                                className="w-11 h-11 rounded-xl object-cover ring-2 ring-slate-800 shrink-0"
+                              />
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h5 className="text-xs sm:text-sm font-bold text-white truncate">
+                                    {user.name}
+                                  </h5>
+                                  <span
+                                    className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase ${
+                                      user.status === 'active'
+                                        ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                                        : 'bg-amber-950 text-amber-400 border border-amber-800'
+                                    }`}
+                                  >
+                                    {user.status === 'active' ? 'Active' : 'Pending'}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-slate-400 font-mono flex items-center gap-1 mt-0.5 truncate">
+                                  <span className="text-orange-400 font-bold">{user.userId}</span>
+                                  <span className="text-slate-600">•</span>
+                                  <span className="text-slate-400 capitalize">{user.role.replace('_', ' ')}</span>
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Department Assignment & Quick Selector */}
+                            <div className="flex-1 max-w-xl space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                  Department Designation:
+                                </span>
+                                <span className="text-[10px] text-slate-500">
+                                  Select preset or type custom
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={user.department || getDefaultDepartmentForProfile(code)}
+                                  onChange={(e) =>
+                                    handleInlineDeptChange(user, code, e.target.value)
+                                  }
+                                  aria-label={`Change department for ${user.name}`}
+                                  className="flex-1 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium cursor-pointer"
+                                >
+                                  <optgroup label={`${code} Profile Recommended Presets`}>
+                                    {(PROFILE_DEPARTMENT_PRESETS[code] || []).map((preset) => (
+                                      <option key={preset} value={preset}>
+                                        {preset}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                  {user.department &&
+                                    !(PROFILE_DEPARTMENT_PRESETS[code] || []).includes(user.department) && (
+                                      <option value={user.department}>
+                                        📌 Current: {user.department}
+                                      </option>
+                                    )}
+                                </select>
+
+                                <button
+                                  type="button"
+                                  onClick={() => openQuickDeptModal(user)}
+                                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-orange-500/20 text-slate-300 hover:text-orange-300 border border-slate-700 hover:border-orange-500/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                                  title="Change Profile or Type Custom Department"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                  <span className="hidden sm:inline">Reassign / Custom</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Secondary Actions */}
+                            <div className="flex items-center justify-end gap-1.5 self-end lg:self-center shrink-0">
+                              <button
+                                onClick={() => setInspectingUser(user)}
+                                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
+                                title="Inspect Member Performance Profile"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => openEditModal(user)}
+                                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
+                                title="Full Profile Edit"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       {/* VIEW 1: Pending Approvals Queue */}
       {activeSubTab === 'pending' && (
@@ -360,8 +729,19 @@ export const UserManagement: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-2 text-xs bg-slate-950/80 p-3 rounded-2xl border border-slate-800/80">
                     <div>
-                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">Department</span>
-                      <span className="font-semibold text-slate-200">{user.department || 'SMM Operations'}</span>
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">Department & Profile</span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="font-semibold text-slate-200">{user.department || 'SMM Operations'}</span>
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase ${
+                            ['PR', 'WR', 'HW'].includes(user.profileCode || '')
+                              ? 'bg-blue-900/60 text-blue-300 border border-blue-700/50'
+                              : 'bg-purple-900/60 text-purple-300 border border-purple-700/50'
+                          }`}
+                        >
+                          {user.profileCode || (user.department?.toLowerCase().includes('it') ? 'PR' : 'RR')}
+                        </span>
+                      </div>
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-500 uppercase font-semibold block">Registered On</span>
@@ -535,7 +915,30 @@ export const UserManagement: React.FC = () => {
                         )}
                       </td>
                       <td className="py-3.5 px-4 whitespace-nowrap text-slate-300">
-                        {user.department || 'SMM'}
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <span className="font-semibold text-slate-200 block text-xs">
+                              {user.department || 'IT Team'}
+                            </span>
+                            <span
+                              className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase inline-block mt-0.5 ${
+                                ['PR', 'WR', 'HW'].includes(user.profileCode || '')
+                                  ? 'bg-blue-900/60 text-blue-300 border border-blue-700/50'
+                                  : 'bg-purple-900/60 text-purple-300 border border-purple-700/50'
+                              }`}
+                            >
+                              {user.profileCode || (user.team === 'IT' || user.department?.toLowerCase().includes('it') ? 'PR' : 'RR')} Profile
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => openQuickDeptModal(user)}
+                            className="p-1 px-2 rounded-lg bg-slate-800 hover:bg-orange-500/20 text-slate-400 hover:text-orange-300 border border-slate-700 hover:border-orange-500/40 transition-colors cursor-pointer text-[10px] font-bold flex items-center gap-1 shrink-0"
+                            title="Update Department & Profile"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                            <span>Update</span>
+                          </button>
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 whitespace-nowrap text-slate-400">
                         {user.joiningDate || '2025-01-01'}
@@ -801,17 +1204,68 @@ export const UserManagement: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
-                    Department / Team
+                    Profile Specialization *
                   </label>
                   <select
-                    value={formDepartment}
-                    onChange={(e) => setFormDepartment(e.target.value)}
+                    value={formProfileCode}
+                    onChange={(e) => {
+                      const code = e.target.value as ProfileCode;
+                      setFormProfileCode(code);
+                      setFormDepartment(getDefaultDepartmentForProfile(code));
+                    }}
+                    aria-label="Select Member Profile"
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium"
                   >
-                    <option value="IT Team">💻 IT Team</option>
-                    <option value="SMM Team">📱 SMM Team</option>
+                    <option value="PR">💻 PR - IT Solutions & Product Delivery</option>
+                    <option value="WR">💻 WR - IT Web Architecture & Eng</option>
+                    <option value="HW">💻 HW - IT Cloud Infra & Hardware</option>
+                    <option value="RR">📱 RR - SMM Retainers & Reach</option>
+                    <option value="DR">📱 DR - SMM Direct Response & Conversion</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Department Assignment */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Department Designation *
+                  </label>
+                  <span className="text-[10px] text-slate-400">
+                    Team: {['PR', 'WR', 'HW'].includes(formProfileCode) ? '💻 IT' : '📱 SMM'}
+                  </span>
+                </div>
+                <select
+                  value={
+                    (PROFILE_DEPARTMENT_PRESETS[formProfileCode] || []).includes(formDepartment)
+                      ? formDepartment
+                      : 'custom'
+                  }
+                  onChange={(e) => {
+                    if (e.target.value !== 'custom') {
+                      setFormDepartment(e.target.value);
+                    }
+                  }}
+                  aria-label="Select Department Preset"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium"
+                >
+                  <optgroup label={`${formProfileCode} Recommended Presets`}>
+                    {(PROFILE_DEPARTMENT_PRESETS[formProfileCode] || []).map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <option value="custom">✏️ Enter Custom Department Name...</option>
+                </select>
+                <input
+                  type="text"
+                  required
+                  placeholder="Type department designation..."
+                  value={formDepartment}
+                  onChange={(e) => setFormDepartment(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium"
+                />
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
@@ -828,6 +1282,183 @@ export const UserManagement: React.FC = () => {
                 >
                   <Save className="w-3.5 h-3.5 inline mr-1" />
                   Save User
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Department & Profile Modal */}
+      {quickDeptUser && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-950/60">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    Update Member Department
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Assign profile-wise department for <span className="text-orange-400 font-semibold">{quickDeptUser.name}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setQuickDeptUser(null)}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickSaveDept} className="p-6 space-y-5">
+              {/* User Summary Card */}
+              <div className="flex items-center gap-3 bg-slate-950/70 p-3 rounded-2xl border border-slate-800">
+                <img
+                  src={quickDeptUser.avatarUrl || PRESET_AVATARS[0]}
+                  alt={quickDeptUser.name}
+                  className="w-11 h-11 rounded-xl object-cover ring-1 ring-slate-700 shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-bold text-white truncate">{quickDeptUser.name}</h4>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-slate-800 text-slate-300">
+                      {quickDeptUser.userId}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 truncate mt-0.5">
+                    Current: <span className="text-slate-200 font-medium">{quickDeptUser.department || 'N/A'}</span> ({quickDeptUser.profileCode || 'PR'})
+                  </p>
+                </div>
+              </div>
+
+              {/* 1. Select Profile Code */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  1. Select Member Profile
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {(['PR', 'WR', 'HW', 'RR', 'DR'] as ProfileCode[]).map((code) => {
+                    const prof = ALL_PROFILES[code];
+                    const isSelected = quickDeptProfileCode === code;
+                    const isIT = ['PR', 'WR', 'HW'].includes(code);
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => {
+                          setQuickDeptProfileCode(code);
+                          if (!isCustomDept) {
+                            setQuickDepartment(getDefaultDepartmentForProfile(code));
+                          }
+                        }}
+                        className={`p-3 rounded-2xl border text-left transition-all cursor-pointer relative ${
+                          isSelected
+                            ? isIT
+                              ? 'bg-blue-950/50 border-blue-500/70 ring-2 ring-blue-500/40 text-white'
+                              : 'bg-purple-950/50 border-purple-500/70 ring-2 ring-purple-500/40 text-white'
+                            : 'bg-slate-950/50 border-slate-800 hover:border-slate-700 text-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`text-xs font-black px-2 py-0.5 rounded uppercase ${
+                              isIT ? 'bg-blue-500/20 text-blue-300' : 'bg-purple-500/20 text-purple-300'
+                            }`}
+                          >
+                            {code} Profile
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-semibold">
+                            {isIT ? '💻 IT Team' : '📱 SMM Team'}
+                          </span>
+                        </div>
+                        <h5 className="text-xs font-bold text-white mt-1 truncate">
+                          {prof?.title || code}
+                        </h5>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 2. Select Department Preset or Enter Custom */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    2. Department Assignment
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomDept(!isCustomDept)}
+                    className="text-[11px] text-orange-400 hover:text-orange-300 font-medium cursor-pointer"
+                  >
+                    {isCustomDept ? '← Use Presets' : '✏️ Type Custom Department'}
+                  </button>
+                </div>
+
+                {!isCustomDept ? (
+                  <div className="space-y-2">
+                    <select
+                      value={quickDepartment}
+                      onChange={(e) => setQuickDepartment(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium cursor-pointer"
+                    >
+                      {(PROFILE_DEPARTMENT_PRESETS[quickDeptProfileCode] || []).map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-slate-400">
+                      Recommended department titles tailored for the {quickDeptProfileCode} profile.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      required
+                      value={quickDepartment}
+                      onChange={(e) => setQuickDepartment(e.target.value)}
+                      placeholder="e.g. IT Solutions & Technical Delivery (PR)"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium"
+                    />
+                    <p className="text-[11px] text-slate-400">
+                      Enter any specialized or custom department designation for this member.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Submit & Cancel */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setQuickDeptUser(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingQuickDept}
+                  className="px-5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 disabled:opacity-50 text-slate-950 shadow-lg shadow-orange-500/30 flex items-center gap-1.5 cursor-pointer"
+                >
+                  {isSavingQuickDept ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5" />
+                      Update Department & Profile
+                    </>
+                  )}
                 </button>
               </div>
             </form>

@@ -8,6 +8,10 @@ import {
   LeaderboardData,
   TeamType,
   TeamStatsSummary,
+  ProfileCode,
+  ProfileRevenueItem,
+  TeamRevenueGroup,
+  MonthEndRevenueSummary,
 } from '../types';
 
 /**
@@ -482,6 +486,191 @@ export function resolveUserTeam(user: { team?: string; department?: string }): '
 }
 
 /**
+ * Helper to determine profile code from user object
+ * IT profiles: PR, WR, HW
+ * SMM profiles: RR, DR
+ */
+export function resolveUserProfileCode(user: {
+  profileCode?: ProfileCode;
+  team?: string;
+  department?: string;
+}): ProfileCode {
+  if (
+    user.profileCode &&
+    (user.profileCode === 'PR' ||
+      user.profileCode === 'WR' ||
+      user.profileCode === 'HW' ||
+      user.profileCode === 'RR' ||
+      user.profileCode === 'DR')
+  ) {
+    return user.profileCode;
+  }
+
+  const team = resolveUserTeam(user);
+  const dept = (user.department || '').toLowerCase();
+
+  if (team === 'IT') {
+    if (dept.includes('wr') || dept.includes('web') || dept.includes('frontend') || dept.includes('fullstack')) {
+      return 'WR';
+    }
+    if (dept.includes('hw') || dept.includes('hardware') || dept.includes('cloud') || dept.includes('infra') || dept.includes('devops')) {
+      return 'HW';
+    }
+    return 'PR';
+  } else {
+    if (dept.includes('dr') || dept.includes('direct') || dept.includes('conversion') || dept.includes('paid') || dept.includes('ad')) {
+      return 'DR';
+    }
+    return 'RR';
+  }
+}
+
+/**
+ * Calculate Profile-Wise, Team-Wise, and Overall Revenue Breakdown
+ * with automatic 20% platform charge deduction at month end.
+ *
+ * Requirements:
+ * - IT Profiles: PR, WR, HW
+ * - SMM Profiles: RR, DR
+ * - Overall IT Team: Gross, -20% Platform Fee, Final Net Revenue
+ * - Overall SMM Team: Gross, -20% Platform Fee, Final Net Revenue
+ * - Overall All Teams: Gross, -20% Platform Fee, Final Net Revenue
+ * - Automatic deduction: Net Revenue = Gross * 0.80, Platform Charge = Gross * 0.20
+ */
+export function calculateMonthEndRevenueSummary(
+  summaries: MemberPerformanceSummary[],
+  platformFeePercent: number = 20
+): MonthEndRevenueSummary {
+  const feeRate = platformFeePercent / 100; // 0.20
+
+  const itSummaries = summaries.filter((m) => m.team === 'IT');
+  const smmSummaries = summaries.filter((m) => m.team === 'SMM' || m.team === 'Operations');
+
+  const itGross = itSummaries.reduce((s, m) => s + m.revenueGenerated, 0);
+  const smmGross = smmSummaries.reduce((s, m) => s + m.revenueGenerated, 0);
+
+  const buildProfileItem = (
+    code: ProfileCode,
+    label: string,
+    fullName: string,
+    team: 'IT' | 'SMM',
+    teamGross: number
+  ): ProfileRevenueItem => {
+    const matched = summaries.filter((m) => m.team === team && m.profileCode === code);
+    const memberCount = matched.length;
+    const projectCount = matched.reduce((s, m) => s + m.projectClosed, 0);
+    const grossRevenue = matched.reduce((s, m) => s + m.revenueGenerated, 0);
+    const platformFeeAmount = Math.round(grossRevenue * feeRate * 100) / 100;
+    const finalNetRevenue = Math.round((grossRevenue - platformFeeAmount) * 100) / 100;
+    const contributionPct = teamGross > 0 ? Math.round((grossRevenue / teamGross) * 1000) / 10 : 0;
+
+    return {
+      profileCode: code,
+      label,
+      fullName,
+      team,
+      memberCount,
+      projectCount,
+      grossRevenue,
+      platformFeeRate: feeRate,
+      platformFeeAmount,
+      platformFee: platformFeeAmount,
+      finalNetRevenue,
+      netRevenue: finalNetRevenue,
+      contributionPct,
+    };
+  };
+
+  // Profile Items
+  const prItem = buildProfileItem('PR', 'PR', 'PR Profile', 'IT', itGross);
+  const wrItem = buildProfileItem('WR', 'WR', 'WR Profile', 'IT', itGross);
+  const hwItem = buildProfileItem('HW', 'HW', 'HW Profile', 'IT', itGross);
+
+  const rrItem = buildProfileItem('RR', 'RR', 'RR Profile', 'SMM', smmGross);
+  const drItem = buildProfileItem('DR', 'DR', 'DR Profile', 'SMM', smmGross);
+
+  // IT Team Revenue Group
+  const itMemberCount = itSummaries.length;
+  const itProjectCount = itSummaries.reduce((s, m) => s + m.projectClosed, 0);
+  const itPlatformFee = Math.round(itGross * feeRate * 100) / 100;
+  const itNetRevenue = Math.round((itGross - itPlatformFee) * 100) / 100;
+
+  const itRevenue: TeamRevenueGroup = {
+    team: 'IT',
+    teamName: 'IT Engineering Division',
+    memberCount: itMemberCount,
+    activeMembers: itMemberCount,
+    projectCount: itProjectCount,
+    totalProjects: itProjectCount,
+    grossRevenue: itGross,
+    platformFeeRate: feeRate,
+    platformFeeAmount: itPlatformFee,
+    platformFee: itPlatformFee,
+    finalNetRevenue: itNetRevenue,
+    netRevenue: itNetRevenue,
+    profiles: [prItem, wrItem, hwItem],
+  };
+
+  // SMM Team Revenue Group
+  const smmMemberCount = smmSummaries.length;
+  const smmProjectCount = smmSummaries.reduce((s, m) => s + m.projectClosed, 0);
+  const smmPlatformFee = Math.round(smmGross * feeRate * 100) / 100;
+  const smmNetRevenue = Math.round((smmGross - smmPlatformFee) * 100) / 100;
+
+  const smmRevenue: TeamRevenueGroup = {
+    team: 'SMM',
+    teamName: 'SMM Strategy Division',
+    memberCount: smmMemberCount,
+    activeMembers: smmMemberCount,
+    projectCount: smmProjectCount,
+    totalProjects: smmProjectCount,
+    grossRevenue: smmGross,
+    platformFeeRate: feeRate,
+    platformFeeAmount: smmPlatformFee,
+    platformFee: smmPlatformFee,
+    finalNetRevenue: smmNetRevenue,
+    netRevenue: smmNetRevenue,
+    profiles: [rrItem, drItem],
+  };
+
+  // Overall Grand Total
+  const grandGross = itGross + smmGross;
+  const grandPlatformFee = Math.round(grandGross * feeRate * 100) / 100;
+  const grandNet = Math.round((grandGross - grandPlatformFee) * 100) / 100;
+
+  const grandTotal = {
+    memberCount: itMemberCount + smmMemberCount,
+    projectCount: itProjectCount + smmProjectCount,
+    grossRevenue: grandGross,
+    platformFeeRate: feeRate,
+    platformFeeAmount: grandPlatformFee,
+    finalNetRevenue: grandNet,
+  };
+
+  const profilesMap: Record<ProfileCode, ProfileRevenueItem> = {
+    PR: prItem,
+    WR: wrItem,
+    HW: hwItem,
+    RR: rrItem,
+    DR: drItem,
+  };
+
+  return {
+    platformFeePercent,
+    totalGrossRevenue: grandGross,
+    totalPlatformFee: grandPlatformFee,
+    totalNetRevenue: grandNet,
+    itTeam: itRevenue,
+    smmTeam: smmRevenue,
+    itRevenue,
+    smmRevenue,
+    grandTotal,
+    profiles: profilesMap,
+    profileBreakdown: profilesMap,
+  };
+}
+
+/**
  * Calculate team statistics summary for a subset of members
  */
 function computeTeamStats(summaries: MemberPerformanceSummary[]): TeamStatsSummary {
@@ -621,6 +810,11 @@ export function calculateLeaderboard(
     }
 
     const userTeam = resolveUserTeam(user);
+    const userProfileCode = resolveUserProfileCode({
+      profileCode: user.profileCode,
+      team: userTeam,
+      department: user.department,
+    });
 
     const {
       totals,
@@ -645,6 +839,7 @@ export function calculateLeaderboard(
       avatarUrl: user.avatarUrl,
       department: user.department || (userTeam === 'IT' ? 'IT Solutions' : 'SMM Strategy'),
       team: userTeam,
+      profileCode: userProfileCode,
       month: filterMonth || 'August',
       year: filterYear || 2026,
       periodId: filterPeriodId,
@@ -679,6 +874,9 @@ export function calculateLeaderboard(
   const itTeamStats = computeTeamStats(itSummaries);
   const smmTeamStats = computeTeamStats(smmSummaries);
   const overallTeamStats = computeTeamStats(sortedAll);
+
+  // Compute comprehensive Month-End Revenue Breakdown with -20% platform charge
+  const revenueSummary = calculateMonthEndRevenueSummary(sortedAll);
 
   const itWinner = itSummaries.length > 0 ? itSummaries[0] : undefined;
   const smmWinner = smmSummaries.length > 0 ? smmSummaries[0] : undefined;
@@ -721,5 +919,6 @@ export function calculateLeaderboard(
     smmRankings: smmSummaries,
     itWinner,
     smmWinner,
+    revenueSummary,
   };
 }

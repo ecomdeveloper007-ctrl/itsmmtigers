@@ -16,6 +16,7 @@ import {
 import { db } from '../firebase';
 import {
   UserProfile,
+  ProfileCode,
   KPIConfig,
   PerformancePeriod,
   PerformanceRecord,
@@ -38,7 +39,7 @@ const LS_KEYS = {
   AUDIT: 'tiger_audit_v2',
 };
 
-// Initial Seed Users
+// Initial Seed Users (Only permanent administrator accounts - No dummy team members)
 export const INITIAL_USERS: UserProfile[] = [
   {
     uid: 'user_superadmin_prakash',
@@ -58,7 +59,7 @@ export const INITIAL_USERS: UserProfile[] = [
   {
     uid: 'user_admin',
     userId: 'admin',
-    name: 'Aditi Roy (Ops Admin)',
+    name: 'Ops Admin',
     email: 'admin@itsmmtigers.com',
     password: 'tiger2026admin',
     role: 'admin',
@@ -68,159 +69,6 @@ export const INITIAL_USERS: UserProfile[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
     joiningDate: '2025-03-15',
     createdAt: '2025-03-15T00:00:00.000Z',
-    updatedAt: '2026-08-25T00:00:00.000Z',
-  },
-  // --- SMM TEAM MEMBERS ---
-  {
-    uid: 'user_divya',
-    userId: 'divya.bhardwaj',
-    name: 'Divya Bhardwaj',
-    email: 'divya@itsmmtigers.com',
-    password: 'tiger2026divya',
-    role: 'team_member',
-    status: 'active',
-    department: 'SMM Enterprise',
-    team: 'SMM',
-    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    joiningDate: '2025-05-10',
-    createdAt: '2025-05-10T00:00:00.000Z',
-    updatedAt: '2026-08-25T00:00:00.000Z',
-  },
-  {
-    uid: 'user_mohita',
-    userId: 'mohita.sharma',
-    name: 'Mohita Sharma',
-    email: 'mohita@itsmmtigers.com',
-    password: 'tiger2026mohita',
-    role: 'team_member',
-    status: 'active',
-    department: 'SMM Growth',
-    team: 'SMM',
-    avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
-    joiningDate: '2025-06-01',
-    createdAt: '2025-06-01T00:00:00.000Z',
-    updatedAt: '2026-08-25T00:00:00.000Z',
-  },
-  {
-    uid: 'user_naveen',
-    userId: 'naveen.jakhar',
-    name: 'Naveen Jakhar',
-    email: 'naveen@itsmmtigers.com',
-    password: 'tiger2026naveen',
-    role: 'team_member',
-    status: 'active',
-    department: 'SMM Accounts',
-    team: 'SMM',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    joiningDate: '2025-07-15',
-    createdAt: '2025-07-15T00:00:00.000Z',
-    updatedAt: '2026-08-25T00:00:00.000Z',
-  },
-  {
-    uid: 'user_rahul',
-    userId: 'rahul.verma',
-    name: 'Rahul Verma',
-    email: 'rahul@itsmmtigers.com',
-    password: 'tiger2026rahul',
-    role: 'team_member',
-    status: 'active',
-    department: 'SMM Creative & Client',
-    team: 'SMM',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    joiningDate: '2025-08-01',
-    createdAt: '2025-08-01T00:00:00.000Z',
-    updatedAt: '2026-08-25T00:00:00.000Z',
-  },
-  {
-    uid: 'user_priya',
-    userId: 'priya.patel',
-    name: 'Priya Patel',
-    email: 'priya@itsmmtigers.com',
-    password: 'tiger2026priya',
-    role: 'team_member',
-    status: 'active',
-    department: 'SMM Strategy',
-    team: 'SMM',
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    joiningDate: '2025-09-10',
-    createdAt: '2025-09-10T00:00:00.000Z',
-    updatedAt: '2026-08-25T00:00:00.000Z',
-  },
-  // --- IT TEAM MEMBERS ---
-  {
-    uid: 'user_amitabh',
-    userId: 'amitabh.sharma',
-    name: 'Amitabh Sharma',
-    email: 'amitabh@itsmmtigers.com',
-    password: 'tiger2026amitabh',
-    role: 'team_member',
-    status: 'active',
-    department: 'IT Solutions & Architecture',
-    team: 'IT',
-    avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
-    joiningDate: '2025-02-10',
-    createdAt: '2025-02-10T00:00:00.000Z',
-    updatedAt: '2026-08-25T00:00:00.000Z',
-  },
-  {
-    uid: 'user_rohan',
-    userId: 'rohan.gupta',
-    name: 'Rohan Gupta',
-    email: 'rohan@itsmmtigers.com',
-    password: 'tiger2026rohan',
-    role: 'team_member',
-    status: 'active',
-    department: 'IT Engineering & Apps',
-    team: 'IT',
-    avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-    joiningDate: '2025-04-01',
-    createdAt: '2025-04-01T00:00:00.000Z',
-    updatedAt: '2026-08-25T00:00:00.000Z',
-  },
-  {
-    uid: 'user_sneha',
-    userId: 'sneha.joshi',
-    name: 'Sneha Joshi',
-    email: 'sneha@itsmmtigers.com',
-    password: 'tiger2026sneha',
-    role: 'team_member',
-    status: 'active',
-    department: 'IT Cloud & DevOps',
-    team: 'IT',
-    avatarUrl: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80',
-    joiningDate: '2025-05-15',
-    createdAt: '2025-05-15T00:00:00.000Z',
-    updatedAt: '2026-08-25T00:00:00.000Z',
-  },
-  {
-    uid: 'user_vikas',
-    userId: 'vikas.mehra',
-    name: 'Vikas Mehra',
-    email: 'vikas@itsmmtigers.com',
-    password: 'tiger2026vikas',
-    role: 'team_member',
-    status: 'active',
-    department: 'IT Support & Security',
-    team: 'IT',
-    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-    joiningDate: '2025-06-20',
-    createdAt: '2025-06-20T00:00:00.000Z',
-    updatedAt: '2026-08-25T00:00:00.000Z',
-  },
-  // --- VIEW-ONLY GUEST / EXECUTIVE VIEWER ---
-  {
-    uid: 'user_viewer_guest',
-    userId: 'viewer',
-    name: 'Executive Stakeholder',
-    email: 'viewer@itsmmtigers.com',
-    password: 'tiger2026viewer',
-    role: 'viewer',
-    status: 'active',
-    department: 'Executive Review',
-    team: 'Leadership',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    joiningDate: '2026-01-01',
-    createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-08-25T00:00:00.000Z',
   },
 ];
@@ -435,6 +283,11 @@ export class DataService {
         continue;
       }
 
+      const resolvedTeam: 'IT' | 'SMM' | 'Operations' | 'Leadership' =
+        raw.team || (raw.department?.toLowerCase().includes('it') ? 'IT' : 'SMM');
+      const resolvedProfile: ProfileCode =
+        raw.profileCode || (resolvedTeam === 'IT' ? 'PR' : 'RR');
+
       const item: UserProfile = {
         uid,
         userId: normalizedUserId,
@@ -443,8 +296,9 @@ export class DataService {
         password: (raw.password || '').trim() || 'tiger2026',
         role: raw.role || 'team_member',
         status: raw.status || 'active',
-        department: raw.department || 'IT Team',
-        team: raw.team || (raw.department?.toLowerCase().includes('it') ? 'IT' : 'SMM'),
+        department: raw.department || (resolvedTeam === 'IT' ? 'IT Team' : 'SMM Team'),
+        team: resolvedTeam,
+        profileCode: resolvedProfile,
         avatarUrl:
           raw.avatarUrl ||
           'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -492,6 +346,7 @@ export class DataService {
           approvedBy: item.approvedBy || existing.approvedBy,
           approvedAt: item.approvedAt || existing.approvedAt,
           role: item.role || existing.role || 'team_member',
+          profileCode: item.profileCode || existing.profileCode || (item.team === 'IT' ? 'PR' : 'RR'),
           password:
             item.password && item.password !== 'tiger2026'
               ? item.password
@@ -570,6 +425,9 @@ export class DataService {
       role: user.role || 'team_member',
       department: user.department || 'IT Team',
       team: user.team || (user.department?.toLowerCase().includes('it') ? 'IT' : 'SMM'),
+      profileCode:
+        user.profileCode ||
+        (user.team === 'IT' || user.department?.toLowerCase().includes('it') ? 'PR' : 'RR'),
       avatarUrl:
         user.avatarUrl ||
         'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -616,6 +474,59 @@ export class DataService {
     } catch (err) {
       console.warn('Audit log save error:', err);
     }
+  }
+
+  public static async updateUserDepartmentAndProfile(
+    userId: string,
+    department: string,
+    profileCode: ProfileCode,
+    actor: { id: string; name: string; role: UserRole },
+    team?: 'IT' | 'SMM'
+  ): Promise<UserProfile | null> {
+    const users = getFromStorage<UserProfile[]>(LS_KEYS.USERS, INITIAL_USERS);
+    const idx = users.findIndex(
+      (x) => x.uid === userId || (x.userId && x.userId.toLowerCase() === userId.toLowerCase())
+    );
+    if (idx < 0) return null;
+
+    const resolvedTeam: 'IT' | 'SMM' =
+      team || (['PR', 'WR', 'HW'].includes(profileCode) ? 'IT' : 'SMM');
+
+    const prevUser = { ...users[idx] };
+    const updatedUser: UserProfile = {
+      ...prevUser,
+      department: department.trim(),
+      profileCode,
+      team: resolvedTeam,
+      updatedAt: new Date().toISOString(),
+    };
+
+    users[idx] = updatedUser;
+    saveToStorage(LS_KEYS.USERS, users);
+
+    try {
+      await setDoc(doc(db, 'users', updatedUser.uid), updatedUser, { merge: true });
+    } catch (e) {
+      console.warn('Firestore updateUserDepartmentAndProfile error:', e);
+    }
+
+    try {
+      await this.logAudit({
+        userId: actor.id,
+        userName: actor.name,
+        userRole: actor.role,
+        action: 'Member Department Updated',
+        entityType: 'user',
+        entityId: updatedUser.uid,
+        details: `Updated ${updatedUser.name} department to "${updatedUser.department}" (Profile: ${profileCode}, Team: ${resolvedTeam})`,
+        newValue: { department: updatedUser.department, profileCode, team: resolvedTeam },
+        oldValue: { department: prevUser.department, profileCode: prevUser.profileCode, team: prevUser.team },
+      });
+    } catch (err) {
+      console.warn('Audit log save error:', err);
+    }
+
+    return updatedUser;
   }
 
   public static async toggleUserStatus(
@@ -747,6 +658,8 @@ export class DataService {
     email: string;
     password?: string;
     department?: string;
+    team?: 'IT' | 'SMM' | 'Operations' | 'Leadership';
+    profileCode?: ProfileCode;
     avatarUrl?: string;
     notes?: string;
   }): Promise<{ success: boolean; user?: UserProfile; message?: string }> {
@@ -776,9 +689,14 @@ export class DataService {
     }
 
     const assignedTeam: 'IT' | 'SMM' =
-      registrationData.department && registrationData.department.toLowerCase().includes('it')
+      registrationData.team === 'IT' || registrationData.team === 'SMM'
+        ? registrationData.team
+        : registrationData.department && registrationData.department.toLowerCase().includes('it')
         ? 'IT'
         : 'SMM';
+
+    const assignedProfile: ProfileCode =
+      registrationData.profileCode || (assignedTeam === 'IT' ? 'PR' : 'RR');
 
     const newUser: UserProfile = {
       uid: `user_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
@@ -790,6 +708,7 @@ export class DataService {
       status: 'pending_approval',
       department: registrationData.department || (assignedTeam === 'IT' ? 'IT Team' : 'SMM Team'),
       team: assignedTeam,
+      profileCode: assignedProfile,
       avatarUrl:
         registrationData.avatarUrl ||
         'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -815,7 +734,7 @@ export class DataService {
       action: 'Registration Request Submitted',
       entityType: 'user',
       entityId: newUser.uid,
-      details: `New registration submitted by ${newUser.name} (${newUser.userId}, ${newUser.email}, Dept: ${newUser.department}). Pending Super Admin Prakash Choudhary approval.`,
+      details: `New registration submitted by ${newUser.name} (${newUser.userId}, ${newUser.email}, Team: ${newUser.team}, Profile: ${newUser.profileCode}). Pending Super Admin Prakash Choudhary approval.`,
       newValue: newUser,
     });
 
@@ -825,7 +744,8 @@ export class DataService {
   public static async approveRegistration(
     userId: string,
     assignedRole: UserRole,
-    actor: { id: string; name: string; role: UserRole }
+    actor: { id: string; name: string; role: UserRole },
+    assignedProfileCode?: ProfileCode
   ): Promise<void> {
     const cleanUserId = (userId || '').trim().toLowerCase();
     this.unmarkDeletedUserId(cleanUserId);
@@ -848,6 +768,10 @@ export class DataService {
       ...target,
       status: 'active',
       role: assignedRole,
+      profileCode:
+        assignedProfileCode ||
+        target.profileCode ||
+        (target.team === 'IT' ? 'PR' : 'RR'),
       approvedBy: actor.name,
       approvedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -1192,6 +1116,7 @@ export class DataService {
         id: recId,
         userId: raw.userId || '',
         userName: raw.userName || 'Team Member',
+        profileCode: raw.profileCode,
         periodId: raw.periodId || '',
         month: raw.month || 'August',
         year: raw.year || 2026,

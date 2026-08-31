@@ -16,8 +16,11 @@ import {
   Users,
   Repeat,
   CheckCircle,
+  TrendingDown,
+  Layers,
 } from 'lucide-react';
 import { DataService } from '../../services/dataService';
+import { ALL_PROFILES, ProfileCode } from '../../types';
 
 export const MonthlyReportView: React.FC = () => {
   const { allUsers, isSuperAdmin } = useAuth();
@@ -31,7 +34,9 @@ export const MonthlyReportView: React.FC = () => {
     addToast,
     selectedTeam,
   } = useApp();
-  const { winner, top3, rankings, teamStats } = leaderboardData;
+  const { winner, top3, rankings, teamStats, revenueSummary } = leaderboardData;
+
+  const sym = settings.currencySymbol || '$';
 
   const handlePrint = () => {
     window.print();
@@ -174,28 +179,222 @@ export const MonthlyReportView: React.FC = () => {
         )}
 
         {/* Team Executive Summary Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-          <div className="p-3.5 rounded-xl bg-slate-950 print:bg-gray-100 border border-slate-800 print:border-gray-300">
-            <span className="text-[10px] text-slate-400 print:text-gray-600 uppercase font-bold">Total Revenue</span>
-            <p className="text-lg font-black text-emerald-400 print:text-black">
-              ${teamStats.totalRevenue.toLocaleString()}
-            </p>
+        {(() => {
+          const grossRev = revenueSummary?.totalGrossRevenue ?? revenueSummary?.grandTotal?.grossRevenue ?? teamStats?.totalRevenue ?? 0;
+          const feeAmount = revenueSummary?.totalPlatformFee ?? revenueSummary?.grandTotal?.platformFeeAmount ?? Math.round(grossRev * 0.2);
+          const netRev = revenueSummary?.totalNetRevenue ?? revenueSummary?.grandTotal?.finalNetRevenue ?? Math.round(grossRev * 0.8);
+          return (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center">
+              <div className="p-3.5 rounded-xl bg-slate-950 print:bg-gray-100 border border-slate-800 print:border-gray-300">
+                <span className="text-[10px] text-slate-400 print:text-gray-600 uppercase font-bold">Gross Revenue</span>
+                <p className="text-base sm:text-lg font-black text-white print:text-black">
+                  {sym}{(grossRev || 0).toLocaleString()}
+                </p>
+                <span className="text-[9px] text-slate-500 print:text-gray-500">Before Fee</span>
+              </div>
+              <div className="p-3.5 rounded-xl bg-rose-950/40 print:bg-red-50 border border-rose-800/60 print:border-red-300">
+                <span className="text-[10px] text-rose-300 print:text-red-700 uppercase font-bold">Platform Fee (-20%)</span>
+                <p className="text-base sm:text-lg font-black text-rose-400 print:text-red-600">
+                  -{sym}{(feeAmount || 0).toLocaleString()}
+                </p>
+                <span className="text-[9px] text-rose-400/80 print:text-red-600">20% Deduction</span>
+              </div>
+              <div className="p-3.5 rounded-xl bg-emerald-950/40 print:bg-emerald-50 border-2 border-emerald-500 print:border-emerald-700">
+                <span className="text-[10px] text-emerald-300 print:text-emerald-800 uppercase font-bold">Month-End Net</span>
+                <p className="text-base sm:text-lg font-black text-emerald-400 print:text-emerald-700">
+                  {sym}{(netRev || 0).toLocaleString()}
+                </p>
+                <span className="text-[9px] text-emerald-400/90 print:text-emerald-800 font-bold">Final Settlement</span>
+              </div>
+              <div className="p-3.5 rounded-xl bg-slate-950 print:bg-gray-100 border border-slate-800 print:border-gray-300">
+                <span className="text-[10px] text-slate-400 print:text-gray-600 uppercase font-bold">Projects Closed</span>
+                <p className="text-base sm:text-lg font-black text-white print:text-black">{teamStats?.totalProjects ?? 0}</p>
+                <span className="text-[9px] text-slate-500 print:text-gray-500">All Profiles</span>
+              </div>
+              <div className="p-3.5 rounded-xl bg-slate-950 print:bg-gray-100 border border-slate-800 print:border-gray-300">
+                <span className="text-[10px] text-slate-400 print:text-gray-600 uppercase font-bold">Total Upsells</span>
+                <p className="text-base sm:text-lg font-black text-cyan-400 print:text-black">{teamStats?.totalUpsells ?? 0}</p>
+                <span className="text-[9px] text-slate-500 print:text-gray-500">Client Expansions</span>
+              </div>
+              <div className="p-3.5 rounded-xl bg-slate-950 print:bg-gray-100 border border-slate-800 print:border-gray-300">
+                <span className="text-[10px] text-slate-400 print:text-gray-600 uppercase font-bold">Avg Score</span>
+                <p className="text-base sm:text-lg font-black text-amber-400 print:text-black">
+                  {(teamStats?.avgTeamScore ?? 0).toFixed(2)} / 100
+                </p>
+                <span className="text-[9px] text-slate-500 print:text-gray-500">Weighted Performance</span>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Profile-Wise Month-End Revenue Breakdown Audit Table */}
+        {revenueSummary && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-emerald-400 print:text-black" />
+                <h3 className="text-sm font-bold text-white print:text-black uppercase tracking-wider">
+                  Month-End Profile-Wise Revenue Audit (-20% Automated Platform Fee)
+                </h3>
+              </div>
+              <span className="text-[11px] text-slate-400 print:text-gray-600">
+                Net Revenue = Gross Revenue - 20% Platform Charge
+              </span>
+            </div>
+
+            <div className="rounded-2xl border border-slate-800 print:border-black overflow-hidden">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-slate-800 print:border-black bg-slate-950 print:bg-gray-200 text-[10px] font-bold text-slate-400 print:text-black uppercase tracking-wider">
+                    <th className="py-2.5 px-4">Division</th>
+                    <th className="py-2.5 px-4">Profile Code</th>
+                    <th className="py-2.5 px-4">Profile Designation</th>
+                    <th className="py-2.5 px-4 text-center">Active Members</th>
+                    <th className="py-2.5 px-4 text-center">Projects</th>
+                    <th className="py-2.5 px-4 text-right">Gross Billing ({sym})</th>
+                    <th className="py-2.5 px-4 text-right">Platform Fee (-20%)</th>
+                    <th className="py-2.5 px-4 text-right font-black">Month-End Net ({sym})</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 print:divide-gray-300">
+                  {/* IT Profiles: PR, WR, HW */}
+                  {(['PR', 'WR', 'HW'] as const).map((pCode) => {
+                    const item = revenueSummary.profiles?.[pCode] || revenueSummary.profileBreakdown?.[pCode] || {
+                      memberCount: 0,
+                      projectCount: 0,
+                      grossRevenue: 0,
+                      platformFee: 0,
+                      netRevenue: 0,
+                    };
+                    const info = ALL_PROFILES[pCode] || { title: `${pCode} Profile` };
+                    return (
+                      <tr key={pCode} className="hover:bg-slate-800/40 print:hover:bg-transparent">
+                        <td className="py-2 px-4 text-cyan-400 print:text-blue-700 font-bold">IT Team</td>
+                        <td className="py-2 px-4 font-black">
+                          <span className="px-2 py-0.5 rounded bg-blue-900/60 text-blue-300 print:bg-blue-100 print:text-blue-800 border border-blue-700/50 print:border-blue-300">
+                            {pCode}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4 text-slate-300 print:text-black font-medium">{info?.title || `${pCode} Profile`}</td>
+                        <td className="py-2 px-4 text-center text-slate-300 print:text-black">{item.memberCount ?? 0}</td>
+                        <td className="py-2 px-4 text-center text-slate-300 print:text-black">{item.projectCount ?? 0}</td>
+                        <td className="py-2 px-4 text-right text-slate-300 print:text-black font-medium">
+                          {sym}{(item.grossRevenue ?? 0).toLocaleString()}
+                        </td>
+                        <td className="py-2 px-4 text-right text-rose-400 print:text-red-700 font-medium">
+                          -{sym}{(item.platformFee ?? 0).toLocaleString()}
+                        </td>
+                        <td className="py-2 px-4 text-right text-emerald-400 print:text-green-800 font-black">
+                          {sym}{(item.netRevenue ?? 0).toLocaleString()}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {/* IT Subtotal */}
+                  <tr className="bg-slate-950/80 print:bg-gray-100 font-bold border-t border-b border-slate-700 print:border-gray-400">
+                    <td colSpan={3} className="py-2 px-4 text-white print:text-black uppercase text-[11px]">
+                      💻 Subtotal — IT Division (PR + WR + HW)
+                    </td>
+                    <td className="py-2 px-4 text-center text-white print:text-black">
+                      {revenueSummary.itTeam?.activeMembers ?? revenueSummary.itRevenue?.memberCount ?? 0}
+                    </td>
+                    <td className="py-2 px-4 text-center text-white print:text-black">
+                      {revenueSummary.itTeam?.totalProjects ?? revenueSummary.itRevenue?.projectCount ?? 0}
+                    </td>
+                    <td className="py-2 px-4 text-right text-white print:text-black font-bold">
+                      {sym}{(revenueSummary.itTeam?.grossRevenue ?? revenueSummary.itRevenue?.grossRevenue ?? 0).toLocaleString()}
+                    </td>
+                    <td className="py-2 px-4 text-right text-rose-400 print:text-red-700 font-bold">
+                      -{sym}{(revenueSummary.itTeam?.platformFee ?? revenueSummary.itRevenue?.platformFeeAmount ?? 0).toLocaleString()}
+                    </td>
+                    <td className="py-2 px-4 text-right text-emerald-400 print:text-green-800 font-black text-sm">
+                      {sym}{(revenueSummary.itTeam?.netRevenue ?? revenueSummary.itRevenue?.finalNetRevenue ?? 0).toLocaleString()}
+                    </td>
+                  </tr>
+
+                  {/* SMM Profiles: RR, DR */}
+                  {(['RR', 'DR'] as const).map((pCode) => {
+                    const item = revenueSummary.profiles?.[pCode] || revenueSummary.profileBreakdown?.[pCode] || {
+                      memberCount: 0,
+                      projectCount: 0,
+                      grossRevenue: 0,
+                      platformFee: 0,
+                      netRevenue: 0,
+                    };
+                    const info = ALL_PROFILES[pCode] || { title: `${pCode} Profile` };
+                    return (
+                      <tr key={pCode} className="hover:bg-slate-800/40 print:hover:bg-transparent">
+                        <td className="py-2 px-4 text-purple-400 print:text-purple-700 font-bold">SMM Team</td>
+                        <td className="py-2 px-4 font-black">
+                          <span className="px-2 py-0.5 rounded bg-purple-900/60 text-purple-300 print:bg-purple-100 print:text-purple-800 border border-purple-700/50 print:border-purple-300">
+                            {pCode}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4 text-slate-300 print:text-black font-medium">{info?.title || `${pCode} Profile`}</td>
+                        <td className="py-2 px-4 text-center text-slate-300 print:text-black">{item.memberCount ?? 0}</td>
+                        <td className="py-2 px-4 text-center text-slate-300 print:text-black">{item.projectCount ?? 0}</td>
+                        <td className="py-2 px-4 text-right text-slate-300 print:text-black font-medium">
+                          {sym}{(item.grossRevenue ?? 0).toLocaleString()}
+                        </td>
+                        <td className="py-2 px-4 text-right text-rose-400 print:text-red-700 font-medium">
+                          -{sym}{(item.platformFee ?? 0).toLocaleString()}
+                        </td>
+                        <td className="py-2 px-4 text-right text-emerald-400 print:text-green-800 font-black">
+                          {sym}{(item.netRevenue ?? 0).toLocaleString()}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {/* SMM Subtotal */}
+                  <tr className="bg-slate-950/80 print:bg-gray-100 font-bold border-t border-b border-slate-700 print:border-gray-400">
+                    <td colSpan={3} className="py-2 px-4 text-white print:text-black uppercase text-[11px]">
+                      📱 Subtotal — SMM Division (RR + DR)
+                    </td>
+                    <td className="py-2 px-4 text-center text-white print:text-black">
+                      {revenueSummary.smmTeam?.activeMembers ?? revenueSummary.smmRevenue?.memberCount ?? 0}
+                    </td>
+                    <td className="py-2 px-4 text-center text-white print:text-black">
+                      {revenueSummary.smmTeam?.totalProjects ?? revenueSummary.smmRevenue?.projectCount ?? 0}
+                    </td>
+                    <td className="py-2 px-4 text-right text-white print:text-black font-bold">
+                      {sym}{(revenueSummary.smmTeam?.grossRevenue ?? revenueSummary.smmRevenue?.grossRevenue ?? 0).toLocaleString()}
+                    </td>
+                    <td className="py-2 px-4 text-right text-rose-400 print:text-red-700 font-bold">
+                      -{sym}{(revenueSummary.smmTeam?.platformFee ?? revenueSummary.smmRevenue?.platformFeeAmount ?? 0).toLocaleString()}
+                    </td>
+                    <td className="py-2 px-4 text-right text-emerald-400 print:text-green-800 font-black text-sm">
+                      {sym}{(revenueSummary.smmTeam?.netRevenue ?? revenueSummary.smmRevenue?.finalNetRevenue ?? 0).toLocaleString()}
+                    </td>
+                  </tr>
+
+                  {/* Grand Total All Teams */}
+                  <tr className="bg-gradient-to-r from-amber-950/60 via-slate-950 to-emerald-950/60 print:bg-gray-200 font-black text-sm border-t-2 border-emerald-500 print:border-black">
+                    <td colSpan={3} className="py-3 px-4 text-white print:text-black uppercase">
+                      🌟 Grand Total — All Teams (IT + SMM)
+                    </td>
+                    <td className="py-3 px-4 text-center text-white print:text-black">
+                      {(revenueSummary.itTeam?.activeMembers ?? revenueSummary.itRevenue?.memberCount ?? 0) +
+                        (revenueSummary.smmTeam?.activeMembers ?? revenueSummary.smmRevenue?.memberCount ?? 0)}
+                    </td>
+                    <td className="py-3 px-4 text-center text-white print:text-black">
+                      {(revenueSummary.itTeam?.totalProjects ?? revenueSummary.itRevenue?.projectCount ?? 0) +
+                        (revenueSummary.smmTeam?.totalProjects ?? revenueSummary.smmRevenue?.projectCount ?? 0)}
+                    </td>
+                    <td className="py-3 px-4 text-right text-white print:text-black">
+                      {sym}{(revenueSummary.totalGrossRevenue ?? revenueSummary.grandTotal?.grossRevenue ?? 0).toLocaleString()}
+                    </td>
+                    <td className="py-3 px-4 text-right text-rose-400 print:text-red-700">
+                      -{sym}{(revenueSummary.totalPlatformFee ?? revenueSummary.grandTotal?.platformFeeAmount ?? 0).toLocaleString()}
+                    </td>
+                    <td className="py-3 px-4 text-right text-emerald-400 print:text-green-800 text-base font-black">
+                      {sym}{(revenueSummary.totalNetRevenue ?? revenueSummary.grandTotal?.finalNetRevenue ?? 0).toLocaleString()}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div className="p-3.5 rounded-xl bg-slate-950 print:bg-gray-100 border border-slate-800 print:border-gray-300">
-            <span className="text-[10px] text-slate-400 print:text-gray-600 uppercase font-bold">Projects Closed</span>
-            <p className="text-lg font-black text-white print:text-black">{teamStats.totalProjects}</p>
-          </div>
-          <div className="p-3.5 rounded-xl bg-slate-950 print:bg-gray-100 border border-slate-800 print:border-gray-300">
-            <span className="text-[10px] text-slate-400 print:text-gray-600 uppercase font-bold">Total Upsells</span>
-            <p className="text-lg font-black text-cyan-400 print:text-black">{teamStats.totalUpsells}</p>
-          </div>
-          <div className="p-3.5 rounded-xl bg-slate-950 print:bg-gray-100 border border-slate-800 print:border-gray-300">
-            <span className="text-[10px] text-slate-400 print:text-gray-600 uppercase font-bold">Average Team Score</span>
-            <p className="text-lg font-black text-amber-400 print:text-black">
-              {teamStats.avgTeamScore.toFixed(2)} / 100
-            </p>
-          </div>
-        </div>
+        )}
 
         {/* Official Rankings Table */}
         <div className="space-y-3">
@@ -207,41 +406,61 @@ export const MonthlyReportView: React.FC = () => {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-slate-800 print:border-black bg-slate-950 print:bg-gray-200 text-[10px] font-bold text-slate-400 print:text-black uppercase tracking-wider">
-                  <th className="py-3 px-4">Rank</th>
-                  <th className="py-3 px-4">Team Member</th>
-                  <th className="py-3 px-4">Final Score</th>
-                  <th className="py-3 px-4">Achievement %</th>
-                  <th className="py-3 px-4">Revenue ($)</th>
-                  <th className="py-3 px-4">Projects</th>
-                  <th className="py-3 px-4">Upsells</th>
-                  <th className="py-3 px-4">Rating</th>
-                  <th className="py-3 px-4">Follow-ups</th>
-                  <th className="py-3 px-4">Repeat</th>
-                  <th className="py-3 px-4">Band</th>
+                  <th className="py-3 px-3">Rank</th>
+                  <th className="py-3 px-3">Team Member</th>
+                  <th className="py-3 px-2">Profile</th>
+                  <th className="py-3 px-3">Final Score</th>
+                  <th className="py-3 px-3">Achievement %</th>
+                  <th className="py-3 px-3 text-right">Gross Rev ({sym})</th>
+                  <th className="py-3 px-3 text-right">Net Rev (-20%)</th>
+                  <th className="py-3 px-3 text-center">Projects</th>
+                  <th className="py-3 px-3 text-center">Upsells</th>
+                  <th className="py-3 px-3 text-center">Rating</th>
+                  <th className="py-3 px-3 text-center">Follow-ups</th>
+                  <th className="py-3 px-3 text-center">Repeat</th>
+                  <th className="py-3 px-3">Band</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 print:divide-gray-300">
-                {rankings.map((m) => (
-                  <tr key={m.userId} className={m.rank === 1 ? 'bg-amber-500/10 font-semibold' : ''}>
-                    <td className="py-3 px-4 font-bold">
-                      {m.rank === 1 ? '🥇 #1' : m.rank === 2 ? '🥈 #2' : m.rank === 3 ? '🥉 #3' : `#${m.rank}`}
-                    </td>
-                    <td className="py-3 px-4 font-bold text-white print:text-black">{m.userName}</td>
-                    <td className="py-3 px-4 font-black text-amber-400 print:text-black">
-                      {m.finalScoreDisplay}
-                    </td>
-                    <td className="py-3 px-4 font-bold">{m.achievementPercentage.toFixed(1)}%</td>
-                    <td className="py-3 px-4 text-emerald-400 print:text-black font-semibold">
-                      ${m.revenueGenerated.toLocaleString()}
-                    </td>
-                    <td className="py-3 px-4">{m.projectClosed}</td>
-                    <td className="py-3 px-4">{m.upsells}</td>
-                    <td className="py-3 px-4">{m.clientRating > 0 ? `${m.clientRating.toFixed(1)} ★` : '0 ★'}</td>
-                    <td className="py-3 px-4">{m.followupsCompleted}</td>
-                    <td className="py-3 px-4">{m.repeatClients}</td>
-                    <td className="py-3 px-4 font-semibold">{m.performanceBand}</td>
-                  </tr>
-                ))}
+                {rankings.map((m) => {
+                  const gross = m.revenueGenerated ?? 0;
+                  const net = Math.round(gross * 0.8);
+                  return (
+                    <tr key={m.userId} className={m.rank === 1 ? 'bg-amber-500/10 font-semibold' : ''}>
+                      <td className="py-3 px-3 font-bold">
+                        {m.rank === 1 ? '🥇 #1' : m.rank === 2 ? '🥈 #2' : m.rank === 3 ? '🥉 #3' : `#${m.rank}`}
+                      </td>
+                      <td className="py-3 px-3 font-bold text-white print:text-black">
+                        {m.userName}
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-black uppercase ${
+                          ['PR', 'WR', 'HW'].includes(m.profileCode || '')
+                            ? 'bg-blue-900/60 text-blue-300 print:bg-blue-100 print:text-blue-800 border border-blue-700/40'
+                            : 'bg-purple-900/60 text-purple-300 print:bg-purple-100 print:text-purple-800 border border-purple-700/40'
+                        }`}>
+                          {m.profileCode || (m.team === 'IT' ? 'PR' : 'RR')}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 font-black text-amber-400 print:text-black">
+                        {m.finalScoreDisplay}
+                      </td>
+                      <td className="py-3 px-3 font-bold">{m.achievementPercentage.toFixed(1)}%</td>
+                      <td className="py-3 px-3 text-right text-slate-300 print:text-black font-semibold">
+                        {sym}{gross.toLocaleString()}
+                      </td>
+                      <td className="py-3 px-3 text-right text-emerald-400 print:text-green-800 font-bold">
+                        {sym}{net.toLocaleString()}
+                      </td>
+                      <td className="py-3 px-3 text-center">{m.projectClosed}</td>
+                      <td className="py-3 px-3 text-center">{m.upsells}</td>
+                      <td className="py-3 px-3 text-center">{m.clientRating > 0 ? `${m.clientRating.toFixed(1)} ★` : '0 ★'}</td>
+                      <td className="py-3 px-3 text-center">{m.followupsCompleted}</td>
+                      <td className="py-3 px-3 text-center">{m.repeatClients}</td>
+                      <td className="py-3 px-3 font-semibold">{m.performanceBand}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

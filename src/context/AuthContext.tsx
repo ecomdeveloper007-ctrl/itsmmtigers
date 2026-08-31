@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { UserProfile, UserRole, UserStatus } from '../types';
+import { UserProfile, UserRole, UserStatus, ProfileCode } from '../types';
 import { DataService, INITIAL_USERS } from '../services/dataService';
 
 interface AuthContextType {
@@ -13,15 +13,23 @@ interface AuthContextType {
     email: string;
     password?: string;
     department?: string;
+    team?: 'IT' | 'SMM' | 'Operations' | 'Leadership';
+    profileCode?: ProfileCode;
     avatarUrl?: string;
     notes?: string;
   }) => Promise<{ success: boolean; message?: string }>;
-  approveUser: (userId: string, assignedRole?: UserRole) => Promise<void>;
+  approveUser: (userId: string, assignedRole?: UserRole, assignedProfileCode?: ProfileCode) => Promise<void>;
   rejectUser: (userId: string, reason?: string) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
   logout: () => void;
   switchUser: (userId: string) => void;
   updateCurrentUserProfile: (profile: Partial<UserProfile>) => void;
+  updateUserDepartmentAndProfile: (
+    userId: string,
+    department: string,
+    profileCode: ProfileCode,
+    team?: 'IT' | 'SMM'
+  ) => Promise<boolean>;
   isSuperAdmin: boolean;
   isAdmin: boolean;
   isTeamMember: boolean;
@@ -280,6 +288,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     email: string;
     password?: string;
     department?: string;
+    team?: 'IT' | 'SMM' | 'Operations' | 'Leadership';
+    profileCode?: ProfileCode;
     avatarUrl?: string;
     notes?: string;
   }): Promise<{ success: boolean; message?: string }> => {
@@ -288,7 +298,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return res;
   };
 
-  const approveUser = async (userId: string, assignedRole: UserRole = 'team_member') => {
+  const approveUser = async (
+    userId: string,
+    assignedRole: UserRole = 'team_member',
+    assignedProfileCode?: ProfileCode
+  ) => {
     if (!currentUser) return;
     setAllUsers((prev) =>
       prev.map((u) =>
@@ -297,6 +311,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               ...u,
               status: 'active',
               role: assignedRole,
+              profileCode: assignedProfileCode || u.profileCode,
               approvedBy: currentUser.name,
               approvedAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
@@ -304,11 +319,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           : u
       )
     );
-    await DataService.approveRegistration(userId, assignedRole, {
-      id: currentUser.uid,
-      name: currentUser.name,
-      role: currentUser.role,
-    });
+    await DataService.approveRegistration(
+      userId,
+      assignedRole,
+      {
+        id: currentUser.uid,
+        name: currentUser.name,
+        role: currentUser.role,
+      },
+      assignedProfileCode
+    );
     await refreshUsers();
   };
 
@@ -373,6 +393,63 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
+  const updateUserDepartmentAndProfile = async (
+    userId: string,
+    department: string,
+    profileCode: ProfileCode,
+    team?: 'IT' | 'SMM'
+  ): Promise<boolean> => {
+    if (!currentUser) return false;
+    const resolvedTeam: 'IT' | 'SMM' =
+      team || (['PR', 'WR', 'HW'].includes(profileCode) ? 'IT' : 'SMM');
+
+    setAllUsers((prev) =>
+      prev.map((u) =>
+        u.uid === userId || (u.userId && u.userId.toLowerCase() === userId.toLowerCase())
+          ? {
+              ...u,
+              department: department.trim(),
+              profileCode,
+              team: resolvedTeam,
+              updatedAt: new Date().toISOString(),
+            }
+          : u
+      )
+    );
+
+    if (
+      currentUser.uid === userId ||
+      (currentUser.userId && currentUser.userId.toLowerCase() === userId.toLowerCase())
+    ) {
+      setCurrentUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              department: department.trim(),
+              profileCode,
+              team: resolvedTeam,
+              updatedAt: new Date().toISOString(),
+            }
+          : prev
+      );
+    }
+
+    const res = await DataService.updateUserDepartmentAndProfile(
+      userId,
+      department,
+      profileCode,
+      {
+        id: currentUser.uid,
+        name: currentUser.name,
+        role: currentUser.role,
+      },
+      resolvedTeam
+    );
+
+    await refreshUsers();
+    return !!res;
+  };
+
   const isSuperAdmin = currentUser?.role === 'super_admin' || currentUser?.email === 'prakash.choudhary@coozmoo.com';
   const isAdmin = currentUser?.role === 'admin' || isSuperAdmin;
   const isTeamMember = currentUser?.role === 'team_member';
@@ -395,6 +472,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logout,
         switchUser,
         updateCurrentUserProfile,
+        updateUserDepartmentAndProfile,
         isSuperAdmin,
         isAdmin,
         isTeamMember,

@@ -29,6 +29,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
   const [sortBy, setSortBy] = useState<'score' | 'revenue' | 'projects' | 'upsells' | 'rank'>('rank');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [bandFilter, setBandFilter] = useState<string>('all');
+  const [profileFilter, setProfileFilter] = useState<string>('all');
 
   const filteredRankings = useMemo(() => {
     return rankings
@@ -37,7 +38,10 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
           m.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           m.userId.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesBand = bandFilter === 'all' || m.performanceBand === bandFilter;
-        return matchesSearch && matchesBand;
+        const matchesProfile =
+          profileFilter === 'all' ||
+          (m.profileCode || (m.team === 'IT' ? 'PR' : 'RR')) === profileFilter;
+        return matchesSearch && matchesBand && matchesProfile;
       })
       .sort((a, b) => {
         let diff = 0;
@@ -76,11 +80,11 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
     if (rank === 1) {
       return (
         <div className="flex items-center gap-1">
-          <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-300 via-amber-400 to-yellow-500 text-slate-950 font-black text-sm flex items-center justify-center shadow-lg shadow-amber-500/30">
+          <span className="w-8 h-8 rounded-xl bg-[#8cc540] text-[#101010] font-black text-sm flex items-center justify-center shadow-md shadow-[#8cc540]/30">
             🥇 1
           </span>
           {isTie && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#8cc540]/20 text-[#436320] font-black border border-[#8cc540]/40">
               Tie
             </span>
           )}
@@ -90,11 +94,11 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
     if (rank === 2) {
       return (
         <div className="flex items-center gap-1">
-          <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 text-slate-950 font-black text-sm flex items-center justify-center shadow-md">
+          <span className="w-8 h-8 rounded-xl bg-slate-200 text-slate-900 font-black text-sm flex items-center justify-center shadow-sm border border-slate-300">
             🥈 2
           </span>
           {isTie && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-300 font-bold border border-slate-500/30">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-bold border border-slate-300">
               Tie
             </span>
           )}
@@ -104,11 +108,11 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
     if (rank === 3) {
       return (
         <div className="flex items-center gap-1">
-          <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-600 via-amber-700 to-orange-800 text-white font-black text-sm flex items-center justify-center shadow-md">
+          <span className="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 font-black text-sm flex items-center justify-center shadow-sm border border-amber-300">
             🥉 3
           </span>
           {isTie && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-700/20 text-amber-300 font-bold border border-amber-700/30">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold border border-amber-300">
               Tie
             </span>
           )}
@@ -117,11 +121,11 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
     }
     return (
       <div className="flex items-center gap-1">
-        <span className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 font-bold text-xs flex items-center justify-center">
+        <span className="w-8 h-8 rounded-xl bg-[#f5f5f5] border border-[#e2ebd9] text-[#555555] font-black text-xs flex items-center justify-center">
           #{rank}
         </span>
         {isTie && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 font-bold">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-bold">
             Tie
           </span>
         )}
@@ -133,26 +137,26 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
     switch (band) {
       case 'Excellent':
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-[#8cc540]/20 text-[#436320] border border-[#8cc540]/40">
             Excellent
           </span>
         );
       case 'Very Good':
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/40">
+          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-blue-50 text-blue-700 border border-blue-200">
             Very Good
           </span>
         );
       case 'Good':
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-amber-50 text-amber-700 border border-amber-200">
             Good
           </span>
         );
       case 'Needs Improvement':
       default:
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-rose-50 text-rose-700 border border-rose-200">
             Needs Improvement
           </span>
         );
@@ -161,92 +165,149 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
 
   return (
     <div className="space-y-4">
-      {/* Controls: Search, Rating Filter, Sort */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search performer by name or ID..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto">
-          <div className="flex items-center gap-1 text-xs text-slate-400">
-            <Filter className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Tier:</span>
+      {/* Controls: Search, Rating Filter, Profile Filter, Sort */}
+      <div className="flex flex-col gap-3 bg-white p-3.5 rounded-2xl border border-[#e2ebd9] shadow-xs">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-[#888888] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search performer by name or ID..."
+              className="w-full bg-[#f5f5f5] border border-[#e2ebd9] rounded-xl pl-9 pr-4 py-2 text-xs text-[#101010] placeholder-[#888888] focus:outline-none focus:ring-1 focus:ring-[#8cc540]"
+            />
           </div>
 
-          {['all', 'Excellent', 'Very Good', 'Good', 'Needs Improvement'].map((b) => (
+          {/* Performance Tier Filter */}
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            <div className="flex items-center gap-1 text-xs text-[#666666] font-bold shrink-0">
+              <Filter className="w-3.5 h-3.5 text-[#598327]" />
+              <span className="hidden md:inline">Tier:</span>
+            </div>
+
+            {['all', 'Excellent', 'Very Good', 'Good', 'Needs Improvement'].map((b) => (
+              <button
+                key={b}
+                type="button"
+                onClick={() => setBandFilter(b)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  bandFilter === b
+                    ? 'bg-[#8cc540] text-[#101010] shadow-sm font-black'
+                    : 'bg-[#f5f5f5] text-[#666666] hover:text-[#101010] border border-[#e2ebd9]'
+                }`}
+              >
+                {b === 'all' ? 'All Tiers' : b}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Profile Filter Pills (IT: PR, WR, HW; SMM: RR, DR) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-[#f0f4ec]">
+          <span className="text-[11px] font-black uppercase text-[#436320] tracking-wider shrink-0 flex items-center gap-1">
+            <span>Profile Filter:</span>
+          </span>
+
+          <button
+            type="button"
+            onClick={() => setProfileFilter('all')}
+            className={`px-2.5 py-0.5 rounded-md text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+              profileFilter === 'all'
+                ? 'bg-[#101010] text-white shadow-sm font-black'
+                : 'bg-[#f5f5f5] text-[#666666] hover:text-[#101010] border border-[#e2ebd9]'
+            }`}
+          >
+            All Profiles
+          </button>
+
+          {/* IT Profiles */}
+          <span className="text-[10px] text-blue-700 font-bold uppercase ml-2 hidden sm:inline">IT:</span>
+          {(['PR', 'WR', 'HW'] as const).map((p) => (
             <button
-              key={b}
-              onClick={() => setBandFilter(b)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-                bandFilter === b
-                  ? 'bg-orange-500 text-white shadow-sm'
-                  : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+              key={p}
+              type="button"
+              onClick={() => setProfileFilter(p)}
+              className={`px-2 py-0.5 rounded-md text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
+                profileFilter === p
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200'
               }`}
             >
-              {b === 'all' ? 'All Tiers' : b}
+              {p}
+            </button>
+          ))}
+
+          {/* SMM Profiles */}
+          <span className="text-[10px] text-purple-700 font-bold uppercase ml-2 hidden sm:inline">SMM:</span>
+          {(['RR', 'DR'] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setProfileFilter(p)}
+              className={`px-2 py-0.5 rounded-md text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
+                profileFilter === p
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'
+              }`}
+            >
+              {p}
             </button>
           ))}
         </div>
       </div>
 
       {/* Leaderboard Table for Desktop / Tablet */}
-      <div className="hidden md:block rounded-2xl border border-slate-800 bg-slate-900/80 backdrop-blur-sm overflow-hidden shadow-xl">
+      <div className="hidden md:block rounded-2xl border border-[#e2ebd9] bg-white overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-950/60 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              <tr className="border-b border-[#e2ebd9] bg-[#f5f5f5] text-[11px] font-black text-[#555555] uppercase tracking-wider">
                 <th
                   onClick={() => toggleSort('rank')}
-                  className="py-3.5 px-4 cursor-pointer hover:text-white"
+                  className="py-3.5 px-4 cursor-pointer hover:text-[#101010]"
                 >
                   <div className="flex items-center gap-1">
                     <span>Rank</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                    <ArrowUpDown className="w-3 h-3 text-[#888888]" />
                   </div>
                 </th>
                 <th className="py-3.5 px-4">Team Member</th>
                 <th
                   onClick={() => toggleSort('score')}
-                  className="py-3.5 px-4 cursor-pointer hover:text-white"
+                  className="py-3.5 px-4 cursor-pointer hover:text-[#101010]"
                 >
                   <div className="flex items-center gap-1">
                     <span>Final Score</span>
-                    <ArrowUpDown className="w-3 h-3 text-orange-400" />
+                    <ArrowUpDown className="w-3 h-3 text-[#598327]" />
                   </div>
                 </th>
                 <th className="py-3.5 px-4">Achievement %</th>
                 <th
                   onClick={() => toggleSort('revenue')}
-                  className="py-3.5 px-4 cursor-pointer hover:text-white"
+                  className="py-3.5 px-4 cursor-pointer hover:text-[#101010]"
                 >
                   <div className="flex items-center gap-1">
                     <span>Revenue</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                    <ArrowUpDown className="w-3 h-3 text-[#888888]" />
                   </div>
                 </th>
                 <th
                   onClick={() => toggleSort('projects')}
-                  className="py-3.5 px-4 cursor-pointer hover:text-white"
+                  className="py-3.5 px-4 cursor-pointer hover:text-[#101010]"
                 >
                   <div className="flex items-center gap-1">
                     <span>Projects</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                    <ArrowUpDown className="w-3 h-3 text-[#888888]" />
                   </div>
                 </th>
                 <th
                   onClick={() => toggleSort('upsells')}
-                  className="py-3.5 px-4 cursor-pointer hover:text-white"
+                  className="py-3.5 px-4 cursor-pointer hover:text-[#101010]"
                 >
                   <div className="flex items-center gap-1">
                     <span>Upsells</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                    <ArrowUpDown className="w-3 h-3 text-[#888888]" />
                   </div>
                 </th>
                 <th className="py-3.5 px-4">Client Rating</th>
@@ -255,13 +316,13 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
                 <th className="py-3.5 px-4">Status Band</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-xs">
+            <tbody className="divide-y divide-[#e4ece0] text-xs">
               {filteredRankings.map((member) => (
                 <tr
                   key={member.userId}
                   onClick={() => onSelectMember && onSelectMember(member)}
-                  className={`hover:bg-slate-800/50 transition-colors ${
-                    member.rank === 1 ? 'bg-amber-500/5' : ''
+                  className={`hover:bg-[#f3f8ef]/60 transition-colors ${
+                    member.rank === 1 ? 'bg-[#f3f8ef]/40' : ''
                   }`}
                 >
                   <td className="py-4 px-4 whitespace-nowrap">
@@ -275,22 +336,31 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
                           'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
                         }
                         alt={member.userName}
-                        className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-700"
+                        className="w-9 h-9 rounded-xl object-cover ring-1 ring-[#e2ebd9]"
                       />
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <p className="font-bold text-white text-sm">{member.userName}</p>
+                          <p className="font-bold text-[#101010] text-sm">{member.userName}</p>
                           <span
                             className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${
                               member.team === 'IT'
-                                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                                : 'bg-pink-500/20 text-pink-300 border border-pink-500/40'
+                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                : 'bg-purple-50 text-purple-700 border border-purple-200'
                             }`}
                           >
                             {member.team || 'SMM'}
                           </span>
+                          <span
+                            className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${
+                              ['PR', 'WR', 'HW'].includes(member.profileCode || '')
+                                ? 'bg-blue-100 text-blue-900 border border-blue-300'
+                                : 'bg-purple-100 text-purple-900 border border-purple-300'
+                            }`}
+                          >
+                            {member.profileCode || (member.team === 'IT' ? 'PR' : 'RR')}
+                          </span>
                         </div>
-                        <p className="text-[11px] text-slate-400">
+                        <p className="text-[11px] text-[#666666]">
                           {member.department || (member.team === 'IT' ? 'IT Solutions' : 'SMM Strategy')} • {member.weeksSubmitted} wk(s)
                         </p>
                       </div>
@@ -298,43 +368,48 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
                   </td>
                   <td className="py-4 px-4 whitespace-nowrap">
                     <div className="flex items-baseline gap-1">
-                      <span className="text-base font-black text-amber-400">
+                      <span className="text-base font-black text-[#101010]">
                         {member.finalScoreDisplay}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-500">/ 100</span>
+                      <span className="text-[10px] font-bold text-[#888888]">/ 100</span>
                     </div>
                   </td>
                   <td className="py-4 px-4 whitespace-nowrap min-w-[130px]">
                     <div className="space-y-1">
-                      <div className="flex justify-between text-[10px] font-bold text-slate-300">
-                        <span>{member.achievementPercentage.toFixed(1)}%</span>
+                      <div className="flex justify-between text-[10px] font-bold text-[#101010]">
+                        <span>{(member.achievementPercentage ?? 0).toFixed(1)}%</span>
                       </div>
-                      <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 bg-[#f5f5f5] rounded-full overflow-hidden border border-[#e2ebd9]">
                         <div
-                          className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full"
+                          className="h-full bg-[#8cc540] rounded-full"
                           style={{
-                            width: `${Math.min(member.achievementPercentage, 100)}%`,
+                            width: `${Math.min(member.achievementPercentage ?? 0, 100)}%`,
                           }}
                         ></div>
                       </div>
                     </div>
                   </td>
-                  <td className="py-4 px-4 whitespace-nowrap font-bold text-emerald-400">
-                    ${member.revenueGenerated.toLocaleString()}
+                  <td className="py-4 px-4 whitespace-nowrap">
+                    <div className="font-black text-[#436320] text-sm">
+                      {settings.currencySymbol || '$'}{Math.round((member.revenueGenerated ?? 0) * 0.8).toLocaleString()}
+                    </div>
+                    <div className="text-[10px] text-[#777777] font-medium">
+                      Gross: {settings.currencySymbol || '$'}{(member.revenueGenerated ?? 0).toLocaleString()} (-20%)
+                    </div>
                   </td>
-                  <td className="py-4 px-4 whitespace-nowrap font-bold text-slate-200">
+                  <td className="py-4 px-4 whitespace-nowrap font-bold text-[#101010]">
                     {member.projectClosed}
                   </td>
-                  <td className="py-4 px-4 whitespace-nowrap font-bold text-cyan-400">
+                  <td className="py-4 px-4 whitespace-nowrap font-bold text-purple-700">
                     {member.upsells}
                   </td>
-                  <td className="py-4 px-4 whitespace-nowrap font-bold text-amber-400">
-                    {member.clientRating > 0 ? `${member.clientRating.toFixed(1)} ★` : '0 ★'}
+                  <td className="py-4 px-4 whitespace-nowrap font-bold text-amber-600">
+                    {(member.clientRating ?? 0) > 0 ? `${(member.clientRating ?? 0).toFixed(1)} ★` : '0 ★'}
                   </td>
-                  <td className="py-4 px-4 whitespace-nowrap font-medium text-slate-300">
+                  <td className="py-4 px-4 whitespace-nowrap font-medium text-[#555555]">
                     {member.followupsCompleted}
                   </td>
-                  <td className="py-4 px-4 whitespace-nowrap font-medium text-slate-300">
+                  <td className="py-4 px-4 whitespace-nowrap font-medium text-[#555555]">
                     {member.repeatClients}
                   </td>
                   <td className="py-4 px-4 whitespace-nowrap">
@@ -352,10 +427,10 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
         {filteredRankings.map((member) => (
           <div
             key={member.userId}
-            className={`p-4 rounded-2xl border bg-slate-900/90 shadow-lg space-y-3 ${
+            className={`p-4 rounded-2xl border bg-white shadow-xs space-y-3 ${
               member.rank === 1
-                ? 'border-amber-500/50 bg-gradient-to-b from-amber-950/20 to-slate-900'
-                : 'border-slate-800'
+                ? 'border-[#8cc540] bg-[#f3f8ef]/40'
+                : 'border-[#e2ebd9]'
             }`}
           >
             <div className="flex items-center justify-between">
@@ -367,71 +442,80 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
                     'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
                   }
                   alt={member.userName}
-                  className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-700"
+                  className="w-10 h-10 rounded-xl object-cover ring-1 ring-[#e2ebd9]"
                 />
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <h4 className="font-bold text-white text-sm">{member.userName}</h4>
+                    <h4 className="font-bold text-[#101010] text-sm">{member.userName}</h4>
                     <span
-                      className={`text-[9px] px-1.5 py-0.2 rounded font-black uppercase ${
+                      className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase ${
                         member.team === 'IT'
-                          ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                          : 'bg-pink-500/20 text-pink-300 border border-pink-500/40'
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          : 'bg-purple-50 text-purple-700 border border-purple-200'
                       }`}
                     >
                       {member.team || 'SMM'}
                     </span>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase ${
+                        ['PR', 'WR', 'HW'].includes(member.profileCode || '')
+                          ? 'bg-blue-100 text-blue-900 border border-blue-300'
+                          : 'bg-purple-100 text-purple-900 border border-purple-300'
+                      }`}
+                    >
+                      {member.profileCode || (member.team === 'IT' ? 'PR' : 'RR')}
+                    </span>
                   </div>
-                  <p className="text-[10px] text-slate-400">
+                  <p className="text-[10px] text-[#666666]">
                     {member.department || (member.team === 'IT' ? 'IT Solutions' : 'SMM Strategy')} • {member.weeksSubmitted} wk(s)
                   </p>
                 </div>
               </div>
 
               <div className="text-right">
-                <div className="text-xl font-black text-amber-400">{member.finalScoreDisplay}</div>
-                <div className="text-[10px] text-slate-500 font-bold">/ 100 PTS</div>
+                <div className="text-xl font-black text-[#101010]">{member.finalScoreDisplay}</div>
+                <div className="text-[10px] text-[#888888] font-bold">/ 100 PTS</div>
               </div>
             </div>
 
             {/* Achievement Bar */}
             <div className="space-y-1">
               <div className="flex justify-between text-[11px]">
-                <span className="text-slate-400 font-semibold">Overall Achievement</span>
-                <span className="text-emerald-400 font-bold">
-                  {member.achievementPercentage.toFixed(1)}%
+                <span className="text-[#666666] font-semibold">Overall Achievement</span>
+                <span className="text-[#436320] font-bold">
+                  {(member.achievementPercentage ?? 0).toFixed(1)}%
                 </span>
               </div>
-              <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-[#f5f5f5] rounded-full overflow-hidden border border-[#e2ebd9]">
                 <div
-                  className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full"
-                  style={{ width: `${Math.min(member.achievementPercentage, 100)}%` }}
+                  className="h-full bg-[#8cc540] rounded-full"
+                  style={{ width: `${Math.min(member.achievementPercentage ?? 0, 100)}%` }}
                 ></div>
               </div>
             </div>
 
             {/* Metrics Grid */}
-            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800 text-center text-xs">
-              <div className="p-1.5 rounded-lg bg-slate-950">
-                <span className="text-[10px] text-slate-500 block">Revenue</span>
-                <span className="font-bold text-emerald-400">
-                  ${member.revenueGenerated.toLocaleString()}
+            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#e2ebd9] text-center text-xs">
+              <div className="p-1.5 rounded-lg bg-[#f5f5f5]">
+                <span className="text-[10px] text-[#888888] block font-medium">Net Rev (-20%)</span>
+                <span className="font-black text-[#436320]">
+                  ${Math.round((member.revenueGenerated ?? 0) * 0.8).toLocaleString()}
                 </span>
               </div>
-              <div className="p-1.5 rounded-lg bg-slate-950">
-                <span className="text-[10px] text-slate-500 block">Projects</span>
-                <span className="font-bold text-white">{member.projectClosed}</span>
+              <div className="p-1.5 rounded-lg bg-[#f5f5f5]">
+                <span className="text-[10px] text-[#888888] block font-medium">Projects</span>
+                <span className="font-bold text-[#101010]">{member.projectClosed}</span>
               </div>
-              <div className="p-1.5 rounded-lg bg-slate-950">
-                <span className="text-[10px] text-slate-500 block">Upsells</span>
-                <span className="font-bold text-cyan-400">{member.upsells}</span>
+              <div className="p-1.5 rounded-lg bg-[#f5f5f5]">
+                <span className="text-[10px] text-[#888888] block font-medium">Upsells</span>
+                <span className="font-bold text-purple-700">{member.upsells}</span>
               </div>
             </div>
 
             <div className="flex items-center justify-between pt-1">
               {getBandBadge(member.performanceBand)}
-              <div className="text-xs text-slate-400 font-medium">
-                Rating: <strong className="text-amber-400">{member.clientRating.toFixed(1)} ★</strong>
+              <div className="text-xs text-[#666666] font-medium">
+                Rating: <strong className="text-amber-600">{((member.clientRating ?? 0)).toFixed(1)} ★</strong>
               </div>
             </div>
           </div>
@@ -439,8 +523,8 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
       </div>
 
       {filteredRankings.length === 0 && (
-        <div className="text-center py-12 bg-slate-900/50 rounded-2xl border border-slate-800">
-          <p className="text-sm font-semibold text-slate-400">No performance data matches the selected filters.</p>
+        <div className="text-center py-12 bg-white rounded-2xl border border-[#e2ebd9] shadow-xs">
+          <p className="text-sm font-semibold text-[#666666]">No performance data matches the selected filters.</p>
         </div>
       )}
     </div>

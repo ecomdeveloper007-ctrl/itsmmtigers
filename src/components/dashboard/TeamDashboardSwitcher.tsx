@@ -22,9 +22,9 @@ export const TeamDashboardSwitcher: React.FC = () => {
     smmLeaderboardData,
   } = useApp();
 
-  const itStats = itLeaderboardData.teamStats;
-  const smmStats = smmLeaderboardData.teamStats;
-  const allStats = leaderboardData.teamStats;
+  const itStats = itLeaderboardData?.teamStats;
+  const smmStats = smmLeaderboardData?.teamStats;
+  const allStats = leaderboardData?.teamStats;
 
   return (
     <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 sm:p-4 shadow-xl backdrop-blur-md">
@@ -98,7 +98,7 @@ export const TeamDashboardSwitcher: React.FC = () => {
                     : 'bg-slate-800 text-cyan-400'
                 }`}
               >
-                {itStats.totalMembers} Tigers
+                {itStats?.totalMembers ?? 0} Tigers
               </span>
             </div>
           </button>
@@ -122,7 +122,7 @@ export const TeamDashboardSwitcher: React.FC = () => {
                     : 'bg-slate-800 text-pink-400'
                 }`}
               >
-                {smmStats.totalMembers} Tigers
+                {smmStats?.totalMembers ?? 0} Tigers
               </span>
             </div>
           </button>
@@ -138,7 +138,7 @@ export const TeamDashboardSwitcher: React.FC = () => {
               IT Team Output
             </span>
             <span className="font-bold text-slate-200">
-              ${itStats.totalRevenue.toLocaleString()} • {itStats.totalProjects} Projects
+              ${(itStats?.totalRevenue ?? 0).toLocaleString()} • {itStats?.totalProjects ?? 0} Projects
             </span>
           </div>
         </div>
@@ -150,7 +150,7 @@ export const TeamDashboardSwitcher: React.FC = () => {
               SMM Team Output
             </span>
             <span className="font-bold text-slate-200">
-              ${smmStats.totalRevenue.toLocaleString()} • {smmStats.totalProjects} Projects
+              ${(smmStats?.totalRevenue ?? 0).toLocaleString()} • {smmStats?.totalProjects ?? 0} Projects
             </span>
           </div>
         </div>

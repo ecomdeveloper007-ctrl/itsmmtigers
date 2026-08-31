@@ -284,13 +284,13 @@ export const WinnerModal: React.FC = () => {
                         <p className="text-[10px] text-slate-400 uppercase font-bold truncate">{kpi.name}</p>
                         <p className="text-lg font-black text-white">
                           {isCurrency
-                            ? `${settings.currencySymbol || '$'}${itemBreakdown.actual.toLocaleString()}`
+                            ? `${settings.currencySymbol || '$'}${(itemBreakdown.actual ?? 0).toLocaleString()}`
                             : isRating
-                            ? `${Number(itemBreakdown.actual).toFixed(1)}/5`
+                            ? `${Number(itemBreakdown.actual ?? 0).toFixed(1)}/5`
                             : itemBreakdown.actual}
                         </p>
                         <span className="text-[10px] text-emerald-400 font-semibold block truncate">
-                          Target: {isCurrency ? `${settings.currencySymbol || '$'}${Number(itemBreakdown.target).toLocaleString()}` : itemBreakdown.target}
+                          Target: {isCurrency ? `${settings.currencySymbol || '$'}${Number(itemBreakdown.target ?? 0).toLocaleString()}` : itemBreakdown.target}
                         </span>
                       </div>
                     );
@@ -334,7 +334,7 @@ export const WinnerModal: React.FC = () => {
                       <div>
                         <span className="text-[10px] text-slate-500 block">Revenue</span>
                         <span className="font-bold text-slate-200">
-                          ${top3[1].revenueGenerated.toLocaleString()}
+                          ${(top3[1].revenueGenerated ?? 0).toLocaleString()}
                         </span>
                       </div>
                       <div>
@@ -383,7 +383,7 @@ export const WinnerModal: React.FC = () => {
                       <div>
                         <span className="text-[10px] text-slate-500 block">Revenue</span>
                         <span className="font-bold text-slate-200">
-                          ${top3[2].revenueGenerated.toLocaleString()}
+                          ${(top3[2].revenueGenerated ?? 0).toLocaleString()}
                         </span>
                       </div>
                       <div>
@@ -416,7 +416,7 @@ export const WinnerModal: React.FC = () => {
                           <span className="font-medium text-white">{item.userName}</span>
                         </div>
                         <div className="flex items-center gap-4">
-                          <span className="text-slate-400">${item.revenueGenerated.toLocaleString()}</span>
+                          <span className="text-slate-400">${(item.revenueGenerated ?? 0).toLocaleString()}</span>
                           <span className="font-bold text-orange-400">{item.finalScoreDisplay} pts</span>
                         </div>
                       </div>

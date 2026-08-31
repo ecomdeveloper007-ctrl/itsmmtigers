@@ -47,8 +47,10 @@ export const ToastContainer: React.FC = () => {
         >
           {getIcon(toast.type)}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white leading-tight">{toast.title}</p>
-            {toast.message && (
+            {toast?.title && (
+              <p className="text-sm font-semibold text-white leading-tight">{toast.title}</p>
+            )}
+            {toast?.message && (
               <p className="text-xs text-slate-300 mt-1 leading-relaxed break-words">{toast.message}</p>
             )}
           </div>

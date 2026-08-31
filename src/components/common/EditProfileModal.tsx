@@ -14,6 +14,7 @@ import {
   Building,
   Save,
 } from 'lucide-react';
+import { PROFILE_DEPARTMENT_PRESETS, ProfileCode } from '../../types';
 
 const PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
@@ -295,17 +296,26 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
 
             <div>
               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
-                Department
+                Department Designation
               </label>
               <select
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium"
               >
-                <option value="IT Team">💻 IT Team</option>
-                <option value="SMM Team">📱 SMM Team</option>
-                <option value="Operations">⚙️ Operations</option>
-                <option value="Leadership & Ops">👑 Leadership & Ops</option>
+                {(['PR', 'WR', 'HW', 'RR', 'DR'] as ProfileCode[]).map((code) => (
+                  <optgroup key={code} label={`${code} Profile Presets`}>
+                    {(PROFILE_DEPARTMENT_PRESETS[code] || []).map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+                {department &&
+                  !Object.values(PROFILE_DEPARTMENT_PRESETS).flat().includes(department) && (
+                    <option value={department}>📌 Current: {department}</option>
+                  )}
               </select>
             </div>
           </div>

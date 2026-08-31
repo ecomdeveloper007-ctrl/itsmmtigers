@@ -13,29 +13,46 @@ import {
 
 export const KPISummaryCards: React.FC = () => {
   const { leaderboardData, settings, selectedTeam } = useApp();
-  const { teamStats, periodFilter, month, year } = leaderboardData;
+  const { teamStats, revenueSummary } = leaderboardData;
 
   const teamPrefix =
     selectedTeam === 'it' ? 'IT Team ' : selectedTeam === 'smm' ? 'SMM Team ' : 'Total ';
 
+  const sym = settings.currencySymbol || '$';
+
+  const grossRevenue =
+    selectedTeam === 'it'
+      ? revenueSummary?.itTeam?.grossRevenue ?? revenueSummary?.itRevenue?.grossRevenue ?? teamStats?.totalRevenue ?? 0
+      : selectedTeam === 'smm'
+      ? revenueSummary?.smmTeam?.grossRevenue ?? revenueSummary?.smmRevenue?.grossRevenue ?? teamStats?.totalRevenue ?? 0
+      : revenueSummary?.totalGrossRevenue ?? revenueSummary?.grandTotal?.grossRevenue ?? teamStats?.totalRevenue ?? 0;
+
+  const netRevenue =
+    selectedTeam === 'it'
+      ? revenueSummary?.itTeam?.netRevenue ?? revenueSummary?.itRevenue?.finalNetRevenue ?? Math.round(grossRevenue * 0.8)
+      : selectedTeam === 'smm'
+      ? revenueSummary?.smmTeam?.netRevenue ?? revenueSummary?.smmRevenue?.finalNetRevenue ?? Math.round(grossRevenue * 0.8)
+      : revenueSummary?.totalNetRevenue ?? revenueSummary?.grandTotal?.finalNetRevenue ?? Math.round(grossRevenue * 0.8);
+
+  const feeAmount = Math.round((grossRevenue || 0) * 0.2);
+
   const cards = [
     {
       title: `${teamPrefix}Members`,
-      value: teamStats.totalMembers,
+      value: teamStats?.totalMembers ?? 0,
       subtitle:
         selectedTeam === 'it'
-          ? 'Active Tech Tigers'
+          ? 'Active Tech Tigers (PR, WR, HW)'
           : selectedTeam === 'smm'
-          ? 'Active Social Tigers'
-          : 'Active Tiger Performers',
+          ? 'Active Social Tigers (RR, DR)'
+          : 'Active Tiger Performers (5 Profiles)',
       icon: Users,
-      color: 'text-indigo-400',
-      bgColor: 'from-indigo-500/10 to-indigo-950/30',
-      borderColor: 'border-indigo-500/30',
+      iconColor: 'text-[#436320]',
+      iconBg: 'bg-[#f3f8ef] border-[#8cc540]/30',
     },
     {
       title: `${teamPrefix}Projects Closed`,
-      value: teamStats.totalProjects,
+      value: teamStats?.totalProjects ?? 0,
       subtitle:
         selectedTeam === 'it'
           ? 'IT Solutions & Apps Delivered'
@@ -43,27 +60,21 @@ export const KPISummaryCards: React.FC = () => {
           ? 'Client Campaigns Delivered'
           : 'Total Projects Delivered',
       icon: Briefcase,
-      color: 'text-orange-400',
-      bgColor: 'from-orange-500/10 to-orange-950/30',
-      borderColor: 'border-orange-500/30',
+      iconColor: 'text-blue-700',
+      iconBg: 'bg-blue-50 border-blue-200',
     },
     {
-      title: `${teamPrefix}Revenue`,
-      value: `${settings.currencySymbol || '$'}${teamStats.totalRevenue.toLocaleString()}`,
-      subtitle:
-        selectedTeam === 'it'
-          ? 'IT Division Billing'
-          : selectedTeam === 'smm'
-          ? 'SMM Division Billing'
-          : 'Aggregate Team Billing',
+      title: `${teamPrefix}Final Net Revenue`,
+      value: `${sym}${(netRevenue || 0).toLocaleString()}`,
+      subtitle: `Gross: ${sym}${(grossRevenue || 0).toLocaleString()} (-20% fee: -${sym}${(feeAmount || 0).toLocaleString()})`,
       icon: DollarSign,
-      color: 'text-emerald-400',
-      bgColor: 'from-emerald-500/10 to-emerald-950/30',
-      borderColor: 'border-emerald-500/30',
+      iconColor: 'text-[#436320]',
+      iconBg: 'bg-[#8cc540]/20 border-[#8cc540]',
+      highlight: true,
     },
     {
       title: `${teamPrefix}Upsells`,
-      value: teamStats.totalUpsells,
+      value: teamStats?.totalUpsells ?? 0,
       subtitle:
         selectedTeam === 'it'
           ? 'Tech Addons & Maintenance Expansions'
@@ -71,45 +82,40 @@ export const KPISummaryCards: React.FC = () => {
           ? 'Package & Retainer Expansions'
           : 'Upsell Expansions',
       icon: TrendingUp,
-      color: 'text-cyan-400',
-      bgColor: 'from-cyan-500/10 to-cyan-950/30',
-      borderColor: 'border-cyan-500/30',
+      iconColor: 'text-purple-700',
+      iconBg: 'bg-purple-50 border-purple-200',
     },
     {
       title: `${teamPrefix}Avg Rating`,
-      value: teamStats.avgClientRating > 0 ? `${teamStats.avgClientRating.toFixed(2)} ★` : '0.0 ★',
+      value: (teamStats?.avgClientRating ?? 0) > 0 ? `${(teamStats.avgClientRating).toFixed(2)} ★` : '0.0 ★',
       subtitle: 'Out of 5.0 Star Satisfaction',
       icon: Star,
-      color: 'text-amber-400',
-      bgColor: 'from-amber-500/10 to-amber-950/30',
-      borderColor: 'border-amber-500/30',
+      iconColor: 'text-amber-600',
+      iconBg: 'bg-amber-50 border-amber-200',
     },
     {
       title: `${teamPrefix}Follow-ups`,
-      value: teamStats.totalFollowups,
+      value: teamStats?.totalFollowups ?? 0,
       subtitle: 'Client Engagement Touches',
       icon: PhoneCall,
-      color: 'text-purple-400',
-      bgColor: 'from-purple-500/10 to-purple-950/30',
-      borderColor: 'border-purple-500/30',
+      iconColor: 'text-indigo-700',
+      iconBg: 'bg-indigo-50 border-indigo-200',
     },
     {
       title: `${teamPrefix}Repeat Clients`,
-      value: teamStats.totalRepeatClients,
+      value: teamStats?.totalRepeatClients ?? 0,
       subtitle: 'Recurring Account Retentions',
       icon: Repeat,
-      color: 'text-pink-400',
-      bgColor: 'from-pink-500/10 to-pink-950/30',
-      borderColor: 'border-pink-500/30',
+      iconColor: 'text-emerald-700',
+      iconBg: 'bg-emerald-50 border-emerald-200',
     },
     {
       title: `${teamPrefix}Avg Score`,
-      value: `${teamStats.avgTeamScore.toFixed(2)} / 100`,
+      value: `${(teamStats?.avgTeamScore ?? 0).toFixed(2)} / 100`,
       subtitle: 'Division Weighted Performance',
       icon: Award,
-      color: 'text-amber-300',
-      bgColor: 'from-amber-500/15 via-orange-950/40 to-slate-900',
-      borderColor: 'border-amber-500/40',
+      iconColor: 'text-[#101010]',
+      iconBg: 'bg-[#8cc540]/30 border-[#8cc540]',
     },
   ];
 
@@ -120,18 +126,18 @@ export const KPISummaryCards: React.FC = () => {
         return (
           <div
             key={idx}
-            className={`relative rounded-2xl bg-gradient-to-br ${card.bgColor} border ${card.borderColor} p-5 shadow-lg backdrop-blur-sm transition-all hover:translate-y-[-2px] hover:shadow-xl`}
+            className="relative rounded-2xl bg-white border border-[#e2ebd9] p-5 shadow-sm transition-all hover:translate-y-[-2px] hover:shadow-md"
           >
             <div className="flex items-start justify-between">
               <div className="space-y-1">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                <span className="text-xs font-black text-[#555555] uppercase tracking-wider">
                   {card.title}
                 </span>
-                <p className="text-2xl font-black text-white tracking-tight">{card.value}</p>
-                <p className="text-[11px] text-slate-400 font-medium">{card.subtitle}</p>
+                <p className="text-2xl font-black text-[#101010] tracking-tight">{card.value}</p>
+                <p className="text-[11px] text-[#666666] font-medium">{card.subtitle}</p>
               </div>
 
-              <div className={`p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 ${card.color}`}>
+              <div className={`p-2.5 rounded-xl border ${card.iconBg} ${card.iconColor}`}>
                 <Icon className="w-5 h-5" />
               </div>
             </div>

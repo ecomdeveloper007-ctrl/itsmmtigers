@@ -1,11 +1,42 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Bricolage Grotesque', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --color-brand: #8cc540;
+  --color-brand-50: #f3f8ef;
+  --color-brand-100: #e3f2d2;
+  --color-brand-200: #cce7aa;
+  --color-brand-300: #b0da7a;
+  --color-brand-400: #9dd05a;
+  --color-brand-500: #8cc540;
+  --color-brand-600: #74a831;
+  --color-brand-700: #598327;
+  --color-brand-800: #436320;
+  --color-brand-900: #2d4317;
+  --color-dark: #101010;
+  --color-dark-surface: #181818;
+  --color-dark-muted: #242424;
+  --color-surface-light: #ffffff;
+  --color-canvas: #f3f8ef;
+  --color-neutral-bg: #f5f5f5;
+}
+
 @layer base {
+  * {
+    border-color: #e4ece0;
+  }
+  
+  html {
+    font-family: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
   body {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: #030712;
-    color: #f8fafc;
+    font-family: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #f3f8ef;
+    color: #101010;
     overflow-x: hidden;
+    letter-spacing: -0.01em;
   }
 
   code, pre, .font-mono {
@@ -20,25 +51,26 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #0b0f19;
+  background: #f5f5f5;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1f2937;
-  border-radius: 4px;
+  background: #c8d8be;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #f97316;
+  background: #8cc540;
 }
 
 /* Print Styles */
 @media print {
   body {
     background: #ffffff !important;
-    color: #000000 !important;
+    color: #101010 !important;
   }
   header, nav, .print-hidden {
     display: none !important;
   }
 }
+
