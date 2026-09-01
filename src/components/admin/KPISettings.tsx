@@ -436,7 +436,7 @@ export const KPISettings: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner & Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/90 p-5 rounded-3xl border border-slate-800 shadow-xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/95 p-5 rounded-3xl border border-slate-750 shadow-xl">
         <div>
           <div className="flex items-center gap-2">
             <span className="p-2 rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/20 text-orange-400 border border-orange-500/30">
@@ -445,11 +445,11 @@ export const KPISettings: React.FC = () => {
             <div>
               <h2 className="text-lg font-black text-white flex items-center gap-2">
                 Super Admin KPI & Target Management
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/25 text-amber-200 border border-amber-400/50">
                   Monthly / Weekly Cadence
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-300 mt-0.5">
                 Update performance targets on monthly or weekly basis for IT Team & SMM Team with automated leaderboards
               </p>
             </div>
@@ -460,7 +460,7 @@ export const KPISettings: React.FC = () => {
           <button
             type="button"
             onClick={handleResetDefaults}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Reset Defaults
@@ -469,14 +469,14 @@ export const KPISettings: React.FC = () => {
       </div>
 
       {/* Main Tab Navigation */}
-      <div className="flex items-center gap-2 p-1.5 bg-slate-900/90 border border-slate-800 rounded-2xl overflow-x-auto shadow-md">
+      <div className="flex items-center gap-2 p-1.5 bg-slate-900/95 border border-slate-750 rounded-2xl overflow-x-auto shadow-md">
         <button
           type="button"
           onClick={() => setActiveTab('targets')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'targets'
               ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 shadow-md shadow-orange-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              : 'text-slate-300 hover:text-white hover:bg-slate-800 font-bold'
           }`}
         >
           <Target className="w-4 h-4" />
@@ -489,7 +489,7 @@ export const KPISettings: React.FC = () => {
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'matrix'
               ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 shadow-md shadow-orange-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              : 'text-slate-300 hover:text-white hover:bg-slate-800 font-bold'
           }`}
         >
           <Layers className="w-4 h-4" />
@@ -502,7 +502,7 @@ export const KPISettings: React.FC = () => {
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'weights'
               ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 shadow-md shadow-orange-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              : 'text-slate-300 hover:text-white hover:bg-slate-800 font-bold'
           }`}
         >
           <Percent className="w-4 h-4" />
@@ -515,7 +515,7 @@ export const KPISettings: React.FC = () => {
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'rules'
               ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 shadow-md shadow-orange-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              : 'text-slate-300 hover:text-white hover:bg-slate-800 font-bold'
           }`}
         >
           <Sliders className="w-4 h-4" />
@@ -527,21 +527,21 @@ export const KPISettings: React.FC = () => {
       <div
         className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${
           validation.isValid
-            ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-            : 'bg-rose-950/40 border-rose-500/50 text-rose-200 animate-pulse'
+            ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-100 shadow-md'
+            : 'bg-rose-950/60 border-rose-500/60 text-rose-100 animate-pulse'
         }`}
       >
         <div className="flex items-center gap-3">
           {validation.isValid ? (
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-5 h-5 text-emerald-300 shrink-0" />
           ) : (
-            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+            <AlertCircle className="w-5 h-5 text-rose-300 shrink-0" />
           )}
           <div>
-            <span className="text-xs font-bold block">
-              Total KPI Weight Distribution: <strong>{validation.totalWeight}%</strong> / 100%
+            <span className="text-xs font-bold block text-white">
+              Total KPI Weight Distribution: <strong className="text-emerald-300 font-mono text-sm">{validation.totalWeight}%</strong> / 100%
             </span>
-            <span className="text-[11px] opacity-80">
+            <span className="text-[11px] text-slate-200">
               {validation.isValid
                 ? 'Valid distribution. All KPI scores will compute cleanly.'
                 : 'Warning: Total KPI weight must equal 100% before you can save.'}
@@ -551,7 +551,7 @@ export const KPISettings: React.FC = () => {
 
         <span
           className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-            validation.isValid ? 'bg-emerald-500 text-slate-950' : 'bg-rose-500 text-white'
+            validation.isValid ? 'bg-emerald-400 text-slate-950' : 'bg-rose-500 text-white'
           }`}
         >
           {validation.isValid ? '✓ Valid (100%)' : `≠ ${validation.totalWeight}%`}
@@ -559,7 +559,7 @@ export const KPISettings: React.FC = () => {
       </div>
 
       {errorMessage && (
-        <div className="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs font-semibold flex items-center gap-2">
+        <div className="p-3.5 rounded-xl bg-rose-500/20 border border-rose-500/50 text-rose-200 text-xs font-bold flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
@@ -569,21 +569,21 @@ export const KPISettings: React.FC = () => {
       {activeTab === 'targets' && (
         <div className="space-y-6">
           {/* Target Cadence & Scope Selector Control Bar */}
-          <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div className="p-5 rounded-3xl bg-slate-900/95 border border-slate-750 shadow-xl space-y-4">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-slate-750 pb-4">
               {/* Cadence Switcher: Monthly vs Weekly */}
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
                   Target Cadence:
                 </span>
-                <div className="inline-flex p-1 rounded-xl bg-slate-950 border border-slate-800">
+                <div className="inline-flex p-1 rounded-xl bg-slate-950 border border-slate-700">
                   <button
                     type="button"
                     onClick={() => setTargetCadence('monthly')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       targetCadence === 'monthly'
-                        ? 'bg-orange-500 text-slate-950 shadow-md'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-orange-500 text-slate-950 shadow-md font-black'
+                        : 'text-slate-300 hover:text-white'
                     }`}
                   >
                     <Calendar className="w-3.5 h-3.5" />
@@ -594,8 +594,8 @@ export const KPISettings: React.FC = () => {
                     onClick={() => setTargetCadence('weekly')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       targetCadence === 'weekly'
-                        ? 'bg-orange-500 text-slate-950 shadow-md'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-orange-500 text-slate-950 shadow-md font-black'
+                        : 'text-slate-300 hover:text-white'
                     }`}
                   >
                     <Clock className="w-3.5 h-3.5" />
@@ -606,17 +606,17 @@ export const KPISettings: React.FC = () => {
 
               {/* Team Division Scope */}
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
                   Team Scope:
                 </span>
-                <div className="inline-flex p-1 rounded-xl bg-slate-950 border border-slate-800">
+                <div className="inline-flex p-1 rounded-xl bg-slate-950 border border-slate-700">
                   <button
                     type="button"
                     onClick={() => setTargetTeam('all')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       targetTeam === 'all'
-                        ? 'bg-amber-500 text-slate-950 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-amber-500 text-slate-950 shadow-sm font-black'
+                        : 'text-slate-300 hover:text-white'
                     }`}
                   >
                     🌟 All Teams
@@ -626,8 +626,8 @@ export const KPISettings: React.FC = () => {
                     onClick={() => setTargetTeam('it')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       targetTeam === 'it'
-                        ? 'bg-cyan-500 text-slate-950 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-cyan-500 text-slate-950 shadow-sm font-black'
+                        : 'text-slate-300 hover:text-white'
                     }`}
                   >
                     💻 IT Team
@@ -637,8 +637,8 @@ export const KPISettings: React.FC = () => {
                     onClick={() => setTargetTeam('smm')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       targetTeam === 'smm'
-                        ? 'bg-pink-500 text-slate-950 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-pink-500 text-slate-950 shadow-sm font-black'
+                        : 'text-slate-300 hover:text-white'
                     }`}
                   >
                     📱 SMM Team
@@ -650,59 +650,59 @@ export const KPISettings: React.FC = () => {
             {/* Scope Filter Controls: Month, Year, Week */}
             <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3 items-center">
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                <label className="block text-[10px] font-bold text-slate-300 uppercase mb-1">
                   Target Month
                 </label>
                 <select
                   value={targetMonth}
                   onChange={(e) => setTargetMonth(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
                 >
-                  <option value="August">August</option>
-                  <option value="September">September</option>
-                  <option value="October">October</option>
-                  <option value="November">November</option>
-                  <option value="December">December</option>
-                  <option value="January">January</option>
-                  <option value="February">February</option>
-                  <option value="March">March</option>
-                  <option value="April">April</option>
-                  <option value="May">May</option>
-                  <option value="June">June</option>
-                  <option value="July">July</option>
+                  <option value="August" className="bg-slate-900 text-white">August</option>
+                  <option value="September" className="bg-slate-900 text-white">September</option>
+                  <option value="October" className="bg-slate-900 text-white">October</option>
+                  <option value="November" className="bg-slate-900 text-white">November</option>
+                  <option value="December" className="bg-slate-900 text-white">December</option>
+                  <option value="January" className="bg-slate-900 text-white">January</option>
+                  <option value="February" className="bg-slate-900 text-white">February</option>
+                  <option value="March" className="bg-slate-900 text-white">March</option>
+                  <option value="April" className="bg-slate-900 text-white">April</option>
+                  <option value="May" className="bg-slate-900 text-white">May</option>
+                  <option value="June" className="bg-slate-900 text-white">June</option>
+                  <option value="July" className="bg-slate-900 text-white">July</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                <label className="block text-[10px] font-bold text-slate-300 uppercase mb-1">
                   Target Year
                 </label>
                 <select
                   value={targetYear}
                   onChange={(e) => setTargetYear(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
                 >
-                  <option value={2026}>2026</option>
-                  <option value={2025}>2025</option>
-                  <option value={2027}>2027</option>
+                  <option value={2026} className="bg-slate-900 text-white">2026</option>
+                  <option value={2025} className="bg-slate-900 text-white">2025</option>
+                  <option value={2027} className="bg-slate-900 text-white">2027</option>
                 </select>
               </div>
 
               {targetCadence === 'weekly' && (
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                  <label className="block text-[10px] font-bold text-slate-300 uppercase mb-1">
                     Target Week
                   </label>
                   <select
                     value={targetWeek}
                     onChange={(e) => setTargetWeek(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-orange-300 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-orange-300 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
                   >
-                    <option value="Week 1">Week 1</option>
-                    <option value="Week 2">Week 2</option>
-                    <option value="Week 3">Week 3</option>
-                    <option value="Week 4">Week 4</option>
-                    <option value="Week 5">Week 5</option>
+                    <option value="Week 1" className="bg-slate-900 text-white">Week 1</option>
+                    <option value="Week 2" className="bg-slate-900 text-white">Week 2</option>
+                    <option value="Week 3" className="bg-slate-900 text-white">Week 3</option>
+                    <option value="Week 4" className="bg-slate-900 text-white">Week 4</option>
+                    <option value="Week 5" className="bg-slate-900 text-white">Week 5</option>
                   </select>
                 </div>
               )}
@@ -712,7 +712,7 @@ export const KPISettings: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleLoadITPresets}
-                  className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800/60 hover:bg-cyan-900 transition-colors cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-cyan-950 text-cyan-200 border border-cyan-700 hover:bg-cyan-900 transition-colors cursor-pointer"
                   title="Load recommended benchmarks for IT Engineers"
                 >
                   💻 Load IT Presets
@@ -720,7 +720,7 @@ export const KPISettings: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleLoadSMMPresets}
-                  className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-pink-950 text-pink-300 border border-pink-800/60 hover:bg-pink-900 transition-colors cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-pink-950 text-pink-200 border border-pink-700 hover:bg-pink-900 transition-colors cursor-pointer"
                   title="Load recommended benchmarks for SMM Specialists"
                 >
                   📱 Load SMM Presets
@@ -729,12 +729,12 @@ export const KPISettings: React.FC = () => {
             </div>
 
             {/* Smart Converter Bar */}
-            <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 text-slate-300">
+            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-slate-200">
                 <Zap className="w-4 h-4 text-amber-400" />
                 <span>
                   Currently Editing:{' '}
-                  <strong className="text-white">
+                  <strong className="text-white font-bold">
                     {targetTeam === 'it' ? 'IT Team' : targetTeam === 'smm' ? 'SMM Team' : 'All Teams'} -{' '}
                     {targetCadence === 'monthly' ? `${targetMonth} ${targetYear} (Full Month)` : `${targetMonth} ${targetYear} (${targetWeek})`}
                   </strong>
@@ -746,7 +746,7 @@ export const KPISettings: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleAutoDivideMonthly}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold bg-slate-800 hover:bg-slate-700 text-orange-400 border border-slate-700 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold bg-slate-800 hover:bg-slate-700 text-orange-300 border border-slate-600 transition-colors cursor-pointer"
                     title="Auto-calculate and set weekly targets = monthly / 4"
                   >
                     <Divide className="w-3.5 h-3.5" />
@@ -757,7 +757,7 @@ export const KPISettings: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleAutoMultiplyWeekly}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold bg-slate-800 hover:bg-slate-700 text-orange-400 border border-slate-700 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold bg-slate-800 hover:bg-slate-700 text-orange-300 border border-slate-600 transition-colors cursor-pointer"
                       title="Auto-calculate and set monthly target = weekly * 4"
                     >
                       <Calculator className="w-3.5 h-3.5" />
@@ -766,7 +766,7 @@ export const KPISettings: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleApplyWeekToAllWeeks}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold bg-slate-800 hover:bg-slate-700 text-amber-200 border border-slate-600 transition-colors cursor-pointer"
                       title="Apply this week's target values to Weeks 1-4"
                     >
                       <Copy className="w-3.5 h-3.5" />
@@ -790,31 +790,31 @@ export const KPISettings: React.FC = () => {
                   key={kpi.id}
                   className={`p-5 rounded-3xl border transition-all ${
                     kpi.active
-                      ? 'bg-slate-900/90 border-slate-800 shadow-xl'
+                      ? 'bg-slate-900/95 border-slate-750 shadow-xl'
                       : 'bg-slate-900/40 border-slate-800/40 opacity-50'
                   }`}
                 >
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-750">
                     <div className="flex items-center gap-2.5">
-                      <div className="p-2 rounded-xl bg-slate-950 border border-slate-800">
+                      <div className="p-2 rounded-xl bg-slate-950 border border-slate-700">
                         {getKPIIcon(kpi.key)}
                       </div>
                       <div>
                         <h4 className="text-sm font-bold text-white leading-tight">{kpi.name}</h4>
-                        <span className="text-[10px] text-slate-400 font-semibold">
-                          Weight: {kpi.weight}% • Unit: {kpi.unit}
+                        <span className="text-[10px] text-slate-300 font-bold">
+                          Weight: <span className="text-amber-300">{kpi.weight}%</span> • Unit: {kpi.unit}
                         </span>
                       </div>
                     </div>
 
-                    <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-slate-950 text-slate-300 border border-slate-800">
+                    <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-slate-950 text-slate-200 border border-slate-700">
                       {targetCadence === 'weekly' ? 'Weekly Target' : 'Monthly Target'}
                     </span>
                   </div>
 
                   <div className="mt-4 space-y-3">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      <label className="block text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-1">
                         {targetCadence === 'weekly'
                           ? `Target Value for ${targetWeek} (${kpi.unit})`
                           : `Target Value for ${targetMonth} (${kpi.unit})`}
@@ -826,32 +826,32 @@ export const KPISettings: React.FC = () => {
                           step={kpi.isRating ? '0.1' : 'any'}
                           value={currentVal}
                           onChange={(e) => handleScopeTargetChange(kpi.id, Number(e.target.value))}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-base font-black text-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-500 font-mono shadow-inner"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-base font-black text-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-500 font-mono shadow-inner"
                         />
-                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">
+                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
                           {kpi.unit}
                         </span>
                       </div>
                     </div>
 
                     {/* Prorated Context helper */}
-                    <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 text-[11px] text-slate-400 flex items-center justify-between">
+                    <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-[11px] text-slate-300 flex items-center justify-between">
                       {targetCadence === 'monthly' ? (
                         <span>
                           Weekly Equivalent:{' '}
-                          <strong className="text-slate-200">
+                          <strong className="text-white font-bold">
                             {weeklyEst} {kpi.unit}/wk
                           </strong>
                         </span>
                       ) : (
                         <span>
                           Monthly Equivalent:{' '}
-                          <strong className="text-slate-200">
+                          <strong className="text-white font-bold">
                             {monthlyEst} {kpi.unit}/mo
                           </strong>
                         </span>
                       )}
-                      <span className="text-emerald-400 font-semibold">Active in scoring</span>
+                      <span className="text-emerald-300 font-bold">Active in scoring</span>
                     </div>
                   </div>
                 </div>
@@ -864,14 +864,14 @@ export const KPISettings: React.FC = () => {
       {/* TAB 2: 4-WEEK TARGET MATRIX */}
       {activeTab === 'matrix' && (
         <div className="space-y-6">
-          <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div className="p-5 rounded-3xl bg-slate-900/95 border border-slate-750 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-750 pb-4">
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <Layers className="w-5 h-5 text-orange-400" />
                   Performance Period Target Matrix
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-300 mt-0.5">
                   Side-by-side view of Monthly targets alongside Week 1, Week 2, Week 3, and Week 4
                 </p>
               </div>
@@ -881,32 +881,32 @@ export const KPISettings: React.FC = () => {
                 <select
                   value={targetMonth}
                   onChange={(e) => setTargetMonth(e.target.value)}
-                  className="bg-slate-950 text-xs font-bold text-white rounded-xl px-3 py-2 border border-slate-800"
+                  className="bg-slate-950 text-xs font-bold text-white rounded-xl px-3 py-2 border border-slate-700 cursor-pointer"
                 >
-                  <option value="August">August</option>
-                  <option value="September">September</option>
-                  <option value="October">October</option>
-                  <option value="November">November</option>
-                  <option value="December">December</option>
+                  <option value="August" className="bg-slate-900 text-white">August</option>
+                  <option value="September" className="bg-slate-900 text-white">September</option>
+                  <option value="October" className="bg-slate-900 text-white">October</option>
+                  <option value="November" className="bg-slate-900 text-white">November</option>
+                  <option value="December" className="bg-slate-900 text-white">December</option>
                 </select>
 
                 <select
                   value={targetYear}
                   onChange={(e) => setTargetYear(Number(e.target.value))}
-                  className="bg-slate-950 text-xs font-bold text-white rounded-xl px-3 py-2 border border-slate-800"
+                  className="bg-slate-950 text-xs font-bold text-white rounded-xl px-3 py-2 border border-slate-700 cursor-pointer"
                 >
-                  <option value={2026}>2026</option>
-                  <option value={2025}>2025</option>
+                  <option value={2026} className="bg-slate-900 text-white">2026</option>
+                  <option value={2025} className="bg-slate-900 text-white">2025</option>
                 </select>
 
                 <select
                   value={targetTeam}
                   onChange={(e) => setTargetTeam(e.target.value as any)}
-                  className="bg-slate-950 text-xs font-bold text-orange-300 rounded-xl px-3 py-2 border border-orange-500/30"
+                  className="bg-slate-950 text-xs font-bold text-orange-300 rounded-xl px-3 py-2 border border-orange-500/50 cursor-pointer"
                 >
-                  <option value="all">🌟 All Teams</option>
-                  <option value="it">💻 IT Team</option>
-                  <option value="smm">📱 SMM Team</option>
+                  <option value="all" className="bg-slate-900 text-white">🌟 All Teams</option>
+                  <option value="it" className="bg-slate-900 text-white">💻 IT Team</option>
+                  <option value="smm" className="bg-slate-900 text-white">📱 SMM Team</option>
                 </select>
               </div>
             </div>
@@ -915,16 +915,16 @@ export const KPISettings: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-800 bg-slate-950/80 text-slate-400 font-bold uppercase tracking-wider">
+                  <tr className="border-b border-slate-750 bg-slate-950 text-slate-300 font-bold uppercase tracking-wider">
                     <th className="py-3 px-4">KPI Metric</th>
                     <th className="py-3 px-3">Weight</th>
                     <th className="py-3 px-3">Unit</th>
-                    <th className="py-3 px-3 text-orange-400">Monthly Target</th>
+                    <th className="py-3 px-3 text-orange-300">Monthly Target</th>
                     <th className="py-3 px-3">Week 1</th>
                     <th className="py-3 px-3">Week 2</th>
                     <th className="py-3 px-3">Week 3</th>
                     <th className="py-3 px-3">Week 4</th>
-                    <th className="py-3 px-4 text-emerald-400">4-Wk Sum</th>
+                    <th className="py-3 px-4 text-emerald-300">4-Wk Sum</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
@@ -959,13 +959,13 @@ export const KPISettings: React.FC = () => {
                     const weekSum = kpi.isRating ? (w1 + w2 + w3 + w4) / 4 : w1 + w2 + w3 + w4;
 
                     return (
-                      <tr key={kpi.id} className="hover:bg-slate-950/40">
+                      <tr key={kpi.id} className="hover:bg-slate-800/50 transition-colors">
                         <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
                           {getKPIIcon(kpi.key)}
-                          <span>{kpi.name}</span>
+                          <span className="text-white">{kpi.name}</span>
                         </td>
-                        <td className="py-3 px-3 font-semibold text-amber-400">{kpi.weight}%</td>
-                        <td className="py-3 px-3 text-slate-400 font-mono">{kpi.unit}</td>
+                        <td className="py-3 px-3 font-bold text-amber-300">{kpi.weight}%</td>
+                        <td className="py-3 px-3 text-slate-300 font-mono font-medium">{kpi.unit}</td>
 
                         {/* Monthly Target Input */}
                         <td className="py-3 px-3">
@@ -977,7 +977,7 @@ export const KPISettings: React.FC = () => {
                             onChange={(e) =>
                               handleMatrixMonthTargetChange(kpi.id, Number(e.target.value))
                             }
-                            className="w-24 bg-slate-950 border border-orange-500/40 rounded-lg px-2.5 py-1 text-xs font-bold text-orange-300 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                            className="w-24 bg-slate-950 border border-orange-500/50 rounded-lg px-2.5 py-1 text-xs font-bold text-orange-300 focus:outline-none focus:ring-1 focus:ring-orange-500"
                           />
                         </td>
 
@@ -991,7 +991,7 @@ export const KPISettings: React.FC = () => {
                             onChange={(e) =>
                               handleMatrixWeekTargetChange(kpi.id, 'Week 1', Number(e.target.value))
                             }
-                            className="w-20 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                            className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                           />
                         </td>
 
@@ -1005,7 +1005,7 @@ export const KPISettings: React.FC = () => {
                             onChange={(e) =>
                               handleMatrixWeekTargetChange(kpi.id, 'Week 2', Number(e.target.value))
                             }
-                            className="w-20 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                            className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                           />
                         </td>
 
@@ -1019,7 +1019,7 @@ export const KPISettings: React.FC = () => {
                             onChange={(e) =>
                               handleMatrixWeekTargetChange(kpi.id, 'Week 3', Number(e.target.value))
                             }
-                            className="w-20 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                            className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                           />
                         </td>
 
@@ -1033,14 +1033,14 @@ export const KPISettings: React.FC = () => {
                             onChange={(e) =>
                               handleMatrixWeekTargetChange(kpi.id, 'Week 4', Number(e.target.value))
                             }
-                            className="w-20 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                            className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                           />
                         </td>
 
                         {/* Total 4-Wk Sum */}
-                        <td className="py-3 px-4 font-mono font-bold text-emerald-400">
+                        <td className="py-3 px-4 font-mono font-bold text-emerald-300">
                           {kpi.isRating ? weekSum.toFixed(1) : weekSum.toLocaleString()}{' '}
-                          <span className="text-[10px] text-slate-500">{kpi.unit}</span>
+                          <span className="text-[10px] text-slate-400">{kpi.unit}</span>
                         </td>
                       </tr>
                     );
@@ -1055,8 +1055,8 @@ export const KPISettings: React.FC = () => {
       {/* TAB 3: KPI WEIGHTS & ORDER (100% Distribution) */}
       {activeTab === 'weights' && (
         <div className="space-y-6">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 space-y-4 shadow-xl">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3">
+          <div className="rounded-3xl border border-slate-750 bg-slate-900/95 p-6 space-y-4 shadow-xl">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-750 pb-3">
               KPI Weight Breakdown (Must Total Exactly 100%)
             </h3>
 
@@ -1066,27 +1066,27 @@ export const KPISettings: React.FC = () => {
                   key={kpi.id}
                   className={`p-4 rounded-2xl border transition-all ${
                     kpi.active
-                      ? 'bg-slate-950 border-slate-800'
+                      ? 'bg-slate-950 border-slate-700'
                       : 'bg-slate-950/40 border-slate-800/40 opacity-60'
                   }`}
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
                     {/* KPI Name */}
                     <div className="sm:col-span-5">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      <label className="block text-[10px] font-bold text-slate-300 uppercase mb-1">
                         KPI Name
                       </label>
                       <input
                         type="text"
                         value={kpi.name}
                         onChange={(e) => handleNameChange(kpi.id, e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                       />
                     </div>
 
                     {/* Weight % */}
                     <div className="sm:col-span-3">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      <label className="block text-[10px] font-bold text-slate-300 uppercase mb-1">
                         Weight (%)
                       </label>
                       <div className="relative">
@@ -1097,15 +1097,15 @@ export const KPISettings: React.FC = () => {
                           step="1"
                           value={kpi.weight}
                           onChange={(e) => handleWeightChange(kpi.id, Number(e.target.value))}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-3 pr-7 py-2 text-xs font-black text-amber-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-3 pr-7 py-2 text-xs font-black text-amber-300 focus:outline-none focus:ring-1 focus:ring-orange-500"
                         />
-                        <Percent className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                        <Percent className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
                       </div>
                     </div>
 
                     {/* Unit */}
                     <div className="sm:col-span-3">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      <label className="block text-[10px] font-bold text-slate-300 uppercase mb-1">
                         Measurement Unit
                       </label>
                       <input
@@ -1116,7 +1116,7 @@ export const KPISettings: React.FC = () => {
                             prev.map((k) => (k.id === kpi.id ? { ...k, unit: e.target.value } : k))
                           )
                         }
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-300 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-orange-500"
                       />
                     </div>
 
@@ -1125,10 +1125,10 @@ export const KPISettings: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleToggleActive(kpi.id)}
-                        className={`p-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                        className={`px-3 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                           kpi.active
-                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                            : 'bg-slate-800 text-slate-500'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 hover:bg-emerald-500/30'
+                            : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700'
                         }`}
                         title={kpi.active ? 'Disable KPI' : 'Enable KPI'}
                       >
@@ -1146,14 +1146,14 @@ export const KPISettings: React.FC = () => {
       {/* TAB 4: GLOBAL SCORING RULES */}
       {activeTab === 'rules' && (
         <div className="space-y-6">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 space-y-4 shadow-xl">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3">
+          <div className="rounded-3xl border border-slate-750 bg-slate-900/95 p-6 space-y-4 shadow-xl">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-750 pb-3">
               Global Scoring & Display Thresholds
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
                   Currency Symbol
                 </label>
                 <select
@@ -1165,18 +1165,18 @@ export const KPISettings: React.FC = () => {
                       currency: e.target.value === '$' ? 'USD' : e.target.value === '€' ? 'EUR' : 'INR',
                     })
                   }
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
                 >
-                  <option value="$">USD ($)</option>
-                  <option value="€">EUR (€)</option>
-                  <option value="£">GBP (£)</option>
-                  <option value="₹">INR (₹)</option>
-                  <option value="AED">AED</option>
+                  <option value="$" className="bg-slate-900 text-white">USD ($)</option>
+                  <option value="€" className="bg-slate-900 text-white">EUR (€)</option>
+                  <option value="£" className="bg-slate-900 text-white">GBP (£)</option>
+                  <option value="₹" className="bg-slate-900 text-white">INR (₹)</option>
+                  <option value="AED" className="bg-slate-900 text-white">AED</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
                   Score Display Decimals
                 </label>
                 <select
@@ -1187,16 +1187,16 @@ export const KPISettings: React.FC = () => {
                       scoreDecimalPlaces: Number(e.target.value),
                     })
                   }
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
                 >
-                  <option value={2}>2 Decimal Places (Standard, e.g. 68.02)</option>
-                  <option value={1}>1 Decimal Place (e.g. 68.0)</option>
-                  <option value={0}>0 Decimal Places (Rounded Integer)</option>
+                  <option value={2} className="bg-slate-900 text-white">2 Decimal Places (Standard, e.g. 68.02)</option>
+                  <option value={1} className="bg-slate-900 text-white">1 Decimal Place (e.g. 68.0)</option>
+                  <option value={0} className="bg-slate-900 text-white">0 Decimal Places (Rounded Integer)</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
                   Max Achievement Cap (%)
                 </label>
                 <input
@@ -1210,22 +1210,22 @@ export const KPISettings: React.FC = () => {
                       achievementCap: Number(e.target.value),
                     })
                   }
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                 />
-                <span className="text-[10px] text-slate-400 mt-1 block">
+                <span className="text-[10px] text-slate-300 font-medium mt-1 block">
                   Standard cap is 100% to prevent over-weighting
                 </span>
               </div>
             </div>
 
             {/* Performance Bands Thresholds */}
-            <div className="pt-4 border-t border-slate-800">
-              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">
+            <div className="pt-4 border-t border-slate-750">
+              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">
                 Performance Rating Bands (Score Cutoffs)
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-emerald-400 uppercase mb-1">
+                  <label className="block text-[10px] font-bold text-emerald-300 uppercase mb-1">
                     Excellent Cutoff (PTS)
                   </label>
                   <input
@@ -1239,12 +1239,12 @@ export const KPISettings: React.FC = () => {
                         excellenceThreshold: Number(e.target.value),
                       })
                     }
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-emerald-300 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-emerald-300 focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-blue-400 uppercase mb-1">
+                  <label className="block text-[10px] font-bold text-blue-300 uppercase mb-1">
                     Very Good Cutoff (PTS)
                   </label>
                   <input
@@ -1258,12 +1258,12 @@ export const KPISettings: React.FC = () => {
                         veryGoodThreshold: Number(e.target.value),
                       })
                     }
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-blue-300 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-blue-300 focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-amber-400 uppercase mb-1">
+                  <label className="block text-[10px] font-bold text-amber-300 uppercase mb-1">
                     Good Cutoff (PTS)
                   </label>
                   <input
@@ -1277,7 +1277,7 @@ export const KPISettings: React.FC = () => {
                         goodThreshold: Number(e.target.value),
                       })
                     }
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-amber-300 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-amber-300 focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
                 </div>
               </div>
@@ -1287,8 +1287,8 @@ export const KPISettings: React.FC = () => {
       )}
 
       {/* Global Save Button Fixed / Bottom Bar */}
-      <div className="p-4 rounded-2xl bg-slate-900/95 border border-slate-800 shadow-2xl flex items-center justify-between sticky bottom-4 z-30 backdrop-blur-md">
-        <div className="text-xs text-slate-400">
+      <div className="p-4 rounded-2xl bg-slate-900/95 border border-slate-750 shadow-2xl flex items-center justify-between sticky bottom-4 z-30 backdrop-blur-md">
+        <div className="text-xs text-slate-300 font-medium">
           Super Admin Root: Updates persist directly to Firestore database & reflect in all member leaderboards.
         </div>
 
@@ -1299,7 +1299,7 @@ export const KPISettings: React.FC = () => {
           className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black transition-all shadow-lg cursor-pointer ${
             validation.isValid && !isSaving
               ? 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-400 hover:to-amber-400 text-slate-950 shadow-orange-500/30'
-              : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+              : 'bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-700'
           }`}
         >
           <Save className="w-4 h-4" />

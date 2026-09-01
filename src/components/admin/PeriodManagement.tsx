@@ -50,22 +50,22 @@ export const PeriodManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/90 p-5 rounded-3xl border border-slate-800 shadow-xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/95 p-5 rounded-3xl border border-slate-750 shadow-xl">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-teal-500/20 text-teal-400 border border-teal-500/30">
+            <span className="p-2 rounded-xl bg-teal-500/20 text-teal-300 border border-teal-500/40">
               <Calendar className="w-5 h-5" />
             </span>
             <h2 className="text-lg font-bold text-white">Performance Periods & Lock Control</h2>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-300 mt-1">
             Create new tracking weeks/months and lock periods to prevent unauthorized member modifications
           </p>
         </div>
 
         <button
           onClick={() => setIsAddOpen(true)}
-          className="px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 flex items-center gap-1.5 shadow-lg shadow-orange-500/30 transition-all cursor-pointer"
+          className="px-4 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 flex items-center gap-1.5 shadow-lg shadow-orange-500/30 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           Create New Week / Month
@@ -73,11 +73,11 @@ export const PeriodManagement: React.FC = () => {
       </div>
 
       {/* Periods List */}
-      <div className="rounded-3xl border border-slate-800 bg-slate-900/80 overflow-hidden shadow-xl">
+      <div className="rounded-3xl border border-slate-750 bg-slate-900/95 overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-950/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              <tr className="border-b border-slate-750 bg-slate-950 text-[11px] font-bold text-slate-300 uppercase tracking-wider">
                 <th className="py-3.5 px-4">Period / Week</th>
                 <th className="py-3.5 px-4">Month & Year</th>
                 <th className="py-3.5 px-4">Start Date</th>
@@ -86,25 +86,25 @@ export const PeriodManagement: React.FC = () => {
                 <th className="py-3.5 px-4 text-right">Lock / Unlock Toggle</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-xs">
+            <tbody className="divide-y divide-slate-800 text-xs">
               {periods.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-800/40 transition-colors">
+                <tr key={p.id} className="hover:bg-slate-800/50 transition-colors">
                   <td className="py-3.5 px-4 font-bold text-white whitespace-nowrap">
-                    {p.weekName} (Week #{p.weekNumber})
+                    {p.weekName} <span className="text-slate-400 font-medium">(Week #{p.weekNumber})</span>
                   </td>
-                  <td className="py-3.5 px-4 font-semibold text-orange-400 whitespace-nowrap">
+                  <td className="py-3.5 px-4 font-bold text-orange-300 whitespace-nowrap">
                     {p.month} {p.year}
                   </td>
-                  <td className="py-3.5 px-4 text-slate-300 whitespace-nowrap">{p.startDate}</td>
-                  <td className="py-3.5 px-4 text-slate-300 whitespace-nowrap">{p.endDate}</td>
+                  <td className="py-3.5 px-4 text-slate-200 whitespace-nowrap">{p.startDate}</td>
+                  <td className="py-3.5 px-4 text-slate-200 whitespace-nowrap">{p.endDate}</td>
                   <td className="py-3.5 px-4 whitespace-nowrap">
                     {p.status === 'locked' ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-700/60">
-                        <Lock className="w-3 h-3" /> Locked from Member Edits
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-950/80 text-amber-300 border border-amber-600/70">
+                        <Lock className="w-3.5 h-3.5" /> Locked from Member Edits
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/60">
-                        <Unlock className="w-3 h-3" /> Open for Data Entry
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-600/70">
+                        <Unlock className="w-3.5 h-3.5" /> Open for Data Entry
                       </span>
                     )}
                   </td>
@@ -115,7 +115,7 @@ export const PeriodManagement: React.FC = () => {
                         setSelectedYear(p.year);
                         setActiveTab('kpi-settings');
                       }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-orange-400 border border-slate-700 hover:bg-slate-700 transition-all cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-orange-300 border border-slate-700 hover:bg-slate-700 hover:text-orange-200 transition-all cursor-pointer"
                       title="Set weekly or monthly targets for this period"
                     >
                       <Target className="w-3.5 h-3.5" />
@@ -127,8 +127,8 @@ export const PeriodManagement: React.FC = () => {
                       }
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         p.status === 'locked'
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500 hover:text-slate-950'
-                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-slate-950'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 hover:bg-emerald-500 hover:text-slate-950'
+                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500 hover:text-slate-950'
                       }`}
                     >
                       {p.status === 'locked' ? (
@@ -152,12 +152,12 @@ export const PeriodManagement: React.FC = () => {
       {/* Add Period Modal */}
       {isAddOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-950/60">
+          <div className="relative w-full max-w-lg bg-slate-900 border border-slate-750 rounded-3xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-slate-750 bg-slate-950">
               <h3 className="text-base font-bold text-white">Create New Tracking Period</h3>
               <button
                 onClick={() => setIsAddOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-white"
+                className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -166,14 +166,14 @@ export const PeriodManagement: React.FC = () => {
             <form onSubmit={handleCreatePeriod} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
                     Month *
                   </label>
                   <select
                     value={formMonth}
                     onChange={(e) => setFormMonth(e.target.value)}
                     aria-label="Select Target Month"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
                   >
                     {[
                       'January',
@@ -189,7 +189,7 @@ export const PeriodManagement: React.FC = () => {
                       'November',
                       'December',
                     ].map((m) => (
-                      <option key={m} value={m}>
+                      <option key={m} value={m} className="bg-slate-900 text-white">
                         {m}
                       </option>
                     ))}
@@ -197,21 +197,21 @@ export const PeriodManagement: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
                     Year *
                   </label>
                   <input
                     type="number"
                     value={formYear}
                     onChange={(e) => setFormYear(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
                     Week Name *
                   </label>
                   <input
@@ -220,12 +220,12 @@ export const PeriodManagement: React.FC = () => {
                     placeholder="e.g. Week 5 or Week 1"
                     value={formWeekName}
                     onChange={(e) => setFormWeekName(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
                     Week Number
                   </label>
                   <input
@@ -233,42 +233,42 @@ export const PeriodManagement: React.FC = () => {
                     min="1"
                     value={formWeekNumber}
                     onChange={(e) => setFormWeekNumber(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
                     Start Date
                   </label>
                   <input
                     type="date"
                     value={formStartDate}
                     onChange={(e) => setFormStartDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
                     End Date
                   </label>
                   <input
                     type="date"
                     value={formEndDate}
                     onChange={(e) => setFormEndDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-750">
                 <button
                   type="button"
                   onClick={() => setIsAddOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
                 >
                   Cancel
                 </button>

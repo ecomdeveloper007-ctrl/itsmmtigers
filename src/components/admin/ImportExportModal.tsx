@@ -107,17 +107,17 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({ isOpen, on
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6">
-      <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6">
+      <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-750 rounded-3xl shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-950/60">
+        <div className="flex items-center justify-between p-6 border-b border-slate-750 bg-slate-950">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30">
+            <div className="p-2.5 rounded-xl bg-orange-500/20 text-orange-300 border border-orange-500/40">
               <Upload className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-white">Import Historical Performance Data</h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-300 mt-0.5">
                 Upload CSV file with automatic zero-fill validation and preview
               </p>
             </div>
@@ -125,7 +125,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({ isOpen, on
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -133,7 +133,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({ isOpen, on
 
         <div className="p-6 space-y-6">
           {/* Action Row */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-slate-950 border border-slate-800">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-slate-950 border border-slate-750">
             <div className="flex items-center gap-3">
               <label className="px-4 py-2.5 rounded-xl text-xs font-black bg-orange-500 hover:bg-orange-400 text-slate-950 flex items-center gap-2 cursor-pointer shadow-md">
                 <Upload className="w-4 h-4" />
@@ -145,21 +145,21 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({ isOpen, on
                   className="hidden"
                 />
               </label>
-              <span className="text-xs text-slate-400">or paste CSV raw text below</span>
+              <span className="text-xs text-slate-300 font-medium">or paste CSV raw text below</span>
             </div>
 
             <button
               onClick={handleDownloadSampleTemplate}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5 text-emerald-400" />
+              <Download className="w-3.5 h-3.5 text-emerald-300" />
               Download Sample CSV
             </button>
           </div>
 
           {/* Raw Text Input */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
               CSV Data Stream
             </label>
             <textarea
@@ -170,7 +170,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({ isOpen, on
                 validateCSVContent(e.target.value);
               }}
               placeholder="Paste comma-separated performance data here..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs font-mono text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
             ></textarea>
           </div>
 
@@ -178,32 +178,32 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({ isOpen, on
           {parsedResult && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold">Total Rows</span>
-                  <p className="text-xl font-black text-white">{parsedResult.summary.totalRows}</p>
+                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-750 text-center">
+                  <span className="text-[10px] text-slate-300 uppercase font-bold">Total Rows</span>
+                  <p className="text-xl font-black text-white mt-0.5">{parsedResult.summary.totalRows}</p>
                 </div>
-                <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-center">
-                  <span className="text-[10px] text-emerald-400 uppercase font-bold">Valid Records</span>
-                  <p className="text-xl font-black text-emerald-300">{parsedResult.summary.validCount}</p>
+                <div className="p-3.5 rounded-xl bg-emerald-950/50 border border-emerald-500/50 text-center">
+                  <span className="text-[10px] text-emerald-300 uppercase font-bold">Valid Records</span>
+                  <p className="text-xl font-black text-emerald-300 mt-0.5">{parsedResult.summary.validCount}</p>
                 </div>
-                <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-center">
-                  <span className="text-[10px] text-amber-400 uppercase font-bold">Auto Zero-Filled</span>
-                  <p className="text-xl font-black text-amber-300">{parsedResult.missingConvertedCount}</p>
+                <div className="p-3.5 rounded-xl bg-amber-950/50 border border-amber-500/50 text-center">
+                  <span className="text-[10px] text-amber-300 uppercase font-bold">Auto Zero-Filled</span>
+                  <p className="text-xl font-black text-amber-300 mt-0.5">{parsedResult.missingConvertedCount}</p>
                 </div>
-                <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-500/40 text-center">
-                  <span className="text-[10px] text-rose-400 uppercase font-bold">Invalid / Errors</span>
-                  <p className="text-xl font-black text-rose-300">{parsedResult.summary.invalidCount}</p>
+                <div className="p-3.5 rounded-xl bg-rose-950/50 border border-rose-500/50 text-center">
+                  <span className="text-[10px] text-rose-300 uppercase font-bold">Invalid / Errors</span>
+                  <p className="text-xl font-black text-rose-300 mt-0.5">{parsedResult.summary.invalidCount}</p>
                 </div>
               </div>
 
               {/* Invalid Rows Warning */}
               {parsedResult.invalidRows.length > 0 && (
-                <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-500/30 space-y-2">
+                <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/50 space-y-2">
                   <div className="flex items-center gap-2 text-rose-300 text-xs font-bold">
                     <AlertCircle className="w-4 h-4" />
                     <span>Errors Encountered in CSV:</span>
                   </div>
-                  <ul className="space-y-1 text-[11px] text-rose-200 list-disc list-inside">
+                  <ul className="space-y-1 text-[11px] text-rose-200 list-disc list-inside font-medium">
                     {parsedResult.invalidRows.slice(0, 5).map((err, idx) => (
                       <li key={idx}>
                         Row {err.rowNumber}: {err.reason}
@@ -216,23 +216,23 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({ isOpen, on
               {/* Preview Valid Records */}
               {parsedResult.validRecords.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
                     Ready to Import ({parsedResult.validRecords.length} records):
                   </h4>
-                  <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950 p-2 space-y-1">
+                  <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-750 bg-slate-950 p-2 space-y-1">
                     {parsedResult.validRecords.slice(0, 8).map((rec) => (
                       <div
                         key={rec.id}
-                        className="flex items-center justify-between text-xs p-1.5 rounded bg-slate-900 text-slate-300"
+                        className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-200"
                       >
-                        <span className="font-semibold text-white">
-                          {rec.userName} ({rec.weekName} {rec.month})
+                        <span className="font-bold text-white">
+                          {rec.userName} <span className="text-orange-300 font-medium">({rec.weekName} {rec.month})</span>
                         </span>
-                        <div className="flex gap-3 text-[11px]">
-                          <span>Rev: ${rec.revenueGenerated}</span>
-                          <span>Projects: {rec.projectClosed}</span>
-                          <span>Upsells: {rec.upsells}</span>
-                          <span>Rating: {rec.clientRating}★</span>
+                        <div className="flex gap-3 text-[11px] font-medium">
+                          <span className="text-emerald-300 font-bold">Rev: ${rec.revenueGenerated}</span>
+                          <span className="text-slate-300">Projects: {rec.projectClosed}</span>
+                          <span className="text-cyan-300">Upsells: {rec.upsells}</span>
+                          <span className="text-amber-300">Rating: {rec.clientRating}★</span>
                         </div>
                       </div>
                     ))}
@@ -243,10 +243,10 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({ isOpen, on
           )}
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-750">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
             >
               Cancel
             </button>
@@ -258,7 +258,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({ isOpen, on
               className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all shadow-lg cursor-pointer ${
                 parsedResult && parsedResult.validRecords.length > 0 && !isProcessing
                   ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 shadow-orange-500/30'
-                  : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                  : 'bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-700'
               }`}
             >
               <Save className="w-4 h-4" />

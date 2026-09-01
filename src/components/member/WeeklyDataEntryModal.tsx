@@ -202,19 +202,19 @@ export const WeeklyDataEntryModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6">
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6">
+      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-750 rounded-3xl shadow-2xl overflow-hidden">
         {/* Modal Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-950/60">
+        <div className="flex items-center justify-between p-6 border-b border-slate-750 bg-slate-950">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30">
+            <div className="p-2.5 rounded-xl bg-orange-500/20 text-orange-300 border border-orange-500/40">
               <Briefcase className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-white">
                 {editingRecord ? 'Edit Weekly Performance' : 'Log Weekly Performance'}
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-300 mt-0.5">
                 IT SMM Tigers KPI Performance Entry (Empty values default to 0)
               </p>
             </div>
@@ -222,7 +222,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
 
           <button
             onClick={closeDataEntryModal}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -231,15 +231,15 @@ export const WeeklyDataEntryModal: React.FC = () => {
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {validationError && (
-            <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+            <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-200 text-xs font-semibold">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-300" />
               <span>{validationError}</span>
             </div>
           )}
 
           {isLocked && (
-            <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
-              <Lock className="w-4 h-4 shrink-0" />
+            <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-semibold">
+              <Lock className="w-4 h-4 shrink-0 text-amber-300" />
               <span>This period has been locked by Super Admin. Read-only mode.</span>
             </div>
           )}
@@ -248,7 +248,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Team Member Selection (Super Admin only or locked for Member) */}
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
                 Team Member
               </label>
               {isSuperAdmin ? (
@@ -257,7 +257,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
                   onChange={(e) => setSelectedUserId(e.target.value)}
                   disabled={!!editingRecord}
                   aria-label="Select Team Member"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                 >
                   {allUsers
                     .filter((u) => u.status === 'active')
@@ -268,16 +268,16 @@ export const WeeklyDataEntryModal: React.FC = () => {
                     ))}
                 </select>
               ) : (
-                <div className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white flex items-center justify-between">
+                <div className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white flex items-center justify-between">
                   <span>{currentUser?.name}</span>
-                  <span className="text-[11px] font-mono text-orange-400 font-medium">({currentUser?.userId})</span>
+                  <span className="text-[11px] font-mono text-orange-300 font-bold">({currentUser?.userId})</span>
                 </div>
               )}
             </div>
 
             {/* Performance Period / Week Selection */}
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
                 Performance Period / Week
               </label>
               <select
@@ -285,7 +285,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
                 onChange={(e) => setSelectedPeriodId(e.target.value)}
                 disabled={!!editingRecord}
                 aria-label="Select Performance Period"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
               >
                 {periods.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -299,13 +299,13 @@ export const WeeklyDataEntryModal: React.FC = () => {
           {/* KPI Inputs Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Project Closed */}
-            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1.5">
-              <label className="flex items-center justify-between text-xs font-bold text-slate-300">
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-750 space-y-2">
+              <label className="flex items-center justify-between text-xs font-bold text-slate-200">
                 <span className="flex items-center gap-1.5">
-                  <Briefcase className="w-3.5 h-3.5 text-orange-400" />
+                  <Briefcase className="w-3.5 h-3.5 text-orange-300" />
                   Project Closed
                 </span>
-                <span className="text-[10px] text-slate-500">Weight: 20% | Target: 25</span>
+                <span className="text-[10px] text-slate-300 font-semibold">Weight: 20% | Target: 25</span>
               </label>
               <input
                 type="number"
@@ -315,18 +315,18 @@ export const WeeklyDataEntryModal: React.FC = () => {
                 placeholder="Enter number (e.g. 4)"
                 value={projectClosed}
                 onChange={(e) => setProjectClosed(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
               />
             </div>
 
             {/* Revenue Generated */}
-            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1.5">
-              <label className="flex items-center justify-between text-xs font-bold text-slate-300">
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-750 space-y-2">
+              <label className="flex items-center justify-between text-xs font-bold text-slate-200">
                 <span className="flex items-center gap-1.5">
-                  <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-300" />
                   Revenue Generated ($)
                 </span>
-                <span className="text-[10px] text-slate-500">Weight: 30% | Target: $10,000</span>
+                <span className="text-[10px] text-slate-300 font-semibold">Weight: 30% | Target: $10,000</span>
               </label>
               <input
                 type="number"
@@ -336,18 +336,18 @@ export const WeeklyDataEntryModal: React.FC = () => {
                 placeholder="Enter amount (e.g. 1500)"
                 value={revenueGenerated}
                 onChange={(e) => setRevenueGenerated(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-emerald-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-emerald-300 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
               />
             </div>
 
             {/* Upsells */}
-            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1.5">
-              <label className="flex items-center justify-between text-xs font-bold text-slate-300">
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-750 space-y-2">
+              <label className="flex items-center justify-between text-xs font-bold text-slate-200">
                 <span className="flex items-center gap-1.5">
-                  <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
+                  <TrendingUp className="w-3.5 h-3.5 text-cyan-300" />
                   Upsells
                 </span>
-                <span className="text-[10px] text-slate-500">Weight: 15% | Target: 10</span>
+                <span className="text-[10px] text-slate-300 font-semibold">Weight: 15% | Target: 10</span>
               </label>
               <input
                 type="number"
@@ -357,18 +357,18 @@ export const WeeklyDataEntryModal: React.FC = () => {
                 placeholder="Enter number (e.g. 2)"
                 value={upsells}
                 onChange={(e) => setUpsells(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-cyan-300 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-cyan-300 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
               />
             </div>
 
             {/* Client Rating (0 to 5) */}
-            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1.5">
-              <label className="flex items-center justify-between text-xs font-bold text-slate-300">
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-750 space-y-2">
+              <label className="flex items-center justify-between text-xs font-bold text-slate-200">
                 <span className="flex items-center gap-1.5">
-                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                  <Star className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
                   Client Rating (0 - 5.0)
                 </span>
-                <span className="text-[10px] text-slate-500">Weight: 10% | Target: 5.0</span>
+                <span className="text-[10px] text-slate-300 font-semibold">Weight: 10% | Target: 5.0</span>
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -380,7 +380,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
                   placeholder="Enter rating (e.g. 5.0)"
                   value={clientRating}
                   onChange={(e) => setClientRating(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-amber-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-amber-300 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
                 />
                 <div className="flex gap-1">
                   {[5, 4, 3].map((r) => (
@@ -388,7 +388,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
                       type="button"
                       key={r}
                       onClick={() => setClientRating(r.toString())}
-                      className="px-2 py-1 bg-slate-800 hover:bg-amber-500/20 text-amber-300 rounded text-xs font-bold"
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-amber-500/20 text-amber-300 border border-slate-700 rounded-lg text-xs font-bold transition-colors"
                     >
                       {r}★
                     </button>
@@ -398,13 +398,13 @@ export const WeeklyDataEntryModal: React.FC = () => {
             </div>
 
             {/* Follow-up Completed */}
-            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1.5">
-              <label className="flex items-center justify-between text-xs font-bold text-slate-300">
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-750 space-y-2">
+              <label className="flex items-center justify-between text-xs font-bold text-slate-200">
                 <span className="flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-purple-400" />
+                  <Users className="w-3.5 h-3.5 text-purple-300" />
                   Follow-up Completed
                 </span>
-                <span className="text-[10px] text-slate-500">Weight: 10% | Target: 50</span>
+                <span className="text-[10px] text-slate-300 font-semibold">Weight: 10% | Target: 50</span>
               </label>
               <input
                 type="number"
@@ -414,18 +414,18 @@ export const WeeklyDataEntryModal: React.FC = () => {
                 placeholder="Enter number (e.g. 15)"
                 value={followupsCompleted}
                 onChange={(e) => setFollowupsCompleted(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-purple-300 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-purple-300 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
               />
             </div>
 
             {/* Repeat Clients */}
-            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1.5">
-              <label className="flex items-center justify-between text-xs font-bold text-slate-300">
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-750 space-y-2">
+              <label className="flex items-center justify-between text-xs font-bold text-slate-200">
                 <span className="flex items-center gap-1.5">
-                  <Repeat className="w-3.5 h-3.5 text-pink-400" />
+                  <Repeat className="w-3.5 h-3.5 text-pink-300" />
                   Repeat Clients
                 </span>
-                <span className="text-[10px] text-slate-500">Weight: 15% | Target: 10</span>
+                <span className="text-[10px] text-slate-300 font-semibold">Weight: 15% | Target: 10</span>
               </label>
               <input
                 type="number"
@@ -435,14 +435,14 @@ export const WeeklyDataEntryModal: React.FC = () => {
                 placeholder="Enter number (e.g. 2)"
                 value={repeatClients}
                 onChange={(e) => setRepeatClients(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-pink-300 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-pink-300 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
               />
             </div>
           </div>
 
           {/* Notes / Highlights */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+            <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider">
               Notes / Campaign Highlights (Optional)
             </label>
             <input
@@ -451,38 +451,38 @@ export const WeeklyDataEntryModal: React.FC = () => {
               placeholder="e.g. Major retainer renewal, Instagram influencer package closed"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
             />
           </div>
 
           {/* Live Preview Score Estimation Box */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-orange-950/40 via-slate-950 to-amber-950/40 border border-orange-500/30 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-orange-400" />
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-orange-950/50 via-slate-950 to-amber-950/50 border border-orange-500/40 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="w-5 h-5 text-orange-300" />
               <div>
                 <span className="text-xs font-bold text-white block">
                   Estimated Weekly Score Preview
                 </span>
-                <span className="text-[10px] text-slate-400">
+                <span className="text-[10px] text-slate-300 font-medium">
                   Calculated against benchmark KPI weights
                 </span>
               </div>
             </div>
 
             <div className="text-right">
-              <span className="text-2xl font-black text-amber-400">
+              <span className="text-2xl font-black text-amber-300">
                 {liveCalculations.totalScoreDisplay}
               </span>
-              <span className="text-xs font-bold text-slate-500"> / 100 PTS</span>
+              <span className="text-xs font-bold text-slate-400"> / 100 PTS</span>
             </div>
           </div>
 
           {/* Modal Footer Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-750">
             <button
               type="button"
               onClick={closeDataEntryModal}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
             >
               Cancel
             </button>
@@ -491,7 +491,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
               disabled={isLocked || isSubmitting}
               className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all shadow-lg cursor-pointer ${
                 isLocked || isSubmitting
-                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                  ? 'bg-slate-800 text-slate-400 border border-slate-700 cursor-not-allowed'
                   : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 shadow-orange-500/30'
               }`}
             >
