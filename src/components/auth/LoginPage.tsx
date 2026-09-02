@@ -501,18 +501,24 @@ export const LoginPage: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-black text-[#101010] uppercase tracking-wider mb-1">
-                      Department / Team *
+                      Department / Primary Module *
                     </label>
                     <select
                       value={regDepartment}
                       onChange={(e) => setRegDepartment(e.target.value)}
                       className="w-full bg-[#f5f5f5] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] focus:outline-none focus:ring-2 focus:ring-[#8cc540]/40 font-medium"
                     >
-                      <option value="IT Team">💻 IT Team</option>
-                      <option value="SMM Team">📱 SMM Team</option>
-                      <option value="Operations">⚙️ Operations</option>
-                      <option value="Leadership & Ops">👑 Leadership & Ops</option>
+                      <option value="IT Team">💻 IT Team (PM Solutions & Eng)</option>
+                      <option value="SMM Team">📱 SMM Team (PM Retainers & Growth)</option>
+                      <option value="IT Sales">💼 IT Sales (PR / WR / HW Solutions)</option>
+                      <option value="SMM Sales">📈 SMM Sales (DR / RR Growth & Retainers)</option>
+                      <option value="Dual Operations">⚡ Both (PM & Sales Operations)</option>
+                      <option value="Operations">⚙️ Operations & Support</option>
+                      <option value="Leadership & Ops">👑 Leadership & Executive</option>
                     </select>
+                    <p className="text-[10px] text-[#777777] mt-1 font-medium">
+                      Admin will review & assign your module (PM, Sales, or Both) upon approval.
+                    </p>
                   </div>
 
                   <div>

@@ -148,6 +148,8 @@ export function getAllDepartmentPresets(): { profileCode: ProfileCode; team: 'IT
   return result;
 }
 
+export type ModuleAssignment = 'pm' | 'sales' | 'both';
+
 export interface UserProfile {
   uid: string;
   userId: string; // e.g., 'prakash.choudhary' or 'divya.bhardwaj'
@@ -160,6 +162,9 @@ export interface UserProfile {
   department?: string;
   team?: 'IT' | 'SMM' | 'Operations' | 'Leadership';
   profileCode?: ProfileCode;
+  moduleAssignment?: ModuleAssignment;
+  salesDepartment?: 'IT' | 'SMM';
+  salesProfileCode?: 'PR' | 'WR' | 'HW' | 'DR' | 'RR';
   joiningDate?: string;
   lastLogin?: string;
   registrationNotes?: string;
@@ -389,3 +394,5 @@ export interface ToastMessage {
   title: string;
   message?: string;
 }
+
+export * from './sales';

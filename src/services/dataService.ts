@@ -303,6 +303,9 @@ export class DataService {
           raw.avatarUrl ||
           'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
         joiningDate: raw.joiningDate || new Date().toISOString().split('T')[0],
+        moduleAssignment: raw.moduleAssignment || (raw.department?.toLowerCase().includes('sales') ? 'sales' : 'both'),
+        salesDepartment: raw.salesDepartment || (resolvedTeam === 'IT' ? 'IT' : 'SMM'),
+        salesProfileCode: raw.salesProfileCode || (resolvedProfile as any) || (resolvedTeam === 'IT' ? 'PR' : 'DR'),
         createdAt: raw.createdAt || new Date().toISOString(),
         updatedAt: raw.updatedAt || new Date().toISOString(),
         registrationNotes: raw.registrationNotes,
@@ -432,6 +435,9 @@ export class DataService {
         user.avatarUrl ||
         'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
       joiningDate: user.joiningDate || new Date().toISOString().split('T')[0],
+      moduleAssignment: user.moduleAssignment || 'both',
+      salesDepartment: user.salesDepartment || (user.team === 'IT' ? 'IT' : 'SMM'),
+      salesProfileCode: user.salesProfileCode || (user.profileCode as any) || (user.team === 'IT' ? 'PR' : 'DR'),
       createdAt: user.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

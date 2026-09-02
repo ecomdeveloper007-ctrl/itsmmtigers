@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
+import { useSales } from '../../context/SalesContext';
 import {
   Trophy,
   Users,
@@ -23,6 +24,10 @@ import {
   Camera,
   Edit3,
   Eye,
+  TrendingUp,
+  Building,
+  Target,
+  Calculator,
 } from 'lucide-react';
 import { EditProfileModal } from './EditProfileModal';
 
@@ -42,7 +47,11 @@ export const Header: React.FC = () => {
     activeTab,
     setActiveTab,
     openDataEntryModal,
+    activeModule,
+    setActiveModule,
   } = useApp();
+
+  const { openSalesEntryModal, setSalesActiveTab } = useSales();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isDemoSwitchOpen, setIsDemoSwitchOpen] = useState(false);
@@ -142,15 +151,47 @@ export const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
           {/* Logo & Brand Identity */}
-          <div className="flex items-center gap-3 cursor-pointer py-1" onClick={() => setActiveTab('dashboard')}>
-            <img
-              src="https://framerusercontent.com/images/mRMK3iRhUP61hmrTIjXC0oPQ0U.webp?width=451&height=125"
-              alt="IT SMM Tigers"
-              className="h-8 sm:h-9 w-auto object-contain"
-            />
-            <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-[#f3f8ef] text-[#436320] font-black border border-[#8cc540]/30 uppercase tracking-wider">
-              Rewards & Recognition
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 cursor-pointer py-1" onClick={() => { setActiveTab('dashboard'); setActiveModule('pm'); }}>
+              <img
+                src="https://framerusercontent.com/images/mRMK3iRhUP61hmrTIjXC0oPQ0U.webp?width=451&height=125"
+                alt="IT SMM Tigers"
+                className="h-8 sm:h-9 w-auto object-contain"
+              />
+              <span className="hidden xl:inline-block text-[10px] px-2 py-0.5 rounded-full bg-[#f3f8ef] text-[#436320] font-black border border-[#8cc540]/30 uppercase tracking-wider">
+                Rewards & Recognition
+              </span>
+            </div>
+
+            {/* Global Team/Module Switcher: PM vs Sales */}
+            <div className="flex items-center bg-[#f0f4ec] p-1 rounded-2xl border border-[#e2ebd9] shadow-inner ml-1">
+              <button
+                onClick={() => setActiveModule('pm')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeModule === 'pm'
+                    ? 'bg-[#101010] text-white shadow-xs'
+                    : 'text-[#666666] hover:text-[#101010]'
+                }`}
+                title="Project Management (PM) Module"
+              >
+                <Building className="w-3.5 h-3.5 text-[#8cc540]" />
+                <span className="hidden sm:inline">Project Mgmt</span>
+                <span className="sm:hidden">PM</span>
+              </button>
+              <button
+                onClick={() => setActiveModule('sales')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeModule === 'sales'
+                    ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                    : 'text-[#666666] hover:text-[#101010]'
+                }`}
+                title="Sales Division (IT & SMM Sales)"
+              >
+                <TrendingUp className="w-3.5 h-3.5 text-[#101010]" />
+                <span className="hidden sm:inline">Sales Team</span>
+                <span className="sm:hidden">Sales</span>
+              </button>
+            </div>
           </div>
 
           {/* Period Selector Controls (Month, Year, Week) */}
@@ -186,23 +227,25 @@ export const Header: React.FC = () => {
               ))}
             </select>
 
-            <select
-              value={selectedPeriodId}
-              onChange={(e) => setSelectedPeriodId(e.target.value)}
-              aria-label="Select Performance Week"
-              className="bg-[#f3f8ef] text-xs font-bold text-[#2d4317] rounded-lg px-2.5 py-1.5 border border-[#8cc540]/40 hover:border-[#8cc540] focus:outline-none focus:ring-2 focus:ring-[#8cc540]/40 cursor-pointer shadow-xs"
-            >
-              <option value="all">Entire Month (All Weeks)</option>
-              {periods
-                .filter((p) => p.month === selectedMonth && p.year === selectedYear)
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.weekName} {p.status === 'locked' ? '🔒 (Locked)' : ''}
-                  </option>
-                ))}
-            </select>
+            {activeModule === 'pm' && (
+              <select
+                value={selectedPeriodId}
+                onChange={(e) => setSelectedPeriodId(e.target.value)}
+                aria-label="Select Performance Week"
+                className="bg-[#f3f8ef] text-xs font-bold text-[#2d4317] rounded-lg px-2.5 py-1.5 border border-[#8cc540]/40 hover:border-[#8cc540] focus:outline-none focus:ring-2 focus:ring-[#8cc540]/40 cursor-pointer shadow-xs"
+              >
+                <option value="all">Entire Month (All Weeks)</option>
+                {periods
+                  .filter((p) => p.month === selectedMonth && p.year === selectedYear)
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.weekName} {p.status === 'locked' ? '🔒 (Locked)' : ''}
+                    </option>
+                  ))}
+              </select>
+            )}
 
-            {isCurrentLocked && (
+            {activeModule === 'pm' && isCurrentLocked && (
               <span className="flex items-center gap-1 text-[11px] px-2 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg font-bold">
                 <Lock className="w-3 h-3 text-amber-600" /> Locked
               </span>
@@ -211,14 +254,24 @@ export const Header: React.FC = () => {
 
           {/* Action Buttons & Profile */}
           <div className="flex items-center gap-3">
-            {/* Quick Submit Weekly Performance for Members */}
-            {isTeamMember && (
+            {/* Quick Submit Buttons */}
+            {activeModule === 'pm' && isTeamMember && (
               <button
                 onClick={() => openDataEntryModal()}
                 className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black bg-[#101010] hover:bg-[#252525] text-white shadow-md shadow-[#101010]/20 transition-all cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4 text-[#8cc540]" />
                 Submit Performance
+              </button>
+            )}
+
+            {activeModule === 'sales' && (
+              <button
+                onClick={() => openSalesEntryModal()}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] text-[#101010] shadow-md shadow-[#8cc540]/30 transition-all cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" />
+                + Enter Sales Record
               </button>
             )}
 
@@ -230,8 +283,8 @@ export const Header: React.FC = () => {
               </div>
             )}
 
-            {/* Announce Winner Button for Admins & Super Admins */}
-            {isAdmin && (
+            {/* Announce Winner Button for PM Admins & Super Admins */}
+            {activeModule === 'pm' && isAdmin && (
               <button
                 onClick={openWinnerModal}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] text-[#101010] shadow-md shadow-[#8cc540]/30 transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
@@ -286,45 +339,92 @@ export const Header: React.FC = () => {
                   </div>
 
                   <div className="py-2 space-y-1">
+                    <p className="px-3 text-[10px] font-black text-[#888888] uppercase tracking-wider">
+                      Project Management
+                    </p>
                     <button
                       onClick={() => {
+                        setActiveModule('pm');
                         setActiveTab('dashboard');
                         setIsProfileOpen(false);
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg text-[#101010] hover:bg-[#f5f5f5]"
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg text-[#101010] hover:bg-[#f5f5f5]"
                     >
                       <LayoutDashboard className="w-4 h-4 text-[#598327]" />
-                      Main Dashboard
+                      PM Dashboard
                     </button>
                     <button
                       onClick={() => {
+                        setActiveModule('pm');
                         setActiveTab('leaderboard');
                         setIsProfileOpen(false);
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg text-[#101010] hover:bg-[#f5f5f5]"
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg text-[#101010] hover:bg-[#f5f5f5]"
                     >
                       <Trophy className="w-4 h-4 text-amber-500" />
-                      Leaderboard Standings
+                      PM Leaderboard
                     </button>
                     <button
                       onClick={() => {
+                        setActiveModule('pm');
                         setActiveTab('my-performance');
                         setIsProfileOpen(false);
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg text-[#101010] hover:bg-[#f5f5f5]"
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg text-[#101010] hover:bg-[#f5f5f5]"
                     >
                       <User className="w-4 h-4 text-[#598327]" />
-                      My Performance Scorecard
+                      My PM Scorecard
                     </button>
                     <button
                       onClick={() => {
+                        setActiveModule('pm');
                         setActiveTab('reports');
                         setIsProfileOpen(false);
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg text-[#101010] hover:bg-[#f5f5f5]"
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg text-[#101010] hover:bg-[#f5f5f5]"
                     >
                       <FileText className="w-4 h-4 text-blue-600" />
-                      Monthly Recognition Report
+                      PM R&R Report
+                    </button>
+                  </div>
+
+                  {/* Sales Division Quick Navigation */}
+                  <div className="py-2 space-y-1">
+                    <p className="px-3 text-[10px] font-black text-[#888888] uppercase tracking-wider">
+                      Sales Division
+                    </p>
+                    <button
+                      onClick={() => {
+                        setActiveModule('sales');
+                        setSalesActiveTab('sales-dashboard');
+                        setIsProfileOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg text-[#101010] hover:bg-[#f5f5f5]"
+                    >
+                      <TrendingUp className="w-4 h-4 text-[#598327]" />
+                      Sales Dashboard
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveModule('sales');
+                        setSalesActiveTab('sales-leaderboard');
+                        setIsProfileOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg text-[#101010] hover:bg-[#f5f5f5]"
+                    >
+                      <Trophy className="w-4 h-4 text-amber-500" />
+                      Sales Leaderboard
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveModule('sales');
+                        setSalesActiveTab('sales-settings');
+                        setIsProfileOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg text-[#101010] hover:bg-[#f5f5f5]"
+                    >
+                      <Sliders className="w-4 h-4 text-[#598327]" />
+                      Sales Reward Settings
                     </button>
                   </div>
 

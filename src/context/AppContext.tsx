@@ -53,6 +53,8 @@ interface AppContextType {
   closeWinnerModal: () => void;
 
   // Modals & Navigation
+  activeModule: 'pm' | 'sales';
+  setActiveModule: (module: 'pm' | 'sales') => void;
   activeTab: 'dashboard' | 'leaderboard' | 'my-performance' | 'admin-data' | 'user-management' | 'period-management' | 'kpi-settings' | 'audit-logs' | 'reports';
   setActiveTab: (tab: any) => void;
   isDataEntryModalOpen: boolean;
@@ -102,6 +104,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // UI state
+  const [activeModule, setActiveModule] = useState<'pm' | 'sales'>('pm');
   const [activeTab, setActiveTab] = useState<'dashboard' | 'leaderboard' | 'my-performance' | 'admin-data' | 'user-management' | 'period-management' | 'kpi-settings' | 'audit-logs' | 'reports'>('dashboard');
   const [isWinnerModalOpen, setIsWinnerModalOpen] = useState<boolean>(false);
   const [isDataEntryModalOpen, setIsDataEntryModalOpen] = useState<boolean>(false);
@@ -466,6 +469,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         isWinnerModalOpen,
         openWinnerModal,
         closeWinnerModal,
+        activeModule,
+        setActiveModule,
         activeTab,
         setActiveTab,
         isDataEntryModalOpen,
