@@ -16,24 +16,33 @@ import {
   SalesRewardSettings,
   SalesProfileCode,
   SalesDepartment,
+  SalesAuditLog,
 } from '../types/sales';
 import {
   DEFAULT_SALES_SETTINGS,
   computeCompleteSalesRecord,
   sanitizeSalesNumber,
 } from './salesCalculationService';
+import {
+  isUserSuperAdmin,
+  isUserAdminOrSuperAdmin,
+  canUserManageRecord,
+  validateRecordAccess,
+  findMatchingSalesEmployee,
+} from '../utils/salesAuthUtils';
 
 const SALES_LS_KEYS = {
-  EMPLOYEES: 'tiger_sales_employees_v2',
-  RECORDS: 'tiger_sales_records_v2',
-  SETTINGS: 'tiger_sales_settings_v2',
-  DELETED_EMPLOYEES: 'tiger_sales_deleted_emp_v2',
-  DELETED_RECORDS: 'tiger_sales_deleted_rec_v2',
-  INITIALIZED: 'tiger_sales_init_v2',
+  EMPLOYEES: 'tiger_sales_employees_v3',
+  RECORDS: 'tiger_sales_records_v3',
+  SETTINGS: 'tiger_sales_settings_v3',
+  DELETED_EMPLOYEES: 'tiger_sales_deleted_emp_v3',
+  DELETED_RECORDS: 'tiger_sales_deleted_rec_v3',
+  AUDIT_LOGS: 'tiger_sales_audit_logs_v3',
+  INITIALIZED: 'tiger_sales_init_v3',
 };
 
 /**
- * Initial Seed Sales Employees
+ * Initial Seed Sales Employees (with multi-profile assignments support)
  */
 export const INITIAL_SALES_EMPLOYEES: SalesEmployee[] = [
   // IT Team - PR Profile
@@ -44,6 +53,7 @@ export const INITIAL_SALES_EMPLOYEES: SalesEmployee[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     department: 'IT',
     profileCode: 'PR',
+    assignedProfiles: ['PR', 'WR'],
     joiningDate: '2024-02-10',
     status: 'active',
     createdAt: '2024-02-10T00:00:00.000Z',
@@ -56,6 +66,7 @@ export const INITIAL_SALES_EMPLOYEES: SalesEmployee[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
     department: 'IT',
     profileCode: 'PR',
+    assignedProfiles: ['PR'],
     joiningDate: '2024-04-15',
     status: 'active',
     createdAt: '2024-04-15T00:00:00.000Z',
@@ -70,6 +81,7 @@ export const INITIAL_SALES_EMPLOYEES: SalesEmployee[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     department: 'IT',
     profileCode: 'WR',
+    assignedProfiles: ['WR', 'HW'],
     joiningDate: '2024-05-01',
     status: 'active',
     createdAt: '2024-05-01T00:00:00.000Z',
@@ -82,6 +94,7 @@ export const INITIAL_SALES_EMPLOYEES: SalesEmployee[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
     department: 'IT',
     profileCode: 'WR',
+    assignedProfiles: ['WR'],
     joiningDate: '2024-06-20',
     status: 'active',
     createdAt: '2024-06-20T00:00:00.000Z',
@@ -96,6 +109,7 @@ export const INITIAL_SALES_EMPLOYEES: SalesEmployee[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
     department: 'IT',
     profileCode: 'HW',
+    assignedProfiles: ['HW', 'PR', 'WR'],
     joiningDate: '2024-07-01',
     status: 'active',
     createdAt: '2024-07-01T00:00:00.000Z',
@@ -110,6 +124,7 @@ export const INITIAL_SALES_EMPLOYEES: SalesEmployee[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
     department: 'SMM',
     profileCode: 'DR',
+    assignedProfiles: ['DR', 'RR'],
     joiningDate: '2024-03-01',
     status: 'active',
     createdAt: '2024-03-01T00:00:00.000Z',
@@ -122,6 +137,7 @@ export const INITIAL_SALES_EMPLOYEES: SalesEmployee[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
     department: 'SMM',
     profileCode: 'DR',
+    assignedProfiles: ['DR'],
     joiningDate: '2024-08-01',
     status: 'active',
     createdAt: '2024-08-01T00:00:00.000Z',
@@ -136,6 +152,7 @@ export const INITIAL_SALES_EMPLOYEES: SalesEmployee[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
     department: 'SMM',
     profileCode: 'RR',
+    assignedProfiles: ['RR', 'DR'],
     joiningDate: '2024-01-15',
     status: 'active',
     createdAt: '2024-01-15T00:00:00.000Z',
@@ -148,6 +165,7 @@ export const INITIAL_SALES_EMPLOYEES: SalesEmployee[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
     department: 'SMM',
     profileCode: 'RR',
+    assignedProfiles: ['RR'],
     joiningDate: '2024-06-01',
     status: 'active',
     createdAt: '2024-06-01T00:00:00.000Z',
@@ -156,7 +174,7 @@ export const INITIAL_SALES_EMPLOYEES: SalesEmployee[] = [
 ];
 
 /**
- * Helper to get data from LocalStorage
+ * LocalStorage Helpers
  */
 function getFromStorage<T>(key: string, fallback: T): T {
   try {
@@ -177,76 +195,44 @@ function saveToStorage<T>(key: string, data: T): void {
 }
 
 /**
- * Generate initial sample performance records for August and September 2026
+ * Generate initial weekly sample performance records
  */
 function generateInitialRecords(): SalesPerformanceRecord[] {
   const settings = DEFAULT_SALES_SETTINGS;
   const records: SalesPerformanceRecord[] = [];
 
-  // September 2026 Records
-  const sepInputs = [
-    { empId: 'sales_emp_1', name: 'Rahul Sharma', code: 'PR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachout: 220, orders: 23, repeat: 9, followups: 115, remarks: 'Exceeded product solutions conversion targets.' },
-    { empId: 'sales_emp_2', name: 'Anjali Patel', code: 'PR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachout: 195, orders: 18, repeat: 7, followups: 92, remarks: 'Strong enterprise client delivery pipeline.' },
-    { empId: 'sales_emp_3', name: 'Vikram Verma', code: 'WR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachout: 185, orders: 19, repeat: 8, followups: 95, remarks: 'Great web architecture solution conversion.' },
-    { empId: 'sales_emp_4', name: 'Sneha Kapoor', code: 'WR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachout: 170, orders: 16, repeat: 6, followups: 85, remarks: 'Good frontend tech proposal closures.' },
-    { empId: 'sales_emp_5', name: 'Amit Kumar', code: 'HW' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachout: 155, orders: 16, repeat: 7, followups: 82, remarks: 'Closed high-value cloud infra contracts.' },
-    { empId: 'sales_emp_6', name: 'Divya Nair', code: 'DR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachout: 270, orders: 28, repeat: 11, followups: 130, remarks: 'Outstanding paid acquisition campaign returns.' },
-    { empId: 'sales_emp_7', name: 'Rohan Mehta', code: 'DR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachout: 240, orders: 22, repeat: 9, followups: 110, remarks: 'Solid direct response performance.' },
-    { empId: 'sales_emp_8', name: 'Pooja Joshi', code: 'RR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachout: 235, orders: 24, repeat: 10, followups: 118, remarks: 'Excellent social retainer renewals.' },
-    { empId: 'sales_emp_9', name: 'Priya Singh', code: 'RR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachout: 210, orders: 20, repeat: 8, followups: 105, remarks: 'Consistent brand retainer growth.' },
+  // Seed weekly data for Week 1 (Sep 1 - Sep 7)
+  const week1Inputs = [
+    { empId: 'sales_emp_1', name: 'Rahul Sharma', code: 'PR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachouts: 210, conversions: 22, followups: 105, orderValue: 110000, remarks: 'Strong enterprise pipeline closed.' },
+    { empId: 'sales_emp_1', name: 'Rahul Sharma', code: 'WR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachouts: 160, conversions: 14, followups: 82, orderValue: 85000, remarks: 'Web architecture contracts.' },
+    { empId: 'sales_emp_2', name: 'Anjali Patel', code: 'PR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachouts: 190, conversions: 18, followups: 95, orderValue: 95000, remarks: 'Consistent product solutions delivery.' },
+    { empId: 'sales_emp_3', name: 'Vikram Verma', code: 'WR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachouts: 175, conversions: 17, followups: 90, orderValue: 88000, remarks: 'Full stack development closures.' },
+    { empId: 'sales_emp_4', name: 'Sneha Kapoor', code: 'WR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachouts: 165, conversions: 15, followups: 85, orderValue: 80000, remarks: 'Frontend proposal renewals.' },
+    { empId: 'sales_emp_5', name: 'Amit Kumar', code: 'HW' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachouts: 145, conversions: 15, followups: 78, orderValue: 130000, remarks: 'High value cloud infrastructure deal.' },
+    { empId: 'sales_emp_6', name: 'Divya Nair', code: 'DR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachouts: 260, conversions: 28, followups: 125, orderValue: 82000, remarks: 'Paid ad campaign acquisition boost.' },
+    { empId: 'sales_emp_7', name: 'Rohan Mehta', code: 'DR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachouts: 230, conversions: 21, followups: 105, orderValue: 72000, remarks: 'Direct response sales stable.' },
+    { empId: 'sales_emp_8', name: 'Pooja Joshi', code: 'RR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachouts: 220, conversions: 23, followups: 110, orderValue: 160000, remarks: 'Social retainer contract extensions.' },
+    { empId: 'sales_emp_9', name: 'Priya Singh', code: 'RR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachouts: 200, conversions: 19, followups: 100, orderValue: 145000, remarks: 'Brand retainer additions.' },
   ];
 
-  sepInputs.forEach((inp) => {
+  week1Inputs.forEach((inp) => {
     records.push(
       computeCompleteSalesRecord(
         {
-          id: `sales_rec_${inp.empId}_September_2026`,
+          id: `sales_rec_${inp.empId}_${inp.code}_Week_1_September_2026`,
           employeeId: inp.empId,
           employeeName: inp.name,
           department: inp.dept,
           profileCode: inp.code,
+          week: 'Week 1',
+          weekStartDate: '2026-09-01',
+          weekEndDate: '2026-09-07',
           month: 'September',
           year: 2026,
-          totalReachout: inp.reachout,
-          orderConvert: inp.orders,
-          repeatOrders: inp.repeat,
-          followupSent: inp.followups,
-          managerRemarks: inp.remarks,
-          submittedBy: 'Admin',
-        },
-        settings
-      )
-    );
-  });
-
-  // August 2026 Records (for history & comparison)
-  const augInputs = [
-    { empId: 'sales_emp_1', name: 'Rahul Sharma', code: 'PR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachout: 205, orders: 20, repeat: 8, followups: 102, remarks: 'Target reached.' },
-    { empId: 'sales_emp_2', name: 'Anjali Patel', code: 'PR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachout: 180, orders: 16, repeat: 6, followups: 88, remarks: 'Stable performance.' },
-    { empId: 'sales_emp_3', name: 'Vikram Verma', code: 'WR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachout: 175, orders: 17, repeat: 7, followups: 88, remarks: 'Good reach.' },
-    { empId: 'sales_emp_4', name: 'Sneha Kapoor', code: 'WR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachout: 160, orders: 14, repeat: 5, followups: 80, remarks: 'Solid start.' },
-    { empId: 'sales_emp_5', name: 'Amit Kumar', code: 'HW' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachout: 140, orders: 13, repeat: 5, followups: 75, remarks: 'Infra sales.' },
-    { empId: 'sales_emp_6', name: 'Divya Nair', code: 'DR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachout: 250, orders: 24, repeat: 9, followups: 115, remarks: 'Top performance in SMM.' },
-    { empId: 'sales_emp_7', name: 'Rohan Mehta', code: 'DR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachout: 225, orders: 19, repeat: 7, followups: 100, remarks: 'Good month.' },
-    { empId: 'sales_emp_8', name: 'Pooja Joshi', code: 'RR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachout: 215, orders: 21, repeat: 8, followups: 105, remarks: 'Retainer growth.' },
-    { empId: 'sales_emp_9', name: 'Priya Singh', code: 'RR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachout: 195, orders: 17, repeat: 7, followups: 98, remarks: 'Steady retainers.' },
-  ];
-
-  augInputs.forEach((inp) => {
-    records.push(
-      computeCompleteSalesRecord(
-        {
-          id: `sales_rec_${inp.empId}_August_2026`,
-          employeeId: inp.empId,
-          employeeName: inp.name,
-          department: inp.dept,
-          profileCode: inp.code,
-          month: 'August',
-          year: 2026,
-          totalReachout: inp.reachout,
-          orderConvert: inp.orders,
-          repeatOrders: inp.repeat,
-          followupSent: inp.followups,
+          reachouts: inp.reachouts,
+          conversions: inp.conversions,
+          followups: inp.followups,
+          orderValue: inp.orderValue,
           managerRemarks: inp.remarks,
           submittedBy: 'Admin',
         },
@@ -260,40 +246,24 @@ function generateInitialRecords(): SalesPerformanceRecord[] {
 
 export class SalesDataService {
   /**
-   * Initialize Sales collections
+   * Initialize Sales Data store
    */
-  static async initializeSalesData(): Promise<void> {
+  static async initializeSalesStore(): Promise<void> {
     try {
       const isInitialized = localStorage.getItem(SALES_LS_KEYS.INITIALIZED);
       const deletedEmp = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_EMPLOYEES, []);
 
-      // Pull tombstones from Firestore if available
-      if (db) {
-        try {
-          const tombSnap = await getDoc(doc(db, 'sales_settings', 'deleted_metadata'));
-          if (tombSnap.exists()) {
-            const fsDeleted = (tombSnap.data()?.deletedEmployeeIds as string[]) || [];
-            for (const id of fsDeleted) {
-              if (id && !deletedEmp.includes(id)) {
-                deletedEmp.push(id);
-              }
-            }
-            saveToStorage(SALES_LS_KEYS.DELETED_EMPLOYEES, deletedEmp);
-          }
-        } catch (e) {
-          console.warn('Could not read Firestore tombstones:', e);
-        }
-      }
-
       if (!isInitialized) {
-        // Seed default dataset only on absolute first setup if storage is not set
-        const storedEmp = getFromStorage<SalesEmployee[] | null>(SALES_LS_KEYS.EMPLOYEES, null);
-        if (storedEmp === null && deletedEmp.length === 0) {
-          saveToStorage(SALES_LS_KEYS.EMPLOYEES, INITIAL_SALES_EMPLOYEES);
+        const storedEmployees = getFromStorage<SalesEmployee[] | null>(SALES_LS_KEYS.EMPLOYEES, null);
+        if (!storedEmployees || storedEmployees.length === 0) {
+          const freshEmployees = INITIAL_SALES_EMPLOYEES.filter(
+            (e) => !deletedEmp.includes(e.id) && !deletedEmp.includes(e.name.toLowerCase())
+          );
+          saveToStorage(SALES_LS_KEYS.EMPLOYEES, freshEmployees);
         }
 
         const storedRecords = getFromStorage<SalesPerformanceRecord[] | null>(SALES_LS_KEYS.RECORDS, null);
-        if (storedRecords === null) {
+        if (!storedRecords || storedRecords.length === 0) {
           saveToStorage(SALES_LS_KEYS.RECORDS, generateInitialRecords());
         }
 
@@ -305,7 +275,7 @@ export class SalesDataService {
         localStorage.setItem(SALES_LS_KEYS.INITIALIZED, 'true');
       }
 
-      // Sync with Firestore if available (only once upon system creation)
+      // Sync with Firestore if connected
       if (db) {
         try {
           const initMarkerSnap = await getDoc(doc(db, 'sales_settings', 'system_init_marker'));
@@ -332,7 +302,7 @@ export class SalesDataService {
 
             await setDoc(doc(db, 'sales_settings', 'system_init_marker'), {
               initializedAt: new Date().toISOString(),
-              version: '2.0',
+              version: '3.0',
             });
           }
         } catch (fsErr) {
@@ -347,7 +317,7 @@ export class SalesDataService {
   // --- EMPLOYEES CRUD ---
   static async getEmployees(): Promise<SalesEmployee[]> {
     const deleted = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_EMPLOYEES, []).map((d) => (d || '').toLowerCase());
-    
+
     const isDeleted = (e: SalesEmployee) => {
       if (!e) return true;
       const id = (e.id || '').toLowerCase();
@@ -362,12 +332,23 @@ export class SalesDataService {
       );
     };
 
+    const normalizeEmployee = (e: SalesEmployee): SalesEmployee => {
+      const assigned = e.assignedProfiles && e.assignedProfiles.length > 0
+        ? e.assignedProfiles
+        : [e.profileCode || 'PR'];
+      return {
+        ...e,
+        assignedProfiles: assigned,
+        profileCode: assigned[0] || e.profileCode || 'PR',
+      };
+    };
+
     try {
       if (db) {
         const snap = await getDocs(collection(db, 'sales_employees'));
         if (!snap.empty) {
           const items = snap.docs
-            .map((d) => d.data() as SalesEmployee)
+            .map((d) => normalizeEmployee(d.data() as SalesEmployee))
             .filter((e) => !isDeleted(e));
           saveToStorage(SALES_LS_KEYS.EMPLOYEES, items);
           return items;
@@ -377,18 +358,29 @@ export class SalesDataService {
       console.warn('Firestore fetch employees failed, fallback to local storage:', e);
     }
     const local = getFromStorage<SalesEmployee[]>(SALES_LS_KEYS.EMPLOYEES, []);
-    return local.filter((e) => !isDeleted(e));
+    return local.map(normalizeEmployee).filter((e) => !isDeleted(e));
   }
 
-  static async saveEmployee(employee: SalesEmployee): Promise<SalesEmployee> {
+  static async saveEmployee(employee: SalesEmployee, actor?: { id: string; name: string; role: string }): Promise<SalesEmployee> {
+    if (!actor || !isUserSuperAdmin(actor)) {
+      throw new Error('403 Forbidden: Only Super Admin can create or update sales members and profile assignments.');
+    }
+
     const all = await this.getEmployees();
     const idx = all.findIndex((e) => e.id === employee.id);
-    let updated: SalesEmployee[];
+
+    const assigned = employee.assignedProfiles && employee.assignedProfiles.length > 0
+      ? employee.assignedProfiles
+      : [employee.profileCode || 'PR'];
+
     const employeeWithTimestamp: SalesEmployee = {
       ...employee,
+      assignedProfiles: assigned,
+      profileCode: assigned[0],
       updatedAt: new Date().toISOString(),
     };
 
+    let updated: SalesEmployee[];
     if (idx >= 0) {
       updated = [...all];
       updated[idx] = employeeWithTimestamp;
@@ -406,15 +398,32 @@ export class SalesDataService {
       }
     }
 
+    if (actor) {
+      this.logAudit({
+        userId: actor.id,
+        userName: actor.name,
+        userRole: actor.role,
+        action: idx >= 0 ? 'UPDATE_SALES_EMPLOYEE' : 'CREATE_SALES_EMPLOYEE',
+        entityType: 'employee',
+        entityId: employee.id,
+        details: `${actor.name} ${idx >= 0 ? 'updated' : 'created'} Sales member ${employee.name} with profiles: ${assigned.join(', ')}`,
+        newValue: employeeWithTimestamp,
+      });
+    }
+
     return employeeWithTimestamp;
   }
 
-  static async deleteEmployee(empId: string): Promise<void> {
+  static async deleteEmployee(empId: string, actor?: { id: string; name: string; role: string }): Promise<void> {
+    if (!actor || !isUserSuperAdmin(actor)) {
+      throw new Error('403 Forbidden: Only Super Admin can delete sales members.');
+    }
+
     const cleanId = (empId || '').trim();
     if (!cleanId) return;
     const cleanIdLower = cleanId.toLowerCase();
 
-    // 1. Collect all identifiers from local storage and firestore
+    // 1. Collect all identifiers
     const all = getFromStorage<SalesEmployee[]>(SALES_LS_KEYS.EMPLOYEES, []);
     const targetEmp = all.find(
       (e) =>
@@ -460,10 +469,10 @@ export class SalesDataService {
     });
     saveToStorage(SALES_LS_KEYS.EMPLOYEES, filteredEmployees);
 
-    // 4. Remove all associated performance records for this employee
+    // 4. Remove all associated performance records
     const allRecords = getFromStorage<SalesPerformanceRecord[]>(SALES_LS_KEYS.RECORDS, []);
     const deletedRecIds = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_RECORDS, []);
-    
+
     const remainingRecords = allRecords.filter((r) => {
       if (!r) return false;
       const empIdentifier = (r.employeeId || '').toLowerCase();
@@ -537,6 +546,18 @@ export class SalesDataService {
         console.warn('Firestore delete sales employee/records warning:', e);
       }
     }
+
+    if (actor) {
+      this.logAudit({
+        userId: actor.id,
+        userName: actor.name,
+        userRole: actor.role,
+        action: 'DELETE_SALES_EMPLOYEE',
+        entityType: 'employee',
+        entityId: cleanId,
+        details: `${actor.name} permanently deleted Sales member (${targetEmp?.name || cleanId}) and purged records.`,
+      });
+    }
   }
 
   /**
@@ -553,22 +574,19 @@ export class SalesDataService {
     profileCode?: string;
     salesDepartment?: 'IT' | 'SMM';
     salesProfileCode?: SalesProfileCode;
+    salesAssignedProfiles?: SalesProfileCode[];
     moduleAssignment?: 'pm' | 'sales' | 'both';
     status?: string;
     joiningDate?: string;
   }): Promise<SalesEmployee> {
-    const rawSalesProfile = user.salesProfileCode || (user.profileCode as SalesProfileCode);
-    let resolvedProfile: SalesProfileCode = 'PR';
-    if (rawSalesProfile && ['PR', 'WR', 'HW', 'DR', 'RR'].includes(rawSalesProfile)) {
-      resolvedProfile = rawSalesProfile;
-    } else if (user.salesDepartment === 'SMM' || user.team === 'SMM' || user.department?.toLowerCase().includes('smm')) {
-      resolvedProfile = 'DR';
-    } else {
-      resolvedProfile = 'PR';
-    }
+    const rawProfiles = user.salesAssignedProfiles && user.salesAssignedProfiles.length > 0
+      ? user.salesAssignedProfiles
+      : user.salesProfileCode
+      ? [user.salesProfileCode]
+      : [(['PR', 'WR', 'HW'].includes(user.profileCode as any) ? (user.profileCode as SalesProfileCode) : 'PR')];
 
     const resolvedDept: SalesDepartment =
-      user.salesDepartment || (['PR', 'WR', 'HW'].includes(resolvedProfile) ? 'IT' : 'SMM');
+      user.salesDepartment || (['PR', 'WR', 'HW'].includes(rawProfiles[0]) ? 'IT' : 'SMM');
 
     // Unmark from deleted if re-assigning
     const deleted = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_EMPLOYEES, []);
@@ -590,7 +608,8 @@ export class SalesDataService {
       email: user.email,
       avatarUrl: user.avatarUrl,
       department: resolvedDept,
-      profileCode: resolvedProfile,
+      profileCode: rawProfiles[0] || 'PR',
+      assignedProfiles: rawProfiles,
       moduleAssignment: user.moduleAssignment || 'both',
       joiningDate: user.joiningDate || new Date().toISOString().split('T')[0],
       status: user.status === 'disabled' ? 'inactive' : 'active',
@@ -605,7 +624,7 @@ export class SalesDataService {
     await this.deleteEmployee(userIdOrEmpId);
   }
 
-  // --- RECORDS CRUD ---
+  // --- RECORDS CRUD (WEEKLY PERFORMANCE) ---
   static async getRecords(): Promise<SalesPerformanceRecord[]> {
     const deleted = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_RECORDS, []);
     const deletedEmp = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_EMPLOYEES, []).map((d) => (d || '').toLowerCase());
@@ -636,9 +655,44 @@ export class SalesDataService {
     return local.filter((r) => !isRecordDeleted(r));
   }
 
-  static async saveRecord(record: SalesPerformanceRecord): Promise<SalesPerformanceRecord> {
+  /**
+   * Save Weekly Performance Record with Unique Constraint:
+   * (Employee + Profile + Week + Month + Year) is unique.
+   * Enforces backend-level authorization for own-data-only.
+   */
+  static async saveRecord(
+    record: SalesPerformanceRecord,
+    actor?: { id: string; name: string; role: string; userId?: string; email?: string }
+  ): Promise<SalesPerformanceRecord> {
     const all = await this.getRecords();
-    const idx = all.findIndex((r) => r.id === record.id || (r.employeeId === record.employeeId && r.month === record.month && Number(r.year) === Number(record.year)));
+    const employees = await this.getEmployees();
+
+    // Backend-level security check
+    if (actor) {
+      const accessCheck = validateRecordAccess(actor, record.employeeId, record.profileCode, employees);
+      if (!accessCheck.allowed) {
+        throw new Error(accessCheck.message || '403 Forbidden: Access Denied.');
+      }
+
+      // If record is updating an existing record, verify that the existing record belongs to the actor as well
+      const existingById = all.find((r) => r.id === record.id);
+      if (existingById && !isUserSuperAdmin(actor)) {
+        if (!canUserManageRecord(existingById, actor, employees)) {
+          throw new Error('403 Forbidden: You cannot overwrite another member\'s performance record.');
+        }
+      }
+    }
+
+    // Unique match key: employeeId + profileCode + week + month + year
+    const idx = all.findIndex(
+      (r) =>
+        r.id === record.id ||
+        (r.employeeId === record.employeeId &&
+          r.profileCode === record.profileCode &&
+          r.week === record.week &&
+          r.month === record.month &&
+          Number(r.year) === Number(record.year))
+    );
 
     let updated: SalesPerformanceRecord[];
     const recToSave: SalesPerformanceRecord = {
@@ -647,6 +701,12 @@ export class SalesDataService {
     };
 
     if (idx >= 0) {
+      // If updating matched record by key, also verify ownership of old record if not Super Admin
+      if (actor && !isUserSuperAdmin(actor)) {
+        if (!canUserManageRecord(all[idx], actor, employees)) {
+          throw new Error('403 Forbidden: You cannot overwrite another member\'s performance record.');
+        }
+      }
       updated = [...all];
       updated[idx] = recToSave;
     } else {
@@ -663,17 +723,42 @@ export class SalesDataService {
       }
     }
 
+    if (actor) {
+      this.logAudit({
+        userId: actor.id,
+        userName: actor.name,
+        userRole: actor.role,
+        action: idx >= 0 ? 'UPDATE_PERFORMANCE_RECORD' : 'CREATE_PERFORMANCE_RECORD',
+        entityType: 'record',
+        entityId: recToSave.id,
+        details: `${actor.name} ${idx >= 0 ? 'updated' : 'entered'} ${recToSave.profileCode} (${recToSave.week}, ${recToSave.month} ${recToSave.year}) performance for ${recToSave.employeeName} (Score: ${recToSave.totalPerformanceScore}/100)`,
+        newValue: recToSave,
+      });
+    }
+
     return recToSave;
   }
 
-  static async deleteRecord(recordId: string): Promise<void> {
+  static async deleteRecord(
+    recordId: string,
+    actor?: { id: string; name: string; role: string; userId?: string; email?: string }
+  ): Promise<void> {
+    const all = await this.getRecords();
+    const targetRec = all.find((r) => r.id === recordId);
+    const employees = await this.getEmployees();
+
+    if (actor && targetRec && !isUserSuperAdmin(actor)) {
+      if (!canUserManageRecord(targetRec, actor, employees)) {
+        throw new Error('403 Forbidden: You cannot delete another member\'s performance record.');
+      }
+    }
+
     const deleted = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_RECORDS, []);
     if (!deleted.includes(recordId)) {
       deleted.push(recordId);
       saveToStorage(SALES_LS_KEYS.DELETED_RECORDS, deleted);
     }
 
-    const all = await this.getRecords();
     const filtered = all.filter((r) => r.id !== recordId);
     saveToStorage(SALES_LS_KEYS.RECORDS, filtered);
 
@@ -683,6 +768,18 @@ export class SalesDataService {
       } catch (e) {
         console.warn('Firestore delete record failed:', e);
       }
+    }
+
+    if (actor) {
+      this.logAudit({
+        userId: actor.id,
+        userName: actor.name,
+        userRole: actor.role,
+        action: 'DELETE_PERFORMANCE_RECORD',
+        entityType: 'record',
+        entityId: recordId,
+        details: `${actor.name} deleted performance record for ${targetRec?.employeeName || recordId} (${targetRec?.profileCode || ''} - ${targetRec?.week || ''}).`,
+      });
     }
   }
 
@@ -703,7 +800,15 @@ export class SalesDataService {
     return getFromStorage<SalesRewardSettings>(SALES_LS_KEYS.SETTINGS, DEFAULT_SALES_SETTINGS);
   }
 
-  static async saveSettings(settings: SalesRewardSettings): Promise<SalesRewardSettings> {
+  static async saveSettings(
+    settings: SalesRewardSettings,
+    actor?: { id: string; name: string; role: string; email?: string }
+  ): Promise<SalesRewardSettings> {
+    if (!actor || !isUserSuperAdmin(actor)) {
+      throw new Error('403 Forbidden: Only Super Admin can update targets, KPIs, and reward settings.');
+    }
+
+    const prev = await this.getSettings();
     const toSave: SalesRewardSettings = {
       ...settings,
       updatedAt: new Date().toISOString(),
@@ -718,23 +823,208 @@ export class SalesDataService {
       }
     }
 
+    if (actor) {
+      this.logAudit({
+        userId: actor.id,
+        userName: actor.name,
+        userRole: actor.role,
+        action: 'UPDATE_SALES_SETTINGS',
+        entityType: 'settings',
+        entityId: 'global_config',
+        details: `${actor.name} updated Sales Targets, Scoring Weights, and Reward Slabs.`,
+        previousValue: prev,
+        newValue: toSave,
+      });
+    }
+
     return toSave;
   }
 
-  static async resetSettingsToDefault(): Promise<SalesRewardSettings> {
-    return this.saveSettings(DEFAULT_SALES_SETTINGS);
+  static async resetSettingsToDefault(actor?: { id: string; name: string; role: string; email?: string }): Promise<SalesRewardSettings> {
+    if (!actor || !isUserSuperAdmin(actor)) {
+      throw new Error('403 Forbidden: Only Super Admin can reset sales targets and settings.');
+    }
+    return this.saveSettings(DEFAULT_SALES_SETTINGS, actor);
+  }
+
+  /**
+   * Import Performance Records from CSV with Super Admin validation
+   */
+  static async importSalesCSV(
+    csvText: string,
+    actor?: { id: string; name: string; role: string; email?: string }
+  ): Promise<{ success: boolean; count: number; errors: string[] }> {
+    if (!actor || !isUserSuperAdmin(actor)) {
+      throw new Error('403 Forbidden: Only Super Admin can import sales records via CSV.');
+    }
+
+    const employees = await this.getEmployees();
+    const settings = await this.getSettings();
+    const lines = csvText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+
+    if (lines.length < 2) {
+      return { success: false, count: 0, errors: ['CSV content is empty or contains only header.'] };
+    }
+
+    const header = lines[0].toLowerCase().split(',').map((h) => h.trim().replace(/^"|"$/g, ''));
+    const rows = lines.slice(1);
+    const errors: string[] = [];
+    let savedCount = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const lineNum = i + 2;
+      const cols = rows[i].split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
+      if (cols.length < 4) {
+        errors.push(`Row ${lineNum}: Insufficient columns.`);
+        continue;
+      }
+
+      const rowObj: Record<string, string> = {};
+      header.forEach((h, idx) => {
+        rowObj[h] = cols[idx] || '';
+      });
+
+      const empName = rowObj['employee'] || rowObj['name'] || rowObj['sales member'] || cols[0];
+      const code = (rowObj['profile'] || rowObj['profilecode'] || cols[2] || 'PR').toUpperCase() as SalesProfileCode;
+      const month = rowObj['month'] || cols[3] || 'September';
+      const year = Number(rowObj['year']) || 2026;
+      const week = rowObj['week'] || 'Week 1';
+      const reachouts = Number(rowObj['total reachout'] || rowObj['reachout'] || rowObj['reachouts'] || cols[4] || 0);
+      const conversions = Number(rowObj['order convert'] || rowObj['conversions'] || rowObj['orders'] || cols[5] || 0);
+      const followups = Number(rowObj['follow-up sent'] || rowObj['followup sent'] || rowObj['followups'] || cols[7] || 0);
+      const orderValue = Number(rowObj['order value'] || rowObj['ordervalue'] || rowObj['value'] || 0);
+
+      const emp = employees.find(
+        (e) => e.name.toLowerCase() === empName.toLowerCase() || (e.email && e.email.toLowerCase() === empName.toLowerCase())
+      );
+
+      if (!emp) {
+        errors.push(`Row ${lineNum}: Member "${empName}" not found in Sales roster.`);
+        continue;
+      }
+
+      const recordToCompute: SalesPerformanceRecord = {
+        id: `sales_rec_${emp.id}_${code}_${week.replace(' ', '_')}_${month}_${year}`,
+        employeeId: emp.id,
+        employeeName: emp.name,
+        department: ['PR', 'WR', 'HW'].includes(code) ? 'IT' : 'SMM',
+        profileCode: code,
+        week,
+        month,
+        year,
+        monthYearKey: `${month} ${year}`,
+        reachouts,
+        conversions,
+        followups,
+        orderValue,
+        conversionRate: 0,
+        reachoutScore: 0,
+        conversionScore: 0,
+        followupScore: 0,
+        orderValueScore: 0,
+        totalPerformanceScore: 0,
+        rewardEligibility: 'Not Eligible',
+        rewardLevel: 'Standard',
+        rewardAmount: 0,
+        submittedBy: actor.name || 'Admin Import',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const computed = computeCompleteSalesRecord(recordToCompute, settings);
+      await this.saveRecord(computed, actor);
+      savedCount++;
+    }
+
+    if (actor) {
+      this.logAudit({
+        userId: actor.id,
+        userName: actor.name,
+        userRole: actor.role,
+        action: 'IMPORT_SALES_RECORDS',
+        entityType: 'record',
+        entityId: 'csv_bulk_import',
+        details: `${actor.name} imported ${savedCount} performance records via CSV.`,
+      });
+    }
+
+    return {
+      success: savedCount > 0,
+      count: savedCount,
+      errors,
+    };
+  }
+
+  // --- AUDIT LOGS ---
+  static async getAuditLogs(): Promise<SalesAuditLog[]> {
+    try {
+      if (db) {
+        const snap = await getDocs(collection(db, 'sales_audit_logs'));
+        if (!snap.empty) {
+          const logs = snap.docs.map((d) => d.data() as SalesAuditLog);
+          logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          saveToStorage(SALES_LS_KEYS.AUDIT_LOGS, logs);
+          return logs;
+        }
+      }
+    } catch (e) {
+      console.warn('Firestore fetch audit logs failed:', e);
+    }
+    const local = getFromStorage<SalesAuditLog[]>(SALES_LS_KEYS.AUDIT_LOGS, []);
+    return local.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  static async logAudit(entry: Omit<SalesAuditLog, 'id' | 'timestamp'>): Promise<void> {
+    const newLog: SalesAuditLog = {
+      ...entry,
+      id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      timestamp: new Date().toISOString(),
+    };
+
+    const existing = getFromStorage<SalesAuditLog[]>(SALES_LS_KEYS.AUDIT_LOGS, []);
+    const updated = [newLog, ...existing].slice(0, 500); // Keep latest 500
+    saveToStorage(SALES_LS_KEYS.AUDIT_LOGS, updated);
+
+    if (db) {
+      try {
+        await setDoc(doc(db, 'sales_audit_logs', newLog.id), newLog);
+      } catch (e) {
+        console.warn('Firestore audit log failed:', e);
+      }
+    }
+  }
+
+  // --- SECURITY VALIDATION ---
+  /**
+   * Validate if a user can record/edit performance for a specific profile and employee
+   */
+  static validatePerformancePermission(
+    currentUser: { uid?: string; userId?: string; email?: string; name?: string; role?: string } | null | undefined,
+    targetEmployeeId: string,
+    profileCode: SalesProfileCode,
+    employees: SalesEmployee[]
+  ): { allowed: boolean; message?: string } {
+    return validateRecordAccess(currentUser, targetEmployeeId, profileCode, employees);
   }
 
   // --- SUBSCRIPTIONS ---
   static subscribeToEmployees(callback: (employees: SalesEmployee[]) => void): Unsubscribe {
-    if (!db) {
-      return () => {};
-    }
+    if (!db) return () => {};
     try {
       return onSnapshot(collection(db, 'sales_employees'), (snap) => {
         const deleted = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_EMPLOYEES, []).map((d) => (d || '').toLowerCase());
         const items = snap.docs
-          .map((d) => d.data() as SalesEmployee)
+          .map((d) => {
+            const data = d.data() as SalesEmployee;
+            const assigned = data.assignedProfiles && data.assignedProfiles.length > 0
+              ? data.assignedProfiles
+              : [data.profileCode || 'PR'];
+            return {
+              ...data,
+              assignedProfiles: assigned,
+              profileCode: assigned[0],
+            };
+          })
           .filter((e) => {
             if (!e) return false;
             const id = (e.id || '').toLowerCase();
@@ -758,9 +1048,7 @@ export class SalesDataService {
   }
 
   static subscribeToRecords(callback: (records: SalesPerformanceRecord[]) => void): Unsubscribe {
-    if (!db) {
-      return () => {};
-    }
+    if (!db) return () => {};
     try {
       return onSnapshot(collection(db, 'sales_records'), (snap) => {
         const deleted = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_RECORDS, []);
@@ -784,9 +1072,7 @@ export class SalesDataService {
   }
 
   static subscribeToSettings(callback: (settings: SalesRewardSettings) => void): Unsubscribe {
-    if (!db) {
-      return () => {};
-    }
+    if (!db) return () => {};
     try {
       return onSnapshot(doc(db, 'sales_settings', 'global_config'), (snap) => {
         if (snap.exists()) {
@@ -799,113 +1085,5 @@ export class SalesDataService {
       console.warn('Subscription error for sales settings:', e);
       return () => {};
     }
-  }
-
-  // --- IMPORT / EXPORT CSV ---
-  static parseSalesCSV(
-    csvContent: string,
-    existingEmployees: SalesEmployee[],
-    settings: SalesRewardSettings,
-    defaultMonth: string,
-    defaultYear: number
-  ): { records: SalesPerformanceRecord[]; newEmployees: SalesEmployee[]; errors: string[] } {
-    const lines = csvContent.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
-    const errors: string[] = [];
-    const parsedRecords: SalesPerformanceRecord[] = [];
-    const newEmployeesMap = new Map<string, SalesEmployee>();
-
-    if (lines.length <= 1) {
-      errors.push('The CSV file is empty or missing data rows.');
-      return { records: [], newEmployees: [], errors };
-    }
-
-    const header = lines[0].toLowerCase();
-    const columns = header.split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
-
-    // Find indices
-    const nameIdx = columns.findIndex((c) => c.includes('employee') || c.includes('name'));
-    const deptIdx = columns.findIndex((c) => c.includes('dept') || c.includes('department'));
-    const profileIdx = columns.findIndex((c) => c.includes('profile') || c.includes('code'));
-    const monthIdx = columns.findIndex((c) => c.includes('month'));
-    const reachoutIdx = columns.findIndex((c) => c.includes('reachout') || c.includes('reach'));
-    const orderIdx = columns.findIndex((c) => c.includes('convert') || c.includes('order'));
-    const repeatIdx = columns.findIndex((c) => c.includes('repeat'));
-    const followupIdx = columns.findIndex((c) => c.includes('follow') || c.includes('followup'));
-
-    if (nameIdx === -1 || reachoutIdx === -1 || orderIdx === -1) {
-      errors.push('CSV must include at least: Employee Name, Total Reachout, and Order Convert columns.');
-      return { records: [], newEmployees: [], errors };
-    }
-
-    for (let i = 1; i < lines.length; i++) {
-      const row = lines[i].split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
-      if (row.length < 3 || !row[nameIdx]) continue;
-
-      const empName = row[nameIdx];
-      let profileCode = (profileIdx >= 0 && row[profileIdx] ? row[profileIdx].toUpperCase() : 'PR') as SalesProfileCode;
-      if (!['PR', 'WR', 'HW', 'DR', 'RR'].includes(profileCode)) {
-        profileCode = 'PR';
-      }
-
-      let department: SalesDepartment = ['PR', 'WR', 'HW'].includes(profileCode) ? 'IT' : 'SMM';
-      if (deptIdx >= 0 && row[deptIdx]) {
-        const d = row[deptIdx].toUpperCase();
-        if (d.includes('IT')) department = 'IT';
-        else if (d.includes('SMM')) department = 'SMM';
-      }
-
-      const month = monthIdx >= 0 && row[monthIdx] ? row[monthIdx] : defaultMonth;
-      const year = defaultYear;
-      const reachout = sanitizeSalesNumber(row[reachoutIdx]);
-      const orders = sanitizeSalesNumber(row[orderIdx]);
-      const repeat = repeatIdx >= 0 ? sanitizeSalesNumber(row[repeatIdx]) : 0;
-      const followups = followupIdx >= 0 ? sanitizeSalesNumber(row[followupIdx]) : 0;
-
-      // Find or create employee
-      let emp = existingEmployees.find((e) => e.name.toLowerCase() === empName.toLowerCase());
-      if (!emp && !newEmployeesMap.has(empName.toLowerCase())) {
-        const newEmp: SalesEmployee = {
-          id: `sales_emp_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-          name: empName,
-          email: `${empName.toLowerCase().replace(/\s+/g, '.')}@itsmmtigers.com`,
-          department,
-          profileCode,
-          joiningDate: new Date().toISOString().split('T')[0],
-          status: 'active',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        newEmployeesMap.set(empName.toLowerCase(), newEmp);
-        emp = newEmp;
-      } else if (!emp) {
-        emp = newEmployeesMap.get(empName.toLowerCase());
-      }
-
-      const rec = computeCompleteSalesRecord(
-        {
-          id: `sales_rec_${emp?.id || 'emp'}_${month}_${year}`,
-          employeeId: emp?.id || `sales_emp_${Date.now()}`,
-          employeeName: empName,
-          department,
-          profileCode,
-          month,
-          year,
-          totalReachout: reachout,
-          orderConvert: orders,
-          repeatOrders: repeat,
-          followupSent: followups,
-          submittedBy: 'CSV Import',
-        },
-        settings
-      );
-
-      parsedRecords.push(rec);
-    }
-
-    return {
-      records: parsedRecords,
-      newEmployees: Array.from(newEmployeesMap.values()),
-      errors,
-    };
   }
 }

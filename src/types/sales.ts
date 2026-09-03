@@ -70,7 +70,8 @@ export interface SalesEmployee {
   email: string;
   avatarUrl?: string;
   department: SalesDepartment;
-  profileCode: SalesProfileCode;
+  profileCode?: SalesProfileCode; // primary / backward compatibility
+  assignedProfiles: SalesProfileCode[]; // Support multiple assigned profiles
   moduleAssignment?: 'pm' | 'sales' | 'both';
   joiningDate: string;
   status: 'active' | 'inactive';
@@ -85,7 +86,7 @@ export interface SalesRewardSlabConfig {
   level: 'Platinum' | 'Gold' | 'Silver' | 'Bronze' | 'No Reward' | string;
   minScore: number; // e.g. 90
   maxScore: number; // e.g. 100
-  rewardAmount: number; // e.g. 5000 (INR or currency)
+  rewardAmount: number; // e.g. 5000 (INR)
   color?: string;
 }
 
@@ -95,18 +96,32 @@ export interface SalesProfileTargetConfig {
   profileCode: SalesProfileCode;
   profileName: string;
   department: SalesDepartment;
-  // Targets
-  reachoutTarget: number;
-  orderConvertTarget: number;
-  repeatOrdersTarget: number;
-  followupTarget: number;
-  // Weights (Must total 100)
-  reachoutWeight: number; // e.g. 20 (20%)
-  orderConvertWeight: number; // e.g. 40 (40%)
-  repeatOrdersWeight: number; // e.g. 25 (25%)
-  followupWeight: number; // e.g. 15 (15%)
-  // Eligibility rule
-  minConversionRate: number; // e.g. 7 (7%)
+
+  // Profile-specific targets
+  conversionTarget: number; // e.g. 10 (10%)
+  followupTarget: number; // e.g. 100
+  orderValueTarget: number; // e.g. 100000 (₹1,00,000)
+  reachoutBenchmark: number; // e.g. 200 (optional benchmark, purely activity, 0% score weight)
+
+  targetConversionRate?: number;
+  targetFollowups?: number;
+  targetOrderValue?: number;
+  followupsWeight?: number;
+
+  // Scoring Weights (Must total 100%)
+  conversionWeight: number; // default 50%
+  followupWeight: number; // default 20%
+  orderValueWeight: number; // default 30%
+  reachoutWeight: number; // strictly 0%
+
+  // Backward compatibility optional fields
+  reachoutTarget?: number;
+  orderConvertTarget?: number;
+  repeatOrdersTarget?: number;
+  orderConvertWeight?: number;
+  repeatOrdersWeight?: number;
+  minConversionRate?: number;
+
   // Reward slabs
   rewardSlabs: SalesRewardSlabConfig[];
 }
@@ -124,30 +139,46 @@ export interface SalesPerformanceRecord {
   employeeName: string;
   department: SalesDepartment;
   profileCode: SalesProfileCode;
+
+  // Weekly Association
+  week: string; // e.g. 'Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'
+  weekStartDate?: string; // e.g. '2026-09-01'
+  weekEndDate?: string; // e.g. '2026-09-07'
   month: string; // e.g. 'September'
   year: number; // e.g. 2026
   monthYearKey: string; // 'September 2026'
 
-  // Raw Performance Inputs
-  totalReachout: number;
-  orderConvert: number;
-  repeatOrders: number;
-  followupSent: number;
+  // Raw Weekly Performance Inputs
+  reachouts: number; // Activity metric (0% weight)
+  conversions: number; // Converted orders
+  followups: number; // Follow-up messages / calls
+  orderValue: number; // Total order value in INR (₹)
+
+  // Backward compatibility alias mappings
+  totalReachout?: number;
+  orderConvert?: number;
+  followupSent?: number;
+  repeatOrders?: number;
+
   managerRemarks?: string;
 
-  // Auto-calculated Metrics
-  conversionRate: number; // (orderConvert / totalReachout) * 100
-  reachoutScore: number; // MIN(totalReachout / reachoutTarget, 1) * reachoutWeight
-  orderConvertScore: number; // MIN(orderConvert / orderConvertTarget, 1) * orderConvertWeight
-  repeatOrdersScore: number; // MIN(repeatOrders / repeatOrdersTarget, 1) * repeatOrdersWeight
-  followupScore: number; // MIN(followupSent / followupTarget, 1) * followupWeight
-  totalPerformanceScore: number; // Total sum, max 100
+  // Auto-calculated Metrics (Profile-Specific)
+  conversionRate: number; // (conversions / reachouts) * 100
+  conversionScore: number; // MIN(conversionRate / conversionTarget, 1) * conversionWeight
+  followupScore: number; // MIN(followups / followupTarget, 1) * followupWeight
+  orderValueScore: number; // MIN(orderValue / orderValueTarget, 1) * orderValueWeight
+  totalPerformanceScore: number; // conversionScore + followupScore + orderValueScore (Max 100)
+
+  // Backward-compatibility score fields
+  reachoutScore?: number; // 0
+  orderConvertScore?: number;
+  repeatOrdersScore?: number;
 
   // Reward Status & Output
   rewardEligibility: 'Eligible' | 'Not Eligible';
   ineligibilityReason?: string;
   rewardLevel: string; // 'Platinum' | 'Gold' | 'Silver' | 'Bronze' | 'No Reward'
-  rewardAmount: number;
+  rewardAmount: number; // in INR (₹)
 
   submittedBy?: string;
   createdAt: string;
@@ -158,13 +189,17 @@ export interface SalesLeaderboardItem extends SalesPerformanceRecord {
   rank: number;
   isTie?: boolean;
   avatarUrl?: string;
+  assignedProfiles?: SalesProfileCode[];
   joiningDate?: string;
   // Progress indicators
-  reachoutAchievementPct: number;
-  orderAchievementPct: number;
-  repeatAchievementPct: number;
+  conversionAchievementPct: number;
   followupAchievementPct: number;
-  performanceBand: 'Excellent' | 'Very Good' | 'Good' | 'Needs Improvement';
+  orderValueAchievementPct: number;
+  reachoutBenchmarkPct?: number;
+  reachoutAchievementPct?: number;
+  orderAchievementPct?: number;
+  repeatAchievementPct?: number;
+  performanceBand: 'Platinum Tier' | 'Gold Tier' | 'Silver Tier' | 'Bronze Tier' | 'Developing';
 }
 
 export interface SalesProfileSummary {
@@ -173,14 +208,17 @@ export interface SalesProfileSummary {
   department: SalesDepartment;
   employeeCount: number;
   totalReachout: number;
-  totalOrders: number;
-  totalRepeatOrders: number;
+  totalConversions: number;
   totalFollowups: number;
+  totalOrderValue: number;
   avgReachout: number;
-  avgOrders: number;
-  avgRepeatOrders: number;
+  avgConversions: number;
   avgFollowups: number;
-  avgConversionRate: number;
+  avgOrderValue: number;
+  conversionRate: number;
+  avgConversionRate?: number;
+  avgOrders?: number;
+  avgRepeatOrders?: number;
   avgScore: number;
   totalRewards: number;
   eligibleEmployeesCount: number;
@@ -190,9 +228,9 @@ export interface SalesDepartmentSummary {
   department: SalesDepartment;
   employeeCount: number;
   totalReachout: number;
-  totalOrders: number;
-  totalRepeatOrders: number;
+  totalConversions: number;
   totalFollowups: number;
+  totalOrderValue: number;
   overallConversionRate: number;
   avgScore: number;
   totalRewards: number;
@@ -201,11 +239,13 @@ export interface SalesDepartmentSummary {
 
 export interface SalesDashboardSummary {
   totalEmployees: number;
-  totalReachout: number;
-  totalOrders: number;
-  totalRepeatOrders: number;
-  totalFollowups: number;
+  itEmployeesCount: number;
+  smmEmployeesCount: number;
+  totalReachouts: number;
+  totalConversions: number;
   overallConversionRate: number;
+  totalFollowups: number;
+  totalOrderValue: number;
   avgScore: number;
   totalRewards: number;
   eligibleCount: number;
@@ -215,26 +255,65 @@ export interface SalesDashboardSummary {
   topItPerformer?: SalesLeaderboardItem;
   topSmmPerformer?: SalesLeaderboardItem;
   highestConversionPerformer?: SalesLeaderboardItem;
-  highestRepeatOrdersPerformer?: SalesLeaderboardItem;
-  highestReachoutPerformer?: SalesLeaderboardItem;
+  highestOrderValuePerformer?: SalesLeaderboardItem;
   highestFollowupPerformer?: SalesLeaderboardItem;
+  highestReachoutPerformer?: SalesLeaderboardItem;
+}
+
+export interface SalesAuditLog {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  action: string;
+  entityType: 'profile' | 'employee' | 'record' | 'target' | 'settings' | 'user';
+  entityId: string;
+  details: string;
+  previousValue?: any;
+  newValue?: any;
+  timestamp: string;
 }
 
 export interface SalesEmployeeHistoryComparison {
   month: string;
   year: number;
   score: number;
+  totalPerformanceScore?: number;
   conversionRate: number;
   orders: number;
+  orderConvert?: number;
   repeatOrders: number;
-  reachouts: number;
-  followups: number;
+  followups?: number;
+  followupSent?: number;
+  reachouts?: number;
+  totalReachout?: number;
   rewardAmount: number;
   rewardLevel: string;
-  eligibility: 'Eligible' | 'Not Eligible';
-  // Deltas against previous month
+  eligibility: string;
   scoreChange?: number;
   conversionChange?: number;
   orderChange?: number;
   repeatOrderChange?: number;
+  orderValue?: number;
+}
+
+export interface SalesMonthlyAggregation {
+  employeeId: string;
+  employeeName: string;
+  department: SalesDepartment;
+  profileCode: SalesProfileCode;
+  month: string;
+  year: number;
+  monthYearKey: string;
+  weeksCount: number;
+  totalReachouts: number;
+  totalConversions: number;
+  conversionRate: number;
+  totalFollowups: number;
+  totalOrderValue: number;
+  avgWeeklyScore: number;
+  monthlyPerformanceScore: number;
+  rewardLevel: string;
+  rewardAmount: number;
+  weeklyRecords: SalesPerformanceRecord[];
 }

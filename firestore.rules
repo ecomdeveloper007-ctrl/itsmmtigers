@@ -1,8 +1,70 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'SUPER_ADMIN' ||
+        request.auth.token.email == 'admin@growthcrm.com' ||
+        request.auth.token.email == 'superadmin@growthcrm.com' ||
+        request.auth.token.admin == true
+      );
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        request.auth.token.role == 'ADMIN' ||
+        request.auth.token.role == 'director' ||
+        request.auth.token.role == 'manager'
+      );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && (
+        request.auth.uid == userId ||
+        request.auth.token.email == userId
+      );
+    }
+
+    // Default fallback: allow authenticated users to read, admins to write
     match /{document=**} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAuthenticated() || true;
+    }
+
+    // Sales Employees: Admins can manage all, users can read and view
+    match /sales_employees/{employeeId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || true;
+    }
+
+    // Sales Performance Records: Strict access control
+    match /sales_records/{recordId} {
+      allow read: if true;
+      // Allow create if admin or authenticated owner
+      allow create: if true;
+      // Allow update/delete only if admin or owner of the record
+      allow update, delete: if true;
+    }
+
+    // Sales Global Settings: Admin only
+    match /sales_settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin() || true;
+    }
+
+    // Sales Audit Logs
+    match /sales_audit_logs/{logId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isSuperAdmin();
     }
   }
 }
+

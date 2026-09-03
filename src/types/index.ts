@@ -165,6 +165,7 @@ export interface UserProfile {
   moduleAssignment?: ModuleAssignment;
   salesDepartment?: 'IT' | 'SMM';
   salesProfileCode?: 'PR' | 'WR' | 'HW' | 'DR' | 'RR';
+  salesAssignedProfiles?: ('PR' | 'WR' | 'HW' | 'DR' | 'RR')[];
   joiningDate?: string;
   lastLogin?: string;
   registrationNotes?: string;

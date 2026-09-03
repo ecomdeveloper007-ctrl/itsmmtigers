@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSales, SalesTab } from '../../context/SalesContext';
+import { useAuth } from '../../context/AuthContext';
+import { isUserSuperAdmin } from '../../utils/salesAuthUtils';
 import {
   LayoutDashboard,
   Users,
@@ -26,24 +28,38 @@ import { SalesImportExportModal } from './SalesImportExportModal';
 
 export const SalesModuleRoot: React.FC = () => {
   const { salesActiveTab, setSalesActiveTab } = useSales();
+  const { currentUser } = useAuth();
+  const isSuperAdmin = isUserSuperAdmin(currentUser);
 
-  const navTabs: { id: SalesTab; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: 'sales-dashboard', label: 'Sales Dashboard', icon: LayoutDashboard },
-    { id: 'sales-leaderboard', label: 'Sales Leaderboard', icon: Trophy },
-    { id: 'sales-performance', label: 'Performance Records', icon: Calculator },
-    { id: 'sales-employees', label: 'Sales Employees', icon: Users },
-    { id: 'sales-analytics', label: 'Profile Benchmarks', icon: Target },
-    { id: 'sales-history', label: 'Monthly History', icon: TrendingUp },
-    { id: 'sales-reports', label: 'Reports & Export', icon: FileText },
-    { id: 'sales-settings', label: 'Reward Settings', icon: Sliders },
+  // If a Sales Member tries to land on an admin-only tab, redirect to sales-dashboard
+  useEffect(() => {
+    if (!isSuperAdmin) {
+      const adminOnlyTabs: SalesTab[] = ['sales-employees', 'sales-reports', 'sales-settings', 'sales-leaderboard'];
+      if (adminOnlyTabs.includes(salesActiveTab)) {
+        setSalesActiveTab('sales-dashboard');
+      }
+    }
+  }, [isSuperAdmin, salesActiveTab, setSalesActiveTab]);
+
+  const allNavTabs: { id: SalesTab; label: string; icon: React.FC<{ className?: string }>; adminOnly?: boolean }[] = [
+    { id: 'sales-dashboard', label: isSuperAdmin ? 'Sales Dashboard' : 'My Dashboard', icon: LayoutDashboard },
+    { id: 'sales-leaderboard', label: 'Sales Leaderboard', icon: Trophy, adminOnly: true },
+    { id: 'sales-performance', label: isSuperAdmin ? 'Performance Records' : 'My Performance Records', icon: Calculator },
+    { id: 'sales-employees', label: 'Sales Members', icon: Users, adminOnly: true },
+    { id: 'sales-analytics', label: isSuperAdmin ? 'Profile Benchmarks' : 'My Profile Targets', icon: Target },
+    { id: 'sales-history', label: isSuperAdmin ? 'Monthly History' : 'My Progression History', icon: TrendingUp },
+    { id: 'sales-reports', label: 'Reports & Export', icon: FileText, adminOnly: true },
+    { id: 'sales-settings', label: 'Target & Rewards', icon: Sliders, adminOnly: true },
   ];
+
+  const visibleTabs = allNavTabs.filter((tab) => !tab.adminOnly || isSuperAdmin);
 
   return (
     <div className="space-y-6">
       {/* Sub-Navigation Bar for Sales Module */}
       <div className="bg-white rounded-2xl border border-[#e2ebd9] p-1.5 shadow-xs overflow-x-auto">
         <div className="flex items-center gap-1 min-w-max">
-          {navTabs.map((tab) => {
+          {visibleTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = salesActiveTab === tab.id;
             return (
@@ -67,20 +83,20 @@ export const SalesModuleRoot: React.FC = () => {
       {/* Tab Content */}
       <div className="transition-all duration-150">
         {salesActiveTab === 'sales-dashboard' && <SalesDashboard />}
-        {salesActiveTab === 'sales-leaderboard' && <SalesLeaderboardView />}
+        {salesActiveTab === 'sales-leaderboard' && isSuperAdmin && <SalesLeaderboardView />}
         {salesActiveTab === 'sales-performance' && <SalesPerformanceView />}
-        {salesActiveTab === 'sales-employees' && <SalesEmployeesView />}
+        {salesActiveTab === 'sales-employees' && isSuperAdmin && <SalesEmployeesView />}
         {salesActiveTab === 'sales-analytics' && <SalesProfilePerformanceView />}
         {salesActiveTab === 'sales-history' && <SalesMonthlyHistoryView />}
-        {salesActiveTab === 'sales-reports' && <SalesReportsView />}
-        {salesActiveTab === 'sales-settings' && <SalesSettingsView />}
+        {salesActiveTab === 'sales-reports' && isSuperAdmin && <SalesReportsView />}
+        {salesActiveTab === 'sales-settings' && isSuperAdmin && <SalesSettingsView />}
       </div>
 
       {/* Global Sales Modals */}
       <SalesPerformanceEntryModal />
-      <SalesEmployeeModal />
+      {isSuperAdmin && <SalesEmployeeModal />}
       <SalesEmployeeDetailModal />
-      <SalesImportExportModal />
+      {isSuperAdmin && <SalesImportExportModal />}
     </div>
   );
 };

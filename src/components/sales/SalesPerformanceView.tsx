@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSales } from '../../context/SalesContext';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import {
   Calculator,
   Search,
@@ -11,8 +12,13 @@ import {
   XCircle,
   TrendingUp,
   Download,
+  Filter,
+  Lock,
 } from 'lucide-react';
 import { SalesPerformanceRecord, SalesProfileCode } from '../../types/sales';
+import { canUserManageRecord, isUserAdminOrSuperAdmin } from '../../utils/salesAuthUtils';
+
+const WEEKS_OPTIONS = ['all', 'Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'];
 
 export const SalesPerformanceView: React.FC = () => {
   const {
@@ -23,9 +29,12 @@ export const SalesPerformanceView: React.FC = () => {
     setSelectedEmployeeForDetail,
     salesEmployees,
     setIsSalesImportModalOpen,
+    selectedWeek,
+    setSelectedWeek,
   } = useSales();
 
   const { selectedMonth, selectedYear } = useApp();
+  const { currentUser, isAdmin, isSuperAdmin } = useAuth();
 
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState<'all' | 'IT' | 'SMM'>('all');
@@ -36,6 +45,9 @@ export const SalesPerformanceView: React.FC = () => {
     (r) => r.month.toLowerCase() === selectedMonth.toLowerCase() && Number(r.year) === Number(selectedYear)
   );
 
+  if (selectedWeek !== 'all') {
+    records = records.filter((r) => r.week === selectedWeek);
+  }
   if (deptFilter !== 'all') {
     records = records.filter((r) => r.department === deptFilter);
   }
@@ -49,13 +61,18 @@ export const SalesPerformanceView: React.FC = () => {
         r.employeeName.toLowerCase().includes(q) ||
         r.profileCode.toLowerCase().includes(q) ||
         r.department.toLowerCase().includes(q) ||
+        (r.week && r.week.toLowerCase().includes(q)) ||
         (r.managerRemarks && r.managerRemarks.toLowerCase().includes(q))
     );
   }
 
   const handleDelete = async (e: React.MouseEvent, rec: SalesPerformanceRecord) => {
     e.stopPropagation();
-    if (confirm(`Delete performance record for ${rec.employeeName} (${rec.month} ${rec.year})?`)) {
+    if (!canUserManageRecord(rec, currentUser, salesEmployees)) {
+      alert('Security Violation: You can only delete your own performance records.');
+      return;
+    }
+    if (confirm(`Delete weekly record for ${rec.employeeName} (${rec.profileCode} - ${rec.week || 'Weekly'})?`)) {
       await deleteSalesPerformanceRecord(rec.id);
     }
   };
@@ -72,17 +89,17 @@ export const SalesPerformanceView: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-[#8cc540]/20 text-[#436320] border border-[#8cc540]/40">
-              Performance Entries
+              Weekly Performance
             </span>
             <span className="text-xs font-bold text-[#666666]">
               • {selectedMonth} {selectedYear} ({records.length} Submissions)
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-[#101010] tracking-tight mt-1">
-            Monthly Performance Records
+            Performance Records by Profile
           </h1>
           <p className="text-xs sm:text-sm text-[#555555] mt-0.5">
-            Audit raw performance metrics, scores, reward tiers, and manager evaluations
+            50% Conversion • 20% Follow-ups • 30% Order Value • 0% Reachouts weight
           </p>
         </div>
 
@@ -110,7 +127,7 @@ export const SalesPerformanceView: React.FC = () => {
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#777777]" />
           <input
             type="text"
-            placeholder="Search performance records..."
+            placeholder="Search by name, profile, week..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9.5 pr-4 py-2 bg-[#f8faf6] border border-[#e2ebd9] rounded-xl text-xs font-medium text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
@@ -118,6 +135,20 @@ export const SalesPerformanceView: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Week Filter */}
+          <select
+            value={selectedWeek}
+            onChange={(e) => setSelectedWeek(e.target.value)}
+            className="bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none cursor-pointer"
+          >
+            <option value="all">All Weeks</option>
+            <option value="Week 1">Week 1</option>
+            <option value="Week 2">Week 2</option>
+            <option value="Week 3">Week 3</option>
+            <option value="Week 4">Week 4</option>
+            <option value="Week 5">Week 5</option>
+          </select>
+
           <select
             value={deptFilter}
             onChange={(e) => setDeptFilter(e.target.value as any)}
@@ -149,16 +180,16 @@ export const SalesPerformanceView: React.FC = () => {
           <table className="w-full text-xs text-left">
             <thead className="bg-[#f8faf6] text-[#666666] font-bold uppercase text-[10px] border-b border-[#e2ebd9]">
               <tr>
-                <th className="p-4">Sales Employee</th>
-                <th className="p-4">Department & Profile</th>
-                <th className="p-4 text-right">Reachout</th>
-                <th className="p-4 text-right">Orders</th>
-                <th className="p-4 text-right">Repeat</th>
-                <th className="p-4 text-right">Follow-ups</th>
-                <th className="p-4 text-right">Conversion Rate</th>
-                <th className="p-4 text-right">Performance Score</th>
-                <th className="p-4 text-right">Reward Payout</th>
-                <th className="p-4 text-center">Eligibility</th>
+                <th className="p-4">Week</th>
+                <th className="p-4">Sales Member</th>
+                <th className="p-4">Profile & Dept</th>
+                <th className="p-4 text-right">Reachouts (0%)</th>
+                <th className="p-4 text-right">Conv. Rate (50%)</th>
+                <th className="p-4 text-right">Follow-ups (20%)</th>
+                <th className="p-4 text-right">Order Value (30%)</th>
+                <th className="p-4 text-right">Total Score</th>
+                <th className="p-4 text-right">Reward</th>
+                <th className="p-4 text-center">Benchmark</th>
                 <th className="p-4 text-center">Actions</th>
               </tr>
             </thead>
@@ -170,6 +201,12 @@ export const SalesPerformanceView: React.FC = () => {
                     onClick={() => handleRowClick(rec.employeeId)}
                     className="hover:bg-[#f8faf6] cursor-pointer transition-colors"
                   >
+                    <td className="p-4 font-bold text-slate-700">
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[11px]">
+                        {rec.week || 'Week 1'}
+                      </span>
+                    </td>
+
                     <td className="p-4 font-black text-[#101010]">
                       <div>{rec.employeeName}</div>
                       {rec.managerRemarks && (
@@ -197,27 +234,35 @@ export const SalesPerformanceView: React.FC = () => {
                     </td>
 
                     <td className="p-4 text-right font-medium text-[#101010]">
-                      <div>{rec.totalReachout}</div>
-                      <div className="text-[10px] text-[#777777]">{rec.reachoutScore} pts</div>
+                      <div>{rec.reachouts ?? rec.totalReachout}</div>
+                      <div className="text-[10px] text-[#777777]">0% wt</div>
                     </td>
 
-                    <td className="p-4 text-right font-black text-[#101010]">
-                      <div>{rec.orderConvert}</div>
-                      <div className="text-[10px] text-[#436320] font-bold">{rec.orderConvertScore} pts</div>
+                    <td className="p-4 text-right">
+                      <div className="font-black text-emerald-800 text-sm">
+                        {rec.conversionRate}%
+                      </div>
+                      <div className="text-[10px] text-emerald-700 font-bold">
+                        {rec.conversionScore ?? rec.orderConvertScore}/50 pts ({rec.conversions ?? rec.orderConvert} ord)
+                      </div>
                     </td>
 
-                    <td className="p-4 text-right font-medium text-[#101010]">
-                      <div>{rec.repeatOrders}</div>
-                      <div className="text-[10px] text-[#777777]">{rec.repeatOrdersScore} pts</div>
+                    <td className="p-4 text-right">
+                      <div className="font-bold text-blue-900">
+                        {rec.followups ?? rec.followupSent}
+                      </div>
+                      <div className="text-[10px] text-blue-700 font-medium">
+                        {rec.followupsScore ?? rec.followupScore}/20 pts
+                      </div>
                     </td>
 
-                    <td className="p-4 text-right font-medium text-[#101010]">
-                      <div>{rec.followupSent}</div>
-                      <div className="text-[10px] text-[#777777]">{rec.followupScore} pts</div>
-                    </td>
-
-                    <td className="p-4 text-right font-black text-emerald-700 text-sm">
-                      {rec.conversionRate}%
+                    <td className="p-4 text-right">
+                      <div className="font-bold text-amber-900">
+                        ${(rec.orderValue || 0).toLocaleString()}
+                      </div>
+                      <div className="text-[10px] text-amber-700 font-medium">
+                        {rec.orderValueScore ?? 0}/30 pts
+                      </div>
                     </td>
 
                     <td className="p-4 text-right">
@@ -229,7 +274,7 @@ export const SalesPerformanceView: React.FC = () => {
 
                     <td className="p-4 text-right">
                       <div className="font-black text-sm text-[#436320]">
-                        {salesSettings.currencySymbol}{rec.rewardAmount.toLocaleString()}
+                        {salesSettings.currencySymbol}{(rec.rewardAmount ?? 0).toLocaleString()}
                       </div>
                       <div className="text-[10px] font-bold text-[#666666]">
                         {rec.rewardLevel}
@@ -247,40 +292,51 @@ export const SalesPerformanceView: React.FC = () => {
                       >
                         {rec.rewardEligibility === 'Eligible' ? (
                           <>
-                            <CheckCircle2 className="w-3 h-3" /> Eligible
+                            <CheckCircle2 className="w-3 h-3" /> Pass
                           </>
                         ) : (
                           <>
-                            <XCircle className="w-3 h-3" /> Not Eligible
+                            <XCircle className="w-3 h-3" /> Benchmark Fail
                           </>
                         )}
                       </span>
                     </td>
 
-                    <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => openSalesEntryModal(rec)}
-                          className="p-1.5 rounded-lg text-[#666666] hover:text-[#101010] hover:bg-[#f5f5f5]"
-                          title="Edit Record"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => handleDelete(e, rec)}
-                          className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50"
-                          title="Delete Record"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                    <td className="p-4 text-center">
+                      <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        {canUserManageRecord(rec, currentUser, salesEmployees) ? (
+                          <>
+                            <button
+                              onClick={() => openSalesEntryModal(rec)}
+                              className="p-1.5 rounded-lg text-[#666666] hover:text-[#101010] hover:bg-[#edf4e8] transition-colors cursor-pointer"
+                              title="Edit Entry"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => handleDelete(e, rec)}
+                              className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+                              title="Delete Entry"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-1 text-[10px] text-slate-400 font-bold px-2 py-0.5 rounded bg-slate-50 border border-slate-200"
+                            title="Read-only: Record belongs to another sales member"
+                          >
+                            <Lock className="w-2.5 h-2.5" /> Read Only
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={11} className="p-8 text-center text-xs text-[#666666]">
-                    No performance records submitted for {selectedMonth} {selectedYear}. Click "+ Enter Performance" to log.
+                  <td colSpan={11} className="p-8 text-center text-[#777777]">
+                    No performance records found for {selectedMonth} {selectedYear} ({selectedWeek}).
                   </td>
                 </tr>
               )}

@@ -86,7 +86,7 @@ export const SalesDepartmentPerformanceView: React.FC = () => {
             <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
               <span className="text-[10px] font-bold text-emerald-800 uppercase block">Total Rewards</span>
               <span className="text-2xl font-black text-emerald-950">
-                {salesSettings.currencySymbol}{it.totalRewards.toLocaleString()}
+                {salesSettings.currencySymbol}{(it.totalRewards ?? 0).toLocaleString()}
               </span>
             </div>
           </div>
@@ -95,7 +95,7 @@ export const SalesDepartmentPerformanceView: React.FC = () => {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs text-center">
             <div className="p-3 rounded-xl bg-white border border-[#e2ebd9]">
               <span className="text-[10px] text-[#777777] block">Reachout</span>
-              <span className="font-black text-sm text-[#101010]">{it.totalReachout.toLocaleString()}</span>
+              <span className="font-black text-sm text-[#101010]">{(it.totalReachout ?? 0).toLocaleString()}</span>
             </div>
             <div className="p-3 rounded-xl bg-white border border-[#e2ebd9]">
               <span className="text-[10px] text-[#777777] block">Orders Converted</span>
@@ -180,7 +180,7 @@ export const SalesDepartmentPerformanceView: React.FC = () => {
             <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
               <span className="text-[10px] font-bold text-emerald-800 uppercase block">Total Rewards</span>
               <span className="text-2xl font-black text-emerald-950">
-                {salesSettings.currencySymbol}{smm.totalRewards.toLocaleString()}
+                {salesSettings.currencySymbol}{(smm.totalRewards ?? 0).toLocaleString()}
               </span>
             </div>
           </div>
@@ -189,7 +189,7 @@ export const SalesDepartmentPerformanceView: React.FC = () => {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs text-center">
             <div className="p-3 rounded-xl bg-white border border-[#e2ebd9]">
               <span className="text-[10px] text-[#777777] block">Reachout</span>
-              <span className="font-black text-sm text-[#101010]">{smm.totalReachout.toLocaleString()}</span>
+              <span className="font-black text-sm text-[#101010]">{(smm.totalReachout ?? 0).toLocaleString()}</span>
             </div>
             <div className="p-3 rounded-xl bg-white border border-[#e2ebd9]">
               <span className="text-[10px] text-[#777777] block">Orders Converted</span>

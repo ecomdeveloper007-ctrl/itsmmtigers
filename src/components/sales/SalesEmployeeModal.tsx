@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useSales } from '../../context/SalesContext';
 import { SalesEmployee, SalesProfileCode, SalesDepartment, SALES_PROFILES_META } from '../../types/sales';
-import { X, UserPlus, CheckCircle2, User, Mail, Calendar, Building, Sparkles, Trash2 } from 'lucide-react';
+import { X, UserPlus, CheckCircle2, User, Mail, Calendar, Building, Sparkles, Trash2, Check } from 'lucide-react';
+
+const ALL_SALES_PROFILES: { code: SalesProfileCode; name: string; dept: SalesDepartment }[] = [
+  { code: 'PR', name: 'PR - IT Solutions & Delivery', dept: 'IT' },
+  { code: 'WR', name: 'WR - IT Web Arch & Eng', dept: 'IT' },
+  { code: 'HW', name: 'HW - IT Cloud & Infra', dept: 'IT' },
+  { code: 'DR', name: 'DR - SMM Direct Response', dept: 'SMM' },
+  { code: 'RR', name: 'RR - SMM Retainers & Growth', dept: 'SMM' },
+];
 
 export const SalesEmployeeModal: React.FC = () => {
   const {
@@ -15,7 +23,7 @@ export const SalesEmployeeModal: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [department, setDepartment] = useState<SalesDepartment>('IT');
-  const [profileCode, setProfileCode] = useState<SalesProfileCode>('PR');
+  const [assignedProfiles, setAssignedProfiles] = useState<SalesProfileCode[]>(['PR']);
   const [joiningDate, setJoiningDate] = useState(new Date().toISOString().split('T')[0]);
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -27,7 +35,10 @@ export const SalesEmployeeModal: React.FC = () => {
       setName(editingSalesEmployee.name);
       setEmail(editingSalesEmployee.email);
       setDepartment(editingSalesEmployee.department);
-      setProfileCode(editingSalesEmployee.profileCode);
+      const profiles = editingSalesEmployee.assignedProfiles && editingSalesEmployee.assignedProfiles.length > 0
+        ? editingSalesEmployee.assignedProfiles
+        : [editingSalesEmployee.profileCode || 'PR'];
+      setAssignedProfiles(profiles);
       setJoiningDate(editingSalesEmployee.joiningDate || new Date().toISOString().split('T')[0]);
       setStatus(editingSalesEmployee.status);
       setAvatarUrl(editingSalesEmployee.avatarUrl || '');
@@ -35,7 +46,7 @@ export const SalesEmployeeModal: React.FC = () => {
       setName('');
       setEmail('');
       setDepartment('IT');
-      setProfileCode('PR');
+      setAssignedProfiles(['PR']);
       setJoiningDate(new Date().toISOString().split('T')[0]);
       setStatus('active');
       setAvatarUrl('');
@@ -43,26 +54,19 @@ export const SalesEmployeeModal: React.FC = () => {
     setError('');
   }, [isSalesEmployeeModalOpen, editingSalesEmployee]);
 
-  // Handle department change to adjust profile code accordingly
-  const handleDepartmentChange = (dept: SalesDepartment) => {
-    setDepartment(dept);
-    if (dept === 'IT' && !['PR', 'WR', 'HW'].includes(profileCode)) {
-      setProfileCode('PR');
-    } else if (dept === 'SMM' && !['DR', 'RR'].includes(profileCode)) {
-      setProfileCode('DR');
-    }
-  };
-
-  const handleProfileChange = (code: SalesProfileCode) => {
-    setProfileCode(code);
-    if (['PR', 'WR', 'HW'].includes(code)) {
-      setDepartment('IT');
-    } else {
-      setDepartment('SMM');
-    }
-  };
-
   if (!isSalesEmployeeModalOpen) return null;
+
+  const toggleProfile = (code: SalesProfileCode) => {
+    if (assignedProfiles.includes(code)) {
+      if (assignedProfiles.length === 1) {
+        setError('At least one sales profile must be assigned.');
+        return;
+      }
+      setAssignedProfiles(assignedProfiles.filter((p) => p !== code));
+    } else {
+      setAssignedProfiles([...assignedProfiles, code]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,14 +82,23 @@ export const SalesEmployeeModal: React.FC = () => {
       return;
     }
 
+    if (assignedProfiles.length === 0) {
+      setError('Please select at least one assigned profile.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      const primaryProfile = assignedProfiles[0];
+      const resolvedDept: SalesDepartment = ['PR', 'WR', 'HW'].includes(primaryProfile) ? 'IT' : 'SMM';
+
       const emp: SalesEmployee = {
         id: editingSalesEmployee?.id || `sales_emp_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         name: name.trim(),
         email: email.trim(),
-        department,
-        profileCode,
+        department: resolvedDept,
+        profileCode: primaryProfile,
+        assignedProfiles,
         joiningDate,
         status,
         avatarUrl:
@@ -117,10 +130,10 @@ export const SalesEmployeeModal: React.FC = () => {
             </div>
             <div>
               <h2 className="text-xl font-black text-[#101010] tracking-tight">
-                {editingSalesEmployee ? 'Edit Sales Employee' : 'Add Sales Employee'}
+                {editingSalesEmployee ? 'Edit Sales Member' : 'Add Sales Member'}
               </h2>
               <p className="text-xs text-[#666666]">
-                Assign to IT or SMM Department and specific profile
+                Multi-profile assignment support (e.g. PR + WR)
               </p>
             </div>
           </div>
@@ -133,7 +146,7 @@ export const SalesEmployeeModal: React.FC = () => {
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
             {error}
           </div>
         )}
@@ -167,43 +180,58 @@ export const SalesEmployeeModal: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
+          {/* Multi-Profile Assignment Selector */}
+          <div className="space-y-2 p-3.5 bg-[#f8faf6] rounded-2xl border border-[#e2ebd9]">
+            <div className="flex items-center justify-between">
               <label className="block text-xs font-black text-[#101010]">
-                Department <span className="text-rose-500">*</span>
+                Assigned Sales Profiles <span className="text-rose-500">*</span>
               </label>
-              <select
-                value={department}
-                onChange={(e) => handleDepartmentChange(e.target.value as SalesDepartment)}
-                className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
-              >
-                <option value="IT">IT Sales</option>
-                <option value="SMM">SMM Sales</option>
-              </select>
+              <span className="text-[11px] font-bold text-[#436320]">
+                {assignedProfiles.length} Profile{assignedProfiles.length > 1 ? 's' : ''} Selected
+              </span>
             </div>
+            <p className="text-[11px] text-[#666666]">
+              Select all profiles this salesperson is authorized to work on. Performance records are recorded separately per profile.
+            </p>
 
-            <div className="space-y-1.5">
-              <label className="block text-xs font-black text-[#101010]">
-                Profile Code <span className="text-rose-500">*</span>
-              </label>
-              <select
-                value={profileCode}
-                onChange={(e) => handleProfileChange(e.target.value as SalesProfileCode)}
-                className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
-              >
-                {department === 'IT' ? (
-                  <>
-                    <option value="PR">PR - Solutions & Delivery</option>
-                    <option value="WR">WR - Web Arch & Eng</option>
-                    <option value="HW">HW - Cloud & Infra</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="DR">DR - Direct Response</option>
-                    <option value="RR">RR - Retainers & Growth</option>
-                  </>
-                )}
-              </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              {ALL_SALES_PROFILES.map((p) => {
+                const isSelected = assignedProfiles.includes(p.code);
+                return (
+                  <button
+                    key={p.code}
+                    type="button"
+                    onClick={() => toggleProfile(p.code)}
+                    className={`flex items-center justify-between p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#8cc540]/15 border-[#8cc540] text-[#101010] font-bold shadow-xs'
+                        : 'bg-white border-[#e2ebd9] text-[#666666] hover:bg-[#f0f5ec]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black ${
+                          p.dept === 'IT'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-purple-100 text-purple-800'
+                        }`}
+                      >
+                        {p.code}
+                      </span>
+                      <span className="text-xs">{p.name}</span>
+                    </div>
+                    <div
+                      className={`w-4 h-4 rounded-md border flex items-center justify-center ${
+                        isSelected
+                          ? 'bg-[#8cc540] border-[#8cc540] text-white'
+                          : 'border-slate-300'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -252,10 +280,10 @@ export const SalesEmployeeModal: React.FC = () => {
                     closeSalesEmployeeModal();
                   }
                 }}
-                className="px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl text-xs font-black text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 flex items-center gap-1.5 cursor-pointer"
               >
-                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                <span>Delete</span>
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Member
               </button>
             ) : <div />}
 
@@ -263,17 +291,16 @@ export const SalesEmployeeModal: React.FC = () => {
               <button
                 type="button"
                 onClick={closeSalesEmployeeModal}
-                className="px-4 py-2.5 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f5f5f5] cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f5f5f5] cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-2.5 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] text-[#101010] shadow-md shadow-[#8cc540]/30 transition-all cursor-pointer flex items-center gap-2"
+                className="px-6 py-2 rounded-xl text-xs font-black bg-[#8cc540] text-white hover:bg-[#7cb334] shadow-md shadow-[#8cc540]/30 transition-all cursor-pointer disabled:opacity-50"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{editingSalesEmployee ? 'Save Changes' : 'Create Sales Employee'}</span>
+                {isSubmitting ? 'Saving...' : editingSalesEmployee ? 'Update Member' : 'Add Member'}
               </button>
             </div>
           </div>

@@ -10,21 +10,26 @@ import {
   SalesProfileSummary,
   SalesDashboardSummary,
   SalesEmployeeHistoryComparison,
+  SalesMonthlyAggregation,
 } from '../types/sales';
 
 /**
- * Default configurable reward slabs per profile
+ * Default configurable reward slabs per profile (INR Currency)
  */
 export const DEFAULT_REWARD_SLABS = [
   { id: 'slab_plat', level: 'Platinum', minScore: 90, maxScore: 100, rewardAmount: 5000, color: 'text-purple-700 bg-purple-50 border-purple-200' },
-  { id: 'slab_gold', level: 'Gold', minScore: 80, maxScore: 89.99, rewardAmount: 3000, color: 'text-amber-700 bg-amber-50 border-amber-200' },
+  { id: 'slab_gold', level: 'Gold', minScore: 80, maxScore: 89.99, rewardAmount: 3500, color: 'text-amber-700 bg-amber-50 border-amber-200' },
   { id: 'slab_silver', level: 'Silver', minScore: 70, maxScore: 79.99, rewardAmount: 2000, color: 'text-slate-700 bg-slate-100 border-slate-300' },
   { id: 'slab_bronze', level: 'Bronze', minScore: 60, maxScore: 69.99, rewardAmount: 1000, color: 'text-amber-800 bg-amber-100/60 border-amber-300' },
   { id: 'slab_none', level: 'No Reward', minScore: 0, maxScore: 59.99, rewardAmount: 0, color: 'text-gray-500 bg-gray-50 border-gray-200' },
 ];
 
 /**
- * Default Configurable Profile Targets & Weights
+ * Default Profile-Specific Targets and 100% Weight Distribution:
+ * - Conversion Rate: 50%
+ * - Follow-ups: 20%
+ * - Order Value: 30%
+ * - Reachouts: 0% (Used only for Conversion Rate & Activity Reporting, NEVER for score)
  */
 export const DEFAULT_SALES_SETTINGS: SalesRewardSettings = {
   currency: 'INR',
@@ -34,75 +39,70 @@ export const DEFAULT_SALES_SETTINGS: SalesRewardSettings = {
       profileCode: 'PR',
       profileName: 'PR Profile (IT Solutions & Product Delivery)',
       department: 'IT',
-      reachoutTarget: 200,
-      orderConvertTarget: 20,
-      repeatOrdersTarget: 8,
-      followupTarget: 100,
-      reachoutWeight: 20,
-      orderConvertWeight: 40,
-      repeatOrdersWeight: 25,
-      followupWeight: 15,
-      minConversionRate: 7.0, // 7%
+      conversionTarget: 10.0, // 10%
+      followupTarget: 100, // 100 followups/week
+      orderValueTarget: 100000, // ₹1,00,000 / week
+      reachoutBenchmark: 200, // 200 reachouts (Activity only, 0% weight)
+      conversionWeight: 50, // 50%
+      followupWeight: 20, // 20%
+      orderValueWeight: 30, // 30%
+      reachoutWeight: 0, // 0%
       rewardSlabs: JSON.parse(JSON.stringify(DEFAULT_REWARD_SLABS)),
     },
     WR: {
       profileCode: 'WR',
       profileName: 'WR Profile (IT Web Architecture & Eng)',
       department: 'IT',
-      reachoutTarget: 180,
-      orderConvertTarget: 18,
-      repeatOrdersTarget: 7,
-      followupTarget: 90,
-      reachoutWeight: 20,
-      orderConvertWeight: 40,
-      repeatOrdersWeight: 25,
-      followupWeight: 15,
-      minConversionRate: 7.0,
+      conversionTarget: 8.0, // 8%
+      followupTarget: 80, // 80 followups/week
+      orderValueTarget: 80000, // ₹80,000 / week
+      reachoutBenchmark: 150, // 150 reachouts (Activity only, 0% weight)
+      conversionWeight: 50,
+      followupWeight: 20,
+      orderValueWeight: 30,
+      reachoutWeight: 0,
       rewardSlabs: JSON.parse(JSON.stringify(DEFAULT_REWARD_SLABS)),
     },
     HW: {
       profileCode: 'HW',
       profileName: 'HW Profile (IT Cloud & Infrastructure)',
       department: 'IT',
-      reachoutTarget: 150,
-      orderConvertTarget: 15,
-      repeatOrdersTarget: 6,
-      followupTarget: 80,
-      reachoutWeight: 20,
-      orderConvertWeight: 40,
-      repeatOrdersWeight: 25,
-      followupWeight: 15,
-      minConversionRate: 7.0,
+      conversionTarget: 6.0, // 6%
+      followupTarget: 60, // 60 followups/week
+      orderValueTarget: 120000, // ₹1,20,000 / week
+      reachoutBenchmark: 120, // 120 reachouts (Activity only, 0% weight)
+      conversionWeight: 50,
+      followupWeight: 20,
+      orderValueWeight: 30,
+      reachoutWeight: 0,
       rewardSlabs: JSON.parse(JSON.stringify(DEFAULT_REWARD_SLABS)),
     },
     DR: {
       profileCode: 'DR',
       profileName: 'DR Profile (SMM Direct Response & Conversions)',
       department: 'SMM',
-      reachoutTarget: 250,
-      orderConvertTarget: 25,
-      repeatOrdersTarget: 10,
-      followupTarget: 120,
-      reachoutWeight: 20,
-      orderConvertWeight: 40,
-      repeatOrdersWeight: 25,
-      followupWeight: 15,
-      minConversionRate: 8.0, // 8%
+      conversionTarget: 12.0, // 12%
+      followupTarget: 120, // 120 followups/week
+      orderValueTarget: 75000, // ₹75,000 / week
+      reachoutBenchmark: 250, // 250 reachouts (Activity only, 0% weight)
+      conversionWeight: 50,
+      followupWeight: 20,
+      orderValueWeight: 30,
+      reachoutWeight: 0,
       rewardSlabs: JSON.parse(JSON.stringify(DEFAULT_REWARD_SLABS)),
     },
     RR: {
       profileCode: 'RR',
       profileName: 'RR Profile (SMM Retainers & Growth)',
       department: 'SMM',
-      reachoutTarget: 220,
-      orderConvertTarget: 22,
-      repeatOrdersTarget: 9,
-      followupTarget: 110,
-      reachoutWeight: 20,
-      orderConvertWeight: 40,
-      repeatOrdersWeight: 25,
-      followupWeight: 15,
-      minConversionRate: 8.0,
+      conversionTarget: 15.0, // 15%
+      followupTarget: 90, // 90 followups/week
+      orderValueTarget: 150000, // ₹1,50,000 / week
+      reachoutBenchmark: 180, // 180 reachouts (Activity only, 0% weight)
+      conversionWeight: 50,
+      followupWeight: 20,
+      orderValueWeight: 30,
+      reachoutWeight: 0,
       rewardSlabs: JSON.parse(JSON.stringify(DEFAULT_REWARD_SLABS)),
     },
   },
@@ -119,6 +119,18 @@ export function sanitizeSalesNumber(value: any, allowNegative: boolean = false):
 }
 
 /**
+ * Format currency in INR (₹)
+ */
+export function formatINR(amount: number): string {
+  const safe = sanitizeSalesNumber(amount);
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(safe);
+}
+
+/**
  * 1. Get profile target and weighting settings
  */
 export function getProfileSettings(
@@ -127,19 +139,32 @@ export function getProfileSettings(
 ): SalesProfileTargetConfig {
   const safeSettings = settings || DEFAULT_SALES_SETTINGS;
   const config = safeSettings.profiles?.[profileCode];
-  if (config) return config;
+  if (config) {
+    // Ensure default weights and benchmarks exist if missing from older data
+    return {
+      ...config,
+      conversionWeight: config.conversionWeight ?? 50,
+      followupWeight: config.followupWeight ?? 20,
+      orderValueWeight: config.orderValueWeight ?? 30,
+      reachoutWeight: 0,
+      conversionTarget: config.conversionTarget || (config.orderConvertTarget ? 10 : 10),
+      followupTarget: config.followupTarget || 100,
+      orderValueTarget: config.orderValueTarget || 100000,
+      reachoutBenchmark: config.reachoutBenchmark || config.reachoutTarget || 200,
+    };
+  }
   return DEFAULT_SALES_SETTINGS.profiles[profileCode] || DEFAULT_SALES_SETTINGS.profiles.PR;
 }
 
 /**
- * 2. Calculate conversion rate safely: (Order Convert / Total Reachout) * 100
+ * 2. Calculate conversion rate safely: (Conversions / Reachouts) * 100
  */
-export function calculateConversionRate(orderConvert: number, totalReachout: number): number {
-  const safeOrders = sanitizeSalesNumber(orderConvert);
-  const safeReachout = sanitizeSalesNumber(totalReachout);
+export function calculateConversionRate(conversions: number, reachouts: number): number {
+  const safeConversions = sanitizeSalesNumber(conversions);
+  const safeReachouts = sanitizeSalesNumber(reachouts);
 
-  if (safeReachout <= 0) return 0;
-  const rate = (safeOrders / safeReachout) * 100;
+  if (safeReachouts <= 0) return 0;
+  const rate = (safeConversions / safeReachouts) * 100;
   if (isNaN(rate) || !isFinite(rate)) return 0;
   return Number(rate.toFixed(2));
 }
@@ -159,76 +184,72 @@ export function calculateMetricScore(actual: number, target: number, weight: num
 }
 
 /**
- * 4. Calculate total 100-point sales performance score
+ * 4. Calculate total 100-point sales performance score:
+ * - Conversion Rate Score (50%)
+ * - Follow-up Score (20%)
+ * - Order Value Score (30%)
+ * - Reachout Score = 0% (NO Reachout Score)
  */
 export function calculateSalesPerformanceScore(
   inputs: {
-    totalReachout: number;
-    orderConvert: number;
-    repeatOrders: number;
-    followupSent: number;
+    reachouts: number;
+    conversions: number;
+    followups: number;
+    orderValue: number;
   },
   config: SalesProfileTargetConfig
 ): {
-  reachoutScore: number;
-  orderConvertScore: number;
-  repeatOrdersScore: number;
+  conversionRate: number;
+  conversionScore: number;
   followupScore: number;
+  orderValueScore: number;
   totalPerformanceScore: number;
-  reachoutAchievementPct: number;
-  orderAchievementPct: number;
-  repeatAchievementPct: number;
+  conversionAchievementPct: number;
   followupAchievementPct: number;
+  orderValueAchievementPct: number;
+  reachoutBenchmarkPct: number;
 } {
-  const reachoutScore = calculateMetricScore(inputs.totalReachout, config.reachoutTarget, config.reachoutWeight);
-  const orderConvertScore = calculateMetricScore(inputs.orderConvert, config.orderConvertTarget, config.orderConvertWeight);
-  const repeatOrdersScore = calculateMetricScore(inputs.repeatOrders, config.repeatOrdersTarget, config.repeatOrdersWeight);
-  const followupScore = calculateMetricScore(inputs.followupSent, config.followupTarget, config.followupWeight);
+  const conversionRate = calculateConversionRate(inputs.conversions, inputs.reachouts);
 
-  const rawTotal = reachoutScore + orderConvertScore + repeatOrdersScore + followupScore;
+  const conversionTarget = config.conversionTarget || 10;
+  const followupTarget = config.followupTarget || 100;
+  const orderValueTarget = config.orderValueTarget || 100000;
+  const reachoutBenchmark = config.reachoutBenchmark || 200;
+
+  const conversionWeight = config.conversionWeight ?? 50;
+  const followupWeight = config.followupWeight ?? 20;
+  const orderValueWeight = config.orderValueWeight ?? 30;
+
+  const conversionScore = calculateMetricScore(conversionRate, conversionTarget, conversionWeight);
+  const followupScore = calculateMetricScore(inputs.followups, followupTarget, followupWeight);
+  const orderValueScore = calculateMetricScore(inputs.orderValue, orderValueTarget, orderValueWeight);
+
+  const rawTotal = conversionScore + followupScore + orderValueScore;
   const totalPerformanceScore = Math.min(100, Number(rawTotal.toFixed(2)));
 
-  const reachoutAchievementPct = config.reachoutTarget > 0 ? Number(((inputs.totalReachout / config.reachoutTarget) * 100).toFixed(1)) : 0;
-  const orderAchievementPct = config.orderConvertTarget > 0 ? Number(((inputs.orderConvert / config.orderConvertTarget) * 100).toFixed(1)) : 0;
-  const repeatAchievementPct = config.repeatOrdersTarget > 0 ? Number(((inputs.repeatOrders / config.repeatOrdersTarget) * 100).toFixed(1)) : 0;
-  const followupAchievementPct = config.followupTarget > 0 ? Number(((inputs.followupSent / config.followupTarget) * 100).toFixed(1)) : 0;
+  const conversionAchievementPct = conversionTarget > 0 ? Number(((conversionRate / conversionTarget) * 100).toFixed(1)) : 0;
+  const followupAchievementPct = followupTarget > 0 ? Number(((inputs.followups / followupTarget) * 100).toFixed(1)) : 0;
+  const orderValueAchievementPct = orderValueTarget > 0 ? Number(((inputs.orderValue / orderValueTarget) * 100).toFixed(1)) : 0;
+  const reachoutBenchmarkPct = reachoutBenchmark > 0 ? Number(((inputs.reachouts / reachoutBenchmark) * 100).toFixed(1)) : 0;
 
   return {
-    reachoutScore,
-    orderConvertScore,
-    repeatOrdersScore,
+    conversionRate,
+    conversionScore,
     followupScore,
+    orderValueScore,
     totalPerformanceScore,
-    reachoutAchievementPct,
-    orderAchievementPct,
-    repeatAchievementPct,
+    conversionAchievementPct,
     followupAchievementPct,
+    orderValueAchievementPct,
+    reachoutBenchmarkPct,
   };
 }
 
 /**
- * 5. Check reward eligibility based on minimum conversion rate
- */
-export function checkRewardEligibility(
-  conversionRate: number,
-  config: SalesProfileTargetConfig
-): { isEligible: boolean; reason?: string } {
-  const minRequired = sanitizeSalesNumber(config.minConversionRate);
-  if (conversionRate < minRequired) {
-    return {
-      isEligible: false,
-      reason: `Conversion Rate (${conversionRate.toFixed(2)}%) is below profile minimum requirement (${minRequired.toFixed(2)}%).`,
-    };
-  }
-  return { isEligible: true };
-}
-
-/**
- * 6. Calculate reward level and reward amount based on score and eligibility
+ * 5. Calculate reward level and reward amount based on score
  */
 export function calculateReward(
   totalPerformanceScore: number,
-  conversionRate: number,
   config: SalesProfileTargetConfig
 ): {
   rewardLevel: string;
@@ -236,18 +257,6 @@ export function calculateReward(
   rewardEligibility: 'Eligible' | 'Not Eligible';
   ineligibilityReason?: string;
 } {
-  const eligibility = checkRewardEligibility(conversionRate, config);
-
-  if (!eligibility.isEligible) {
-    return {
-      rewardLevel: 'No Reward',
-      rewardAmount: 0,
-      rewardEligibility: 'Not Eligible',
-      ineligibilityReason: eligibility.reason,
-    };
-  }
-
-  // Find matching slab (sorted by minScore descending)
   const slabs = (config.rewardSlabs || DEFAULT_REWARD_SLABS).slice().sort((a, b) => b.minScore - a.minScore);
 
   for (const slab of slabs) {
@@ -277,12 +286,20 @@ export function computeCompleteSalesRecord(
     employeeName: string;
     department?: SalesDepartment;
     profileCode: SalesProfileCode;
+    week?: string;
+    weekStartDate?: string;
+    weekEndDate?: string;
     month: string;
     year: number;
-    totalReachout: number;
-    orderConvert: number;
-    repeatOrders: number;
-    followupSent: number;
+    reachouts?: number;
+    conversions?: number;
+    followups?: number;
+    orderValue?: number;
+    // Backward compat aliases
+    totalReachout?: number;
+    orderConvert?: number;
+    repeatOrders?: number;
+    followupSent?: number;
     managerRemarks?: string;
     submittedBy?: string;
     createdAt?: string;
@@ -294,20 +311,23 @@ export function computeCompleteSalesRecord(
   const config = getProfileSettings(settings, profileCode);
   const department = raw.department || config.department || (['PR', 'WR', 'HW'].includes(profileCode) ? 'IT' : 'SMM');
 
-  const totalReachout = sanitizeSalesNumber(raw.totalReachout);
-  const orderConvert = sanitizeSalesNumber(raw.orderConvert);
-  const repeatOrders = sanitizeSalesNumber(raw.repeatOrders);
-  const followupSent = sanitizeSalesNumber(raw.followupSent);
+  const reachouts = sanitizeSalesNumber(raw.reachouts ?? raw.totalReachout);
+  const conversions = sanitizeSalesNumber(raw.conversions ?? raw.orderConvert);
+  const followups = sanitizeSalesNumber(raw.followups ?? raw.followupSent);
+  const orderValue = sanitizeSalesNumber(raw.orderValue ?? ((raw.orderConvert || conversions) * 5000 + (raw.repeatOrders || 0) * 8000));
 
-  const conversionRate = calculateConversionRate(orderConvert, totalReachout);
+  const week = raw.week || 'Week 1';
+  const weekStartDate = raw.weekStartDate || '2026-09-01';
+  const weekEndDate = raw.weekEndDate || '2026-09-07';
+
   const scoreBreakdown = calculateSalesPerformanceScore(
-    { totalReachout, orderConvert, repeatOrders, followupSent },
+    { reachouts, conversions, followups, orderValue },
     config
   );
-  const rewardInfo = calculateReward(scoreBreakdown.totalPerformanceScore, conversionRate, config);
+  const rewardInfo = calculateReward(scoreBreakdown.totalPerformanceScore, config);
 
   const now = new Date().toISOString();
-  const id = raw.id || `sales_rec_${raw.employeeId}_${raw.month}_${raw.year}`;
+  const id = raw.id || `sales_rec_${raw.employeeId}_${profileCode}_${week.replace(/\s+/g, '_')}_${raw.month}_${raw.year}`;
 
   return {
     id,
@@ -315,19 +335,27 @@ export function computeCompleteSalesRecord(
     employeeName: raw.employeeName,
     department,
     profileCode,
+    week,
+    weekStartDate,
+    weekEndDate,
     month: raw.month,
     year: raw.year,
     monthYearKey: `${raw.month} ${raw.year}`,
-    totalReachout,
-    orderConvert,
-    repeatOrders,
-    followupSent,
+    reachouts,
+    conversions,
+    followups,
+    orderValue,
+    // Backward compat mapping
+    totalReachout: reachouts,
+    orderConvert: conversions,
+    followupSent: followups,
+    repeatOrders: Math.round(conversions * 0.35),
     managerRemarks: raw.managerRemarks || '',
-    conversionRate,
-    reachoutScore: scoreBreakdown.reachoutScore,
-    orderConvertScore: scoreBreakdown.orderConvertScore,
-    repeatOrdersScore: scoreBreakdown.repeatOrdersScore,
+    conversionRate: scoreBreakdown.conversionRate,
+    conversionScore: scoreBreakdown.conversionScore,
     followupScore: scoreBreakdown.followupScore,
+    orderValueScore: scoreBreakdown.orderValueScore,
+    reachoutScore: 0, // 0% Weight!
     totalPerformanceScore: scoreBreakdown.totalPerformanceScore,
     rewardEligibility: rewardInfo.rewardEligibility,
     ineligibilityReason: rewardInfo.ineligibilityReason,
@@ -343,24 +371,20 @@ export function computeCompleteSalesRecord(
  * Validate Sales Performance Inputs
  */
 export function validateSalesPerformanceInputs(inputs: {
-  totalReachout: number;
-  orderConvert: number;
-  repeatOrders: number;
-  followupSent: number;
+  reachouts: number;
+  conversions: number;
+  followups: number;
+  orderValue: number;
 }): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  if (inputs.totalReachout < 0) errors.push('Total Reachout cannot be negative.');
-  if (inputs.orderConvert < 0) errors.push('Order Convert cannot be negative.');
-  if (inputs.repeatOrders < 0) errors.push('Repeat Orders cannot be negative.');
-  if (inputs.followupSent < 0) errors.push('Follow-up Sent cannot be negative.');
+  if (inputs.reachouts < 0) errors.push('Reachouts cannot be negative.');
+  if (inputs.conversions < 0) errors.push('Conversions cannot be negative.');
+  if (inputs.followups < 0) errors.push('Follow-ups cannot be negative.');
+  if (inputs.orderValue < 0) errors.push('Order Value cannot be negative.');
 
-  if (inputs.orderConvert > inputs.totalReachout && inputs.totalReachout > 0) {
-    errors.push('Order Convert should not normally exceed Total Reachout.');
-  }
-
-  if (inputs.repeatOrders > inputs.orderConvert && inputs.orderConvert > 0) {
-    errors.push('Repeat Orders should not exceed Order Convert.');
+  if (inputs.conversions > inputs.reachouts && inputs.reachouts > 0) {
+    errors.push('Conversions cannot exceed total Reachouts.');
   }
 
   return {
@@ -370,7 +394,7 @@ export function validateSalesPerformanceInputs(inputs: {
 }
 
 /**
- * Validate Profile Target & Weight Settings
+ * Validate Profile Target & Weight Settings (Weights must sum to 100%)
  */
 export function validateSalesProfileConfig(config: SalesProfileTargetConfig): {
   isValid: boolean;
@@ -378,23 +402,18 @@ export function validateSalesProfileConfig(config: SalesProfileTargetConfig): {
 } {
   const errors: string[] = [];
 
-  if (config.reachoutTarget <= 0) errors.push('Reachout Target must be greater than zero.');
-  if (config.orderConvertTarget <= 0) errors.push('Order Convert Target must be greater than zero.');
-  if (config.repeatOrdersTarget <= 0) errors.push('Repeat Orders Target must be greater than zero.');
+  if (config.conversionTarget <= 0) errors.push('Conversion Target must be greater than 0%.');
   if (config.followupTarget <= 0) errors.push('Follow-up Target must be greater than zero.');
+  if (config.orderValueTarget <= 0) errors.push('Order Value Target must be greater than zero.');
 
-  const totalWeight =
-    config.reachoutWeight +
-    config.orderConvertWeight +
-    config.repeatOrdersWeight +
-    config.followupWeight;
+  const conversionWeight = config.conversionWeight ?? 50;
+  const followupWeight = config.followupWeight ?? 20;
+  const orderValueWeight = config.orderValueWeight ?? 30;
+
+  const totalWeight = conversionWeight + followupWeight + orderValueWeight;
 
   if (Math.abs(totalWeight - 100) > 0.01) {
-    errors.push(`Weights must total exactly 100%. Current total is ${totalWeight}%.`);
-  }
-
-  if (config.minConversionRate < 0 || config.minConversionRate > 100) {
-    errors.push('Minimum Conversion Rate must be between 0% and 100%.');
+    errors.push(`Scoring weights must total exactly 100%. Current sum: ${totalWeight}% (Conversion: ${conversionWeight}%, Follow-ups: ${followupWeight}%, Order Value: ${orderValueWeight}%).`);
   }
 
   return {
@@ -404,8 +423,82 @@ export function validateSalesProfileConfig(config: SalesProfileTargetConfig): {
 }
 
 /**
- * 7. Calculate Sales Leaderboard with sorting and tie-breakers
- * Sorting rule: 1. Total Performance Score, 2. Conversion Rate, 3. Order Convert, 4. Repeat Orders
+ * Calculate Monthly Rollup from Weekly Records for an Employee & Profile
+ */
+export function aggregateMonthlyRecords(
+  weeklyRecords: SalesPerformanceRecord[],
+  employeeId: string,
+  profileCode: SalesProfileCode,
+  month: string,
+  year: number,
+  settings: SalesRewardSettings
+): SalesMonthlyAggregation | null {
+  const empProfileWeekly = weeklyRecords.filter(
+    (r) =>
+      r.employeeId === employeeId &&
+      r.profileCode === profileCode &&
+      r.month.toLowerCase() === month.toLowerCase() &&
+      Number(r.year) === Number(year)
+  );
+
+  if (empProfileWeekly.length === 0) return null;
+
+  const firstRec = empProfileWeekly[0];
+  const config = getProfileSettings(settings, profileCode);
+
+  let totalReachouts = 0;
+  let totalConversions = 0;
+  let totalFollowups = 0;
+  let totalOrderValue = 0;
+  let scoreSum = 0;
+
+  empProfileWeekly.forEach((r) => {
+    totalReachouts += r.reachouts ?? r.totalReachout ?? 0;
+    totalConversions += r.conversions ?? r.orderConvert ?? 0;
+    totalFollowups += r.followups ?? r.followupSent ?? 0;
+    totalOrderValue += r.orderValue ?? 0;
+    scoreSum += r.totalPerformanceScore;
+  });
+
+  const weeksCount = empProfileWeekly.length;
+  const conversionRate = totalReachouts > 0 ? Number(((totalConversions / totalReachouts) * 100).toFixed(2)) : 0;
+  const avgWeeklyScore = Number((scoreSum / weeksCount).toFixed(2));
+
+  // Monthly score calculation:
+  // - Conversion Rate: actual monthly conversion rate vs conversionTarget
+  // - Followups: total followups vs (followupTarget * weeksCount)
+  // - Order Value: total order value vs (orderValueTarget * weeksCount)
+  const monthlyConversionScore = calculateMetricScore(conversionRate, config.conversionTarget || 10, config.conversionWeight ?? 50);
+  const monthlyFollowupScore = calculateMetricScore(totalFollowups, (config.followupTarget || 100) * weeksCount, config.followupWeight ?? 20);
+  const monthlyOrderValueScore = calculateMetricScore(totalOrderValue, (config.orderValueTarget || 100000) * weeksCount, config.orderValueWeight ?? 30);
+
+  const monthlyPerformanceScore = Math.min(100, Number((monthlyConversionScore + monthlyFollowupScore + monthlyOrderValueScore).toFixed(2)));
+  const rewardInfo = calculateReward(monthlyPerformanceScore, config);
+
+  return {
+    employeeId,
+    employeeName: firstRec.employeeName,
+    department: firstRec.department,
+    profileCode,
+    month,
+    year,
+    monthYearKey: `${month} ${year}`,
+    weeksCount,
+    totalReachouts,
+    totalConversions,
+    conversionRate,
+    totalFollowups,
+    totalOrderValue,
+    avgWeeklyScore,
+    monthlyPerformanceScore,
+    rewardLevel: rewardInfo.rewardLevel,
+    rewardAmount: rewardInfo.rewardAmount,
+    weeklyRecords: empProfileWeekly,
+  };
+}
+
+/**
+ * Calculate Sales Leaderboard with sorting and tie-breakers
  */
 export function calculateSalesLeaderboard(
   employees: SalesEmployee[],
@@ -413,6 +506,7 @@ export function calculateSalesLeaderboard(
   settings: SalesRewardSettings,
   filterMonth: string,
   filterYear: number,
+  filterWeek: string = 'all',
   departmentFilter: 'all' | 'IT' | 'SMM' = 'all',
   profileFilter: 'all' | SalesProfileCode = 'all',
   rewardLevelFilter: string = 'all',
@@ -422,49 +516,55 @@ export function calculateSalesLeaderboard(
   top3: SalesLeaderboardItem[];
   winner?: SalesLeaderboardItem;
 } {
-  // 1. Filter active records for month and year
-  const activeRecords = records.filter(
+  // Filter active records for month, year, and optional week
+  let activeRecords = records.filter(
     (r) => r.month.toLowerCase() === filterMonth.toLowerCase() && Number(r.year) === Number(filterYear)
   );
 
-  // Map employee avatars & details
+  if (filterWeek !== 'all') {
+    activeRecords = activeRecords.filter((r) => r.week === filterWeek);
+  }
+
+  // Map employee avatars & assigned profiles
   const empMap = new Map<string, SalesEmployee>();
   employees.forEach((e) => empMap.set(e.id, e));
 
-  // 2. Build complete list of items
+  // Build complete list of items
   let items: SalesLeaderboardItem[] = activeRecords.map((rec) => {
     const emp = empMap.get(rec.employeeId);
     const config = getProfileSettings(settings, rec.profileCode);
 
-    const reachoutAchievementPct = config.reachoutTarget > 0 ? Number(((rec.totalReachout / config.reachoutTarget) * 100).toFixed(1)) : 0;
-    const orderAchievementPct = config.orderConvertTarget > 0 ? Number(((rec.orderConvert / config.orderConvertTarget) * 100).toFixed(1)) : 0;
-    const repeatAchievementPct = config.repeatOrdersTarget > 0 ? Number(((rec.repeatOrders / config.repeatOrdersTarget) * 100).toFixed(1)) : 0;
-    const followupAchievementPct = config.followupTarget > 0 ? Number(((rec.followupSent / config.followupTarget) * 100).toFixed(1)) : 0;
+    const conversionAchievementPct = config.conversionTarget > 0 ? Number(((rec.conversionRate / config.conversionTarget) * 100).toFixed(1)) : 0;
+    const followupAchievementPct = config.followupTarget > 0 ? Number((((rec.followups ?? rec.followupSent ?? 0) / config.followupTarget) * 100).toFixed(1)) : 0;
+    const orderValueAchievementPct = config.orderValueTarget > 0 ? Number((((rec.orderValue ?? 0) / config.orderValueTarget) * 100).toFixed(1)) : 0;
+    const reachoutBenchmarkPct = (config.reachoutBenchmark || 200) > 0 ? Number((((rec.reachouts ?? rec.totalReachout ?? 0) / (config.reachoutBenchmark || 200)) * 100).toFixed(1)) : 0;
 
-    let performanceBand: 'Excellent' | 'Very Good' | 'Good' | 'Needs Improvement' = 'Needs Improvement';
-    if (rec.totalPerformanceScore >= 90) performanceBand = 'Excellent';
-    else if (rec.totalPerformanceScore >= 75) performanceBand = 'Very Good';
-    else if (rec.totalPerformanceScore >= 60) performanceBand = 'Good';
+    let performanceBand: 'Platinum Tier' | 'Gold Tier' | 'Silver Tier' | 'Bronze Tier' | 'Developing' = 'Developing';
+    if (rec.totalPerformanceScore >= 90) performanceBand = 'Platinum Tier';
+    else if (rec.totalPerformanceScore >= 80) performanceBand = 'Gold Tier';
+    else if (rec.totalPerformanceScore >= 70) performanceBand = 'Silver Tier';
+    else if (rec.totalPerformanceScore >= 60) performanceBand = 'Bronze Tier';
 
     return {
       ...rec,
       rank: 0,
       avatarUrl: emp?.avatarUrl,
+      assignedProfiles: emp?.assignedProfiles || (emp?.profileCode ? [emp.profileCode] : [rec.profileCode]),
       joiningDate: emp?.joiningDate,
-      reachoutAchievementPct,
-      orderAchievementPct,
-      repeatAchievementPct,
+      conversionAchievementPct,
       followupAchievementPct,
+      orderValueAchievementPct,
+      reachoutBenchmarkPct,
       performanceBand,
     };
   });
 
-  // 3. Multi-Tier Sorting Rule:
-  // 1. Performance Score desc
+  // Multi-Tier Sorting Rule:
+  // 1. Total Performance Score desc
   // 2. Conversion Rate desc
-  // 3. Order Convert desc
-  // 4. Repeat Orders desc
-  // 5. Total Reachout desc
+  // 3. Order Value desc
+  // 4. Follow-ups desc
+  // 5. Reachouts desc (activity tie-breaker)
   items.sort((a, b) => {
     if (Math.abs(b.totalPerformanceScore - a.totalPerformanceScore) > 0.001) {
       return b.totalPerformanceScore - a.totalPerformanceScore;
@@ -472,16 +572,16 @@ export function calculateSalesLeaderboard(
     if (Math.abs(b.conversionRate - a.conversionRate) > 0.001) {
       return b.conversionRate - a.conversionRate;
     }
-    if (b.orderConvert !== a.orderConvert) {
-      return b.orderConvert - a.orderConvert;
+    if ((b.orderValue ?? 0) !== (a.orderValue ?? 0)) {
+      return (b.orderValue ?? 0) - (a.orderValue ?? 0);
     }
-    if (b.repeatOrders !== a.repeatOrders) {
-      return b.repeatOrders - a.repeatOrders;
+    if ((b.followups ?? b.followupSent ?? 0) !== (a.followups ?? a.followupSent ?? 0)) {
+      return (b.followups ?? b.followupSent ?? 0) - (a.followups ?? a.followupSent ?? 0);
     }
-    return b.totalReachout - a.totalReachout;
+    return (b.reachouts ?? b.totalReachout ?? 0) - (a.reachouts ?? a.totalReachout ?? 0);
   });
 
-  // 4. Assign ranks
+  // Assign ranks
   let currentRank = 1;
   items.forEach((item, index) => {
     if (index > 0) {
@@ -489,8 +589,7 @@ export function calculateSalesLeaderboard(
       const isTie =
         Math.abs(prev.totalPerformanceScore - item.totalPerformanceScore) < 0.001 &&
         Math.abs(prev.conversionRate - item.conversionRate) < 0.001 &&
-        prev.orderConvert === item.orderConvert &&
-        prev.repeatOrders === item.repeatOrders;
+        (prev.orderValue ?? 0) === (item.orderValue ?? 0);
 
       if (isTie) {
         item.rank = prev.rank;
@@ -505,7 +604,7 @@ export function calculateSalesLeaderboard(
     currentRank++;
   });
 
-  // 5. Apply filters
+  // Apply filters
   let filtered = items;
   if (departmentFilter !== 'all') {
     filtered = filtered.filter((i) => i.department === departmentFilter);
@@ -537,35 +636,39 @@ export function calculateSalesLeaderboard(
 }
 
 /**
- * 8. Calculate Sales Dashboard Summary & Highlights
+ * Calculate Sales Dashboard Summary & Highlights
  */
 export function calculateSalesDashboardSummary(
   employees: SalesEmployee[],
   records: SalesPerformanceRecord[],
   settings: SalesRewardSettings,
   month: string,
-  year: number
+  year: number,
+  week: string = 'all'
 ): SalesDashboardSummary {
-  const currentRecords = records.filter(
-    (r) => r.month.toLowerCase() === month.toLowerCase() && Number(r.year) === Number(year)
-  );
+  const currentRecords = records.filter((r) => {
+    const mMatch = r.month.toLowerCase() === month.toLowerCase() && Number(r.year) === Number(year);
+    if (!mMatch) return false;
+    if (week !== 'all') return r.week === week;
+    return true;
+  });
 
-  const leaderboardResult = calculateSalesLeaderboard(employees, currentRecords, settings, month, year);
+  const leaderboardResult = calculateSalesLeaderboard(employees, currentRecords, settings, month, year, week);
   const items = leaderboardResult.items;
 
-  let totalReachout = 0;
-  let totalOrders = 0;
-  let totalRepeatOrders = 0;
+  let totalReachouts = 0;
+  let totalConversions = 0;
   let totalFollowups = 0;
+  let totalOrderValue = 0;
   let totalScoreSum = 0;
   let totalRewards = 0;
   let eligibleCount = 0;
 
   items.forEach((item) => {
-    totalReachout += item.totalReachout;
-    totalOrders += item.orderConvert;
-    totalRepeatOrders += item.repeatOrders;
-    totalFollowups += item.followupSent;
+    totalReachouts += item.reachouts ?? item.totalReachout ?? 0;
+    totalConversions += item.conversions ?? item.orderConvert ?? 0;
+    totalFollowups += item.followups ?? item.followupSent ?? 0;
+    totalOrderValue += item.orderValue ?? 0;
     totalScoreSum += item.totalPerformanceScore;
     totalRewards += item.rewardAmount;
     if (item.rewardEligibility === 'Eligible' && item.rewardAmount > 0) {
@@ -573,8 +676,12 @@ export function calculateSalesDashboardSummary(
     }
   });
 
-  const overallConversionRate = totalReachout > 0 ? Number(((totalOrders / totalReachout) * 100).toFixed(2)) : 0;
+  const overallConversionRate = totalReachouts > 0 ? Number(((totalConversions / totalReachouts) * 100).toFixed(2)) : 0;
   const avgScore = items.length > 0 ? Number((totalScoreSum / items.length).toFixed(2)) : 0;
+
+  const activeEmployees = employees.filter((e) => e.status === 'active');
+  const itEmployeesCount = activeEmployees.filter((e) => e.department === 'IT').length;
+  const smmEmployeesCount = activeEmployees.filter((e) => e.department === 'SMM').length;
 
   // Highlights
   const topSalesPerformer = items[0];
@@ -582,17 +689,19 @@ export function calculateSalesDashboardSummary(
   const topSmmPerformer = items.find((i) => i.department === 'SMM');
 
   const highestConversionPerformer = items.slice().sort((a, b) => b.conversionRate - a.conversionRate)[0];
-  const highestRepeatOrdersPerformer = items.slice().sort((a, b) => b.repeatOrders - a.repeatOrders)[0];
-  const highestReachoutPerformer = items.slice().sort((a, b) => b.totalReachout - a.totalReachout)[0];
-  const highestFollowupPerformer = items.slice().sort((a, b) => b.followupSent - a.followupSent)[0];
+  const highestOrderValuePerformer = items.slice().sort((a, b) => (b.orderValue ?? 0) - (a.orderValue ?? 0))[0];
+  const highestFollowupPerformer = items.slice().sort((a, b) => (b.followups ?? b.followupSent ?? 0) - (a.followups ?? a.followupSent ?? 0))[0];
+  const highestReachoutPerformer = items.slice().sort((a, b) => (b.reachouts ?? b.totalReachout ?? 0) - (a.reachouts ?? a.totalReachout ?? 0))[0];
 
   return {
-    totalEmployees: employees.filter((e) => e.status === 'active').length,
-    totalReachout,
-    totalOrders,
-    totalRepeatOrders,
-    totalFollowups,
+    totalEmployees: activeEmployees.length,
+    itEmployeesCount,
+    smmEmployeesCount,
+    totalReachouts,
+    totalConversions,
     overallConversionRate,
+    totalFollowups,
+    totalOrderValue,
     avgScore,
     totalRewards,
     eligibleCount,
@@ -600,14 +709,14 @@ export function calculateSalesDashboardSummary(
     topItPerformer,
     topSmmPerformer,
     highestConversionPerformer,
-    highestRepeatOrdersPerformer,
-    highestReachoutPerformer,
+    highestOrderValuePerformer,
     highestFollowupPerformer,
+    highestReachoutPerformer,
   };
 }
 
 /**
- * 9. Calculate Profile Performance Breakdown
+ * Calculate Profile Performance Breakdown
  */
 export function getProfilePerformance(
   records: SalesPerformanceRecord[],
@@ -617,32 +726,36 @@ export function getProfilePerformance(
 ): SalesProfileSummary {
   const config = getProfileSettings(settings, profileCode);
   const profileRecords = records.filter((r) => r.profileCode === profileCode);
-  const profileEmployees = employees.filter((e) => e.profileCode === profileCode && e.status === 'active');
+  const profileEmployees = employees.filter(
+    (e) =>
+      e.status === 'active' &&
+      ((e.assignedProfiles && e.assignedProfiles.includes(profileCode)) || e.profileCode === profileCode)
+  );
 
   let totalReachout = 0;
-  let totalOrders = 0;
-  let totalRepeatOrders = 0;
+  let totalConversions = 0;
   let totalFollowups = 0;
+  let totalOrderValue = 0;
   let scoreSum = 0;
   let totalRewards = 0;
   let eligibleCount = 0;
 
   profileRecords.forEach((r) => {
-    totalReachout += r.totalReachout;
-    totalOrders += r.orderConvert;
-    totalRepeatOrders += r.repeatOrders;
-    totalFollowups += r.followupSent;
+    totalReachout += r.reachouts ?? r.totalReachout ?? 0;
+    totalConversions += r.conversions ?? r.orderConvert ?? 0;
+    totalFollowups += r.followups ?? r.followupSent ?? 0;
+    totalOrderValue += r.orderValue ?? 0;
     scoreSum += r.totalPerformanceScore;
     totalRewards += r.rewardAmount;
-    if (r.rewardEligibility === 'Eligible') eligibleCount++;
+    if (r.rewardEligibility === 'Eligible' && r.rewardAmount > 0) eligibleCount++;
   });
 
   const count = profileRecords.length;
   const avgReachout = count > 0 ? Number((totalReachout / count).toFixed(1)) : 0;
-  const avgOrders = count > 0 ? Number((totalOrders / count).toFixed(1)) : 0;
-  const avgRepeatOrders = count > 0 ? Number((totalRepeatOrders / count).toFixed(1)) : 0;
+  const avgConversions = count > 0 ? Number((totalConversions / count).toFixed(1)) : 0;
   const avgFollowups = count > 0 ? Number((totalFollowups / count).toFixed(1)) : 0;
-  const avgConversionRate = totalReachout > 0 ? Number(((totalOrders / totalReachout) * 100).toFixed(2)) : 0;
+  const avgOrderValue = count > 0 ? Number((totalOrderValue / count).toFixed(0)) : 0;
+  const conversionRate = totalReachout > 0 ? Number(((totalConversions / totalReachout) * 100).toFixed(2)) : 0;
   const avgScore = count > 0 ? Number((scoreSum / count).toFixed(2)) : 0;
 
   return {
@@ -651,14 +764,14 @@ export function getProfilePerformance(
     department: config.department,
     employeeCount: profileEmployees.length,
     totalReachout,
-    totalOrders,
-    totalRepeatOrders,
+    totalConversions,
     totalFollowups,
+    totalOrderValue,
     avgReachout,
-    avgOrders,
-    avgRepeatOrders,
+    avgConversions,
     avgFollowups,
-    avgConversionRate,
+    avgOrderValue,
+    conversionRate,
     avgScore,
     totalRewards,
     eligibleEmployeesCount: eligibleCount,
@@ -666,7 +779,7 @@ export function getProfilePerformance(
 }
 
 /**
- * 10. Calculate Department Performance Breakdown (IT vs SMM)
+ * Calculate Department Performance Breakdown (IT vs SMM)
  */
 export function getDepartmentPerformance(
   records: SalesPerformanceRecord[],
@@ -681,31 +794,31 @@ export function getDepartmentPerformance(
   const deptEmployees = employees.filter((e) => e.department === department && e.status === 'active');
 
   let totalReachout = 0;
-  let totalOrders = 0;
-  let totalRepeatOrders = 0;
+  let totalConversions = 0;
   let totalFollowups = 0;
+  let totalOrderValue = 0;
   let scoreSum = 0;
   let totalRewards = 0;
 
   deptRecords.forEach((r) => {
-    totalReachout += r.totalReachout;
-    totalOrders += r.orderConvert;
-    totalRepeatOrders += r.repeatOrders;
-    totalFollowups += r.followupSent;
+    totalReachout += r.reachouts ?? r.totalReachout ?? 0;
+    totalConversions += r.conversions ?? r.orderConvert ?? 0;
+    totalFollowups += r.followups ?? r.followupSent ?? 0;
+    totalOrderValue += r.orderValue ?? 0;
     scoreSum += r.totalPerformanceScore;
     totalRewards += r.rewardAmount;
   });
 
-  const overallConversionRate = totalReachout > 0 ? Number(((totalOrders / totalReachout) * 100).toFixed(2)) : 0;
+  const overallConversionRate = totalReachout > 0 ? Number(((totalConversions / totalReachout) * 100).toFixed(2)) : 0;
   const avgScore = deptRecords.length > 0 ? Number((scoreSum / deptRecords.length).toFixed(2)) : 0;
 
   return {
     department,
     employeeCount: deptEmployees.length,
     totalReachout,
-    totalOrders,
-    totalRepeatOrders,
+    totalConversions,
     totalFollowups,
+    totalOrderValue,
     overallConversionRate,
     avgScore,
     totalRewards,
@@ -714,7 +827,7 @@ export function getDepartmentPerformance(
 }
 
 /**
- * 11. Calculate Monthly History & Month-over-Month Comparison for an Employee
+ * Calculate Monthly History & Month-over-Month Comparison for an Employee
  */
 export function calculateSalesHistoryComparison(
   records: SalesPerformanceRecord[],
@@ -740,8 +853,8 @@ export function calculateSalesHistoryComparison(
       const prev = empRecords[idx - 1];
       scoreChange = Number((r.totalPerformanceScore - prev.totalPerformanceScore).toFixed(2));
       conversionChange = Number((r.conversionRate - prev.conversionRate).toFixed(2));
-      orderChange = r.orderConvert - prev.orderConvert;
-      repeatOrderChange = r.repeatOrders - prev.repeatOrders;
+      orderChange = (r.conversions ?? r.orderConvert ?? 0) - (prev.conversions ?? prev.orderConvert ?? 0);
+      repeatOrderChange = (r.repeatOrders ?? 0) - (prev.repeatOrders ?? 0);
     }
 
     history.push({
@@ -749,10 +862,10 @@ export function calculateSalesHistoryComparison(
       year: r.year,
       score: r.totalPerformanceScore,
       conversionRate: r.conversionRate,
-      orders: r.orderConvert,
-      repeatOrders: r.repeatOrders,
-      reachouts: r.totalReachout,
-      followups: r.followupSent,
+      orders: r.conversions ?? r.orderConvert ?? 0,
+      repeatOrders: r.repeatOrders ?? 0,
+      reachouts: r.reachouts ?? r.totalReachout ?? 0,
+      followups: r.followups ?? r.followupSent ?? 0,
       rewardAmount: r.rewardAmount,
       rewardLevel: r.rewardLevel,
       eligibility: r.rewardEligibility,

@@ -24,8 +24,8 @@ export const SalesLeaderboardView: React.FC = () => {
     setSelectedDepartment,
     selectedProfile,
     setSelectedProfile,
-    selectedRewardLevel,
-    setSelectedRewardLevel,
+    selectedWeek,
+    setSelectedWeek,
     salesSearchQuery,
     setSalesSearchQuery,
     openSalesEntryModal,
@@ -54,14 +54,14 @@ export const SalesLeaderboardView: React.FC = () => {
               Official Leaderboard
             </span>
             <span className="text-xs font-bold text-[#666666]">
-              • {selectedMonth} {selectedYear}
+              • {selectedMonth} {selectedYear} ({selectedWeek})
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-[#101010] tracking-tight mt-1">
             Sales Performance Rankings
           </h1>
           <p className="text-xs sm:text-sm text-[#555555] mt-0.5">
-            Evaluated against profile target benchmarks with minimum conversion eligibility
+            50% Conversion Rate • 20% Follow-ups • 30% Order Value (Reachouts 0% weight)
           </p>
         </div>
 
@@ -90,7 +90,7 @@ export const SalesLeaderboardView: React.FC = () => {
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#777777]" />
           <input
             type="text"
-            placeholder="Search employee, profile, department..."
+            placeholder="Search member, profile, department..."
             value={salesSearchQuery}
             onChange={(e) => setSalesSearchQuery(e.target.value)}
             className="w-full pl-9.5 pr-4 py-2 bg-[#f8faf6] border border-[#e2ebd9] rounded-xl text-xs font-medium text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
@@ -99,6 +99,20 @@ export const SalesLeaderboardView: React.FC = () => {
 
         {/* Dropdowns */}
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Week Filter */}
+          <select
+            value={selectedWeek}
+            onChange={(e) => setSelectedWeek(e.target.value)}
+            className="bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none cursor-pointer"
+          >
+            <option value="all">All Weeks</option>
+            <option value="Week 1">Week 1</option>
+            <option value="Week 2">Week 2</option>
+            <option value="Week 3">Week 3</option>
+            <option value="Week 4">Week 4</option>
+            <option value="Week 5">Week 5</option>
+          </select>
+
           {/* Department Filter */}
           <select
             value={selectedDepartment}
@@ -133,16 +147,15 @@ export const SalesLeaderboardView: React.FC = () => {
             <thead className="bg-[#f8faf6] text-[#666666] font-bold uppercase text-[10px] border-b border-[#e2ebd9]">
               <tr>
                 <th className="p-4 text-center">Rank</th>
-                <th className="p-4">Sales Employee</th>
-                <th className="p-4">Department</th>
-                <th className="p-4">Profile</th>
-                <th className="p-4 text-right">Reachout</th>
-                <th className="p-4 text-right">Order Convert</th>
-                <th className="p-4 text-right">Repeat Orders</th>
-                <th className="p-4 text-right">Follow-ups</th>
-                <th className="p-4 text-right">Conversion Rate</th>
+                <th className="p-4">Sales Member</th>
+                <th className="p-4">Department & Profile</th>
+                <th className="p-4 text-right">Reachouts (0%)</th>
+                <th className="p-4 text-right">Conv. Rate (50%)</th>
+                <th className="p-4 text-right">Follow-ups (20%)</th>
+                <th className="p-4 text-right">Order Value (30%)</th>
                 <th className="p-4 text-right">Score</th>
-                <th className="p-4 text-center">Target Status</th>
+                <th className="p-4 text-right">Reward</th>
+                <th className="p-4 text-center">Benchmark</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f0f4ec]">
@@ -188,53 +201,58 @@ export const SalesLeaderboardView: React.FC = () => {
                       </div>
                     </td>
 
-                    {/* Department */}
+                    {/* Department & Profile */}
                     <td className="p-4 font-bold text-[#555555]">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-black ${
-                          item.department === 'IT'
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                            : 'bg-purple-50 text-purple-700 border border-purple-200'
-                        }`}
-                      >
-                        {item.department} Sales
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                            item.department === 'IT'
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              : 'bg-purple-50 text-purple-700 border border-purple-200'
+                          }`}
+                        >
+                          {item.department}
+                        </span>
+                        <span className="px-2 py-0.5 rounded font-black text-[10px] bg-[#f3f8ef] text-[#436320] border border-[#8cc540]/40">
+                          {item.profileCode}
+                        </span>
+                      </div>
                     </td>
 
-                    {/* Profile */}
-                    <td className="p-4">
-                      <span className="px-2 py-0.5 rounded font-black text-[11px] bg-[#f3f8ef] text-[#436320] border border-[#8cc540]/40">
-                        {item.profileCode}
-                      </span>
-                    </td>
-
-                    {/* Reachout */}
+                    {/* Reachouts */}
                     <td className="p-4 text-right font-medium text-[#101010]">
-                      <div>{item.totalReachout}</div>
-                      <div className="text-[10px] text-[#777777]">{item.reachoutScore} pts</div>
-                    </td>
-
-                    {/* Order Convert */}
-                    <td className="p-4 text-right font-black text-[#101010]">
-                      <div>{item.orderConvert}</div>
-                      <div className="text-[10px] text-[#436320] font-bold">{item.orderConvertScore} pts</div>
-                    </td>
-
-                    {/* Repeat Orders */}
-                    <td className="p-4 text-right font-medium text-[#101010]">
-                      <div>{item.repeatOrders}</div>
-                      <div className="text-[10px] text-[#777777]">{item.repeatOrdersScore} pts</div>
-                    </td>
-
-                    {/* Follow-ups */}
-                    <td className="p-4 text-right font-medium text-[#101010]">
-                      <div>{item.followupSent}</div>
-                      <div className="text-[10px] text-[#777777]">{item.followupScore} pts</div>
+                      <div>{item.reachouts ?? item.totalReachout}</div>
+                      <div className="text-[10px] text-[#777777]">0% wt</div>
                     </td>
 
                     {/* Conversion Rate */}
-                    <td className="p-4 text-right font-black text-emerald-700 text-sm">
-                      {item.conversionRate}%
+                    <td className="p-4 text-right">
+                      <div className="font-black text-emerald-800 text-sm">
+                        {item.conversionRate}%
+                      </div>
+                      <div className="text-[10px] text-emerald-700 font-bold">
+                        {item.conversionScore ?? item.orderConvertScore} / 50 pts ({item.conversions ?? item.orderConvert} ord)
+                      </div>
+                    </td>
+
+                    {/* Follow-ups */}
+                    <td className="p-4 text-right">
+                      <div className="font-bold text-blue-900">
+                        {item.followups ?? item.followupSent}
+                      </div>
+                      <div className="text-[10px] text-blue-700 font-medium">
+                        {item.followupsScore ?? item.followupScore} / 20 pts
+                      </div>
+                    </td>
+
+                    {/* Order Value */}
+                    <td className="p-4 text-right">
+                      <div className="font-bold text-amber-900">
+                        ${(item.orderValue || 0).toLocaleString()}
+                      </div>
+                      <div className="text-[10px] text-amber-700 font-medium">
+                        {item.orderValueScore ?? 0} / 30 pts
+                      </div>
                     </td>
 
                     {/* Total Performance Score */}
@@ -245,22 +263,32 @@ export const SalesLeaderboardView: React.FC = () => {
                       <span className="text-[10px] text-[#598327] font-bold block">/ 100 PTS</span>
                     </td>
 
+                    {/* Reward */}
+                    <td className="p-4 text-right">
+                      <div className="font-black text-sm text-[#436320]">
+                        {salesSettings.currencySymbol}{(item.rewardAmount ?? 0).toLocaleString()}
+                      </div>
+                      <div className="text-[10px] font-bold text-[#666666]">
+                        {item.rewardLevel}
+                      </div>
+                    </td>
+
                     {/* Status */}
                     <td className="p-4 text-center">
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black ${
-                          item.conversionRate >= 10
+                          item.rewardEligibility === 'Eligible'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-rose-50 text-rose-700 border border-rose-200'
                         }`}
                       >
-                        {item.conversionRate >= 10 ? (
+                        {item.rewardEligibility === 'Eligible' ? (
                           <>
-                            <CheckCircle2 className="w-3 h-3" /> Met Target
+                            <CheckCircle2 className="w-3 h-3" /> Pass
                           </>
                         ) : (
                           <>
-                            <XCircle className="w-3 h-3" /> In Progress
+                            <XCircle className="w-3 h-3" /> Benchmark Fail
                           </>
                         )}
                       </span>
@@ -269,8 +297,8 @@ export const SalesLeaderboardView: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={11} className="p-8 text-center text-xs text-[#666666]">
-                    No sales performance records found matching the active filters.
+                  <td colSpan={10} className="p-8 text-center text-[#777777]">
+                    No sales rankings available for the selected filters.
                   </td>
                 </tr>
               )}

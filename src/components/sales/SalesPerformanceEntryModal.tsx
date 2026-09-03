@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSales } from '../../context/SalesContext';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -6,6 +6,7 @@ import {
   SalesPerformanceRecord,
   SalesProfileCode,
   SalesDepartment,
+  SALES_PROFILES_META,
 } from '../../types/sales';
 import {
   getProfileSettings,
@@ -14,7 +15,15 @@ import {
   validateSalesPerformanceInputs,
   sanitizeSalesNumber,
 } from '../../services/salesCalculationService';
-import { X, CheckCircle2, AlertTriangle, Calculator, Sparkles, User, Calendar, Target, Check } from 'lucide-react';
+import {
+  isUserAdminOrSuperAdmin,
+  findMatchingSalesEmployee,
+  canUserManageRecord,
+  validateRecordAccess,
+} from '../../utils/salesAuthUtils';
+import { X, CheckCircle2, AlertTriangle, Calculator, Sparkles, User, Calendar, Target, Check, DollarSign, RefreshCw, Layers, Lock } from 'lucide-react';
+
+const WEEKS_OPTIONS = ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'];
 
 export const SalesPerformanceEntryModal: React.FC = () => {
   const {
@@ -22,103 +31,175 @@ export const SalesPerformanceEntryModal: React.FC = () => {
     closeSalesEntryModal,
     editingSalesRecord,
     defaultEmpIdForEntry,
+    defaultProfileForEntry,
     salesEmployees,
     salesSettings,
     saveSalesPerformanceRecord,
   } = useSales();
 
   const { selectedMonth, selectedYear, availableMonths, availableYears } = useApp();
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin, isSuperAdmin } = useAuth();
 
   const [employeeId, setEmployeeId] = useState<string>('');
+  const [profileCode, setProfileCode] = useState<SalesProfileCode>('PR');
+  const [week, setWeek] = useState<string>('Week 1');
   const [month, setMonth] = useState<string>(selectedMonth);
   const [year, setYear] = useState<number>(selectedYear);
 
-  // Raw inputs
-  const [totalReachout, setTotalReachout] = useState<number | ''>('');
-  const [orderConvert, setOrderConvert] = useState<number | ''>('');
-  const [repeatOrders, setRepeatOrders] = useState<number | ''>('');
-  const [followupSent, setFollowupSent] = useState<number | ''>('');
+  // Raw metric inputs
+  const [reachouts, setReachouts] = useState<number | ''>('');
+  const [conversions, setConversions] = useState<number | ''>('');
+  const [followups, setFollowups] = useState<number | ''>('');
+  const [orderValue, setOrderValue] = useState<number | ''>('');
   const [managerRemarks, setManagerRemarks] = useState<string>('');
+
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [formError, setFormError] = useState<string>('');
 
-  const activeEmployees = salesEmployees.filter((e) => e.status === 'active');
-  
+  const activeEmployees = useMemo(() => salesEmployees.filter((e) => e.status === 'active'), [salesEmployees]);
+  const isPrivileged = isUserAdminOrSuperAdmin(currentUser);
+
   // Find matching sales employee for current logged in user if team member
-  const matchedUserEmp = currentUser?.role === 'team_member'
-    ? activeEmployees.find(
-        (e) =>
-          (e.userId && e.userId.toLowerCase() === currentUser.userId.toLowerCase()) ||
-          (e.email && currentUser.email && e.email.toLowerCase() === currentUser.email.toLowerCase()) ||
-          e.name.toLowerCase() === currentUser.name.toLowerCase() ||
-          e.id === currentUser.uid
-      )
-    : undefined;
+  const matchedUserEmp = useMemo(
+    () => findMatchingSalesEmployee(currentUser, activeEmployees),
+    [currentUser, activeEmployees]
+  );
 
-  const selectedEmp = activeEmployees.find((e) => e.id === employeeId) || (matchedUserEmp || activeEmployees[0]);
+  // Check if current user has edit permission for the record being edited
+  const isAuthorizedToEdit = useMemo(() => {
+    if (!editingSalesRecord) return true;
+    return canUserManageRecord(editingSalesRecord, currentUser, salesEmployees);
+  }, [editingSalesRecord, currentUser, salesEmployees]);
 
-  const profileCode: SalesProfileCode = selectedEmp?.profileCode || 'PR';
-  const department: SalesDepartment = selectedEmp?.department || (['PR', 'WR', 'HW'].includes(profileCode) ? 'IT' : 'SMM');
+  const selectedEmp = useMemo(() => {
+    if (!isPrivileged && matchedUserEmp) {
+      return matchedUserEmp;
+    }
+    return activeEmployees.find((e) => e.id === employeeId) || (matchedUserEmp || activeEmployees[0]);
+  }, [isPrivileged, matchedUserEmp, activeEmployees, employeeId]);
+
+  // Available profiles for this employee
+  const employeeProfiles: SalesProfileCode[] = useMemo(() => {
+    if (!selectedEmp) return ['PR'];
+    return selectedEmp.assignedProfiles && selectedEmp.assignedProfiles.length > 0
+      ? selectedEmp.assignedProfiles
+      : [selectedEmp.profileCode || 'PR'];
+  }, [selectedEmp]);
+
+  const department: SalesDepartment = ['PR', 'WR', 'HW'].includes(profileCode) ? 'IT' : 'SMM';
   const profileConfig = getProfileSettings(salesSettings, profileCode);
 
   useEffect(() => {
     if (editingSalesRecord) {
+      if (!canUserManageRecord(editingSalesRecord, currentUser, salesEmployees)) {
+        setFormError('Security Violation: You are not authorized to edit another member\'s performance record.');
+      } else {
+        setFormError('');
+      }
       setEmployeeId(editingSalesRecord.employeeId);
+      setProfileCode(editingSalesRecord.profileCode);
+      setWeek(editingSalesRecord.week || 'Week 1');
       setMonth(editingSalesRecord.month);
       setYear(editingSalesRecord.year);
-      setTotalReachout(editingSalesRecord.totalReachout);
-      setOrderConvert(editingSalesRecord.orderConvert);
-      setRepeatOrders(editingSalesRecord.repeatOrders);
-      setFollowupSent(editingSalesRecord.followupSent);
+      setReachouts(editingSalesRecord.reachouts);
+      setConversions(editingSalesRecord.conversions);
+      setFollowups(editingSalesRecord.followups);
+      setOrderValue(editingSalesRecord.orderValue);
       setManagerRemarks(editingSalesRecord.managerRemarks || '');
     } else {
-      const initialEmpId = defaultEmpIdForEntry || (matchedUserEmp ? matchedUserEmp.id : (activeEmployees.length > 0 ? activeEmployees[0].id : ''));
+      const initialEmpId = (!isPrivileged && matchedUserEmp)
+        ? matchedUserEmp.id
+        : (defaultEmpIdForEntry || (matchedUserEmp ? matchedUserEmp.id : (activeEmployees.length > 0 ? activeEmployees[0].id : '')));
+      
       setEmployeeId(initialEmpId);
+
+      const targetEmp = activeEmployees.find((e) => e.id === initialEmpId);
+      const initialProfiles = targetEmp?.assignedProfiles && targetEmp.assignedProfiles.length > 0
+        ? targetEmp.assignedProfiles
+        : [targetEmp?.profileCode || 'PR'];
+      
+      const initialProfile = defaultProfileForEntry && initialProfiles.includes(defaultProfileForEntry)
+        ? defaultProfileForEntry
+        : initialProfiles[0] || 'PR';
+
+      setProfileCode(initialProfile);
+      setWeek('Week 1');
       setMonth(selectedMonth);
       setYear(selectedYear);
-      setTotalReachout('');
-      setOrderConvert('');
-      setRepeatOrders('');
-      setFollowupSent('');
+      setReachouts('');
+      setConversions('');
+      setFollowups('');
+      setOrderValue('');
       setManagerRemarks('');
+      setFormError('');
     }
-    setFormError('');
-  }, [isSalesEntryModalOpen, editingSalesRecord, defaultEmpIdForEntry, selectedMonth, selectedYear, matchedUserEmp]);
+  }, [isSalesEntryModalOpen, editingSalesRecord, defaultEmpIdForEntry, defaultProfileForEntry, selectedMonth, selectedYear, matchedUserEmp, isPrivileged, currentUser, salesEmployees]);
+
+  // When selected employee changes, ensure profileCode is valid for that employee
+  const handleEmployeeChange = (newEmpId: string) => {
+    if (!isPrivileged) return; // Prevent tampering by team members
+    setEmployeeId(newEmpId);
+    const emp = activeEmployees.find((e) => e.id === newEmpId);
+    const profs = emp?.assignedProfiles && emp.assignedProfiles.length > 0
+      ? emp.assignedProfiles
+      : [emp?.profileCode || 'PR'];
+    if (!profs.includes(profileCode)) {
+      setProfileCode(profs[0] || 'PR');
+    }
+  };
 
   if (!isSalesEntryModalOpen) return null;
 
   // Live Calculations for instant feedback
-  const numReachout = sanitizeSalesNumber(totalReachout);
-  const numOrders = sanitizeSalesNumber(orderConvert);
-  const numRepeat = sanitizeSalesNumber(repeatOrders);
-  const numFollowups = sanitizeSalesNumber(followupSent);
+  const numReachouts = sanitizeSalesNumber(reachouts);
+  const numConversions = sanitizeSalesNumber(conversions);
+  const numFollowups = sanitizeSalesNumber(followups);
+  const numOrderValue = sanitizeSalesNumber(orderValue);
 
-  const liveConversionRate = calculateConversionRate(numOrders, numReachout);
+  const liveConversionRate = calculateConversionRate(numConversions, numReachouts);
   const liveScores = calculateSalesPerformanceScore(
     {
-      totalReachout: numReachout,
-      orderConvert: numOrders,
-      repeatOrders: numRepeat,
-      followupSent: numFollowups,
+      reachouts: numReachouts,
+      conversions: numConversions,
+      followups: numFollowups,
+      orderValue: numOrderValue,
     },
     profileConfig
   );
 
+  const meetsBenchmark = liveConversionRate >= profileConfig.minConversionRate;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
+
+    if (!isAuthorizedToEdit) {
+      setFormError('Security Violation: You cannot edit another member\'s performance record.');
+      return;
+    }
 
     if (!selectedEmp) {
       setFormError('Please select a valid sales employee.');
       return;
     }
 
+    // Backend validation check
+    const accessCheck = validateRecordAccess(currentUser, selectedEmp.id, profileCode, salesEmployees);
+    if (!accessCheck.allowed) {
+      setFormError(accessCheck.message || 'Security Violation: Access Denied.');
+      return;
+    }
+
+    if (!employeeProfiles.includes(profileCode)) {
+      setFormError(`Selected employee is not assigned to profile ${profileCode}.`);
+      return;
+    }
+
     const validation = validateSalesPerformanceInputs({
-      totalReachout: numReachout,
-      orderConvert: numOrders,
-      repeatOrders: numRepeat,
-      followupSent: numFollowups,
+      reachouts: numReachouts,
+      conversions: numConversions,
+      followups: numFollowups,
+      orderValue: numOrderValue,
     });
 
     if (!validation.isValid) {
@@ -128,28 +209,31 @@ export const SalesPerformanceEntryModal: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      const recordId = editingSalesRecord?.id || `sales_rec_${selectedEmp.id}_${profileCode}_${week.replace(' ', '_')}_${month}_${year}`;
+      
       const record: SalesPerformanceRecord = {
-        id: editingSalesRecord?.id || `sales_rec_${selectedEmp.id}_${month}_${year}`,
+        id: recordId,
         employeeId: selectedEmp.id,
         employeeName: selectedEmp.name,
         department,
         profileCode,
+        week,
         month,
         year,
         monthYearKey: `${month} ${year}`,
-        totalReachout: numReachout,
-        orderConvert: numOrders,
-        repeatOrders: numRepeat,
-        followupSent: numFollowups,
+        reachouts: numReachouts,
+        conversions: numConversions,
+        followups: numFollowups,
+        orderValue: numOrderValue,
         managerRemarks,
         conversionRate: liveConversionRate,
-        reachoutScore: liveScores.reachoutScore,
-        orderConvertScore: liveScores.orderConvertScore,
-        repeatOrdersScore: liveScores.repeatOrdersScore,
+        reachoutScore: 0,
+        conversionScore: liveScores.conversionScore,
         followupScore: liveScores.followupScore,
+        orderValueScore: liveScores.orderValueScore,
         totalPerformanceScore: liveScores.totalPerformanceScore,
-        rewardEligibility: 'Eligible',
-        ineligibilityReason: undefined,
+        rewardEligibility: meetsBenchmark ? 'Eligible' : 'Not Eligible',
+        ineligibilityReason: meetsBenchmark ? undefined : `Conversion rate (${liveConversionRate}%) below profile benchmark (${profileConfig.minConversionRate}%)`,
         rewardLevel: 'Standard',
         rewardAmount: 0,
         submittedBy: currentUser?.name || 'Self Entry',
@@ -157,9 +241,11 @@ export const SalesPerformanceEntryModal: React.FC = () => {
         updatedAt: new Date().toISOString(),
       };
 
-      const success = await saveSalesPerformanceRecord(record);
-      if (success) {
+      const res = await saveSalesPerformanceRecord(record);
+      if (res.success) {
         closeSalesEntryModal();
+      } else {
+        setFormError(res.message || 'Failed to submit sales record.');
       }
     } catch (err: any) {
       setFormError(err?.message || 'Failed to submit sales record.');
@@ -168,7 +254,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
     }
   };
 
-  const isSelfEntry = currentUser?.role === 'team_member' && matchedUserEmp;
+  const isSelfEntry = !isPrivileged && matchedUserEmp;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
@@ -182,13 +268,13 @@ export const SalesPerformanceEntryModal: React.FC = () => {
             <div>
               <h2 className="text-xl font-black text-[#101010] tracking-tight">
                 {editingSalesRecord
-                  ? 'Edit Sales Performance'
+                  ? 'Edit Profile Performance Entry'
                   : isSelfEntry
-                  ? 'Submit My Sales Performance'
-                  : 'Record Monthly Sales Performance'}
+                  ? 'Submit Weekly Performance'
+                  : 'Record Weekly Profile Performance'}
               </h2>
               <p className="text-xs text-[#666666]">
-                Target-adjusted 100-point performance evaluation with conversion benchmark check
+                50% Conversion • 20% Follow-ups • 30% Order Value • 0% Reachouts weight
               </p>
             </div>
           </div>
@@ -201,277 +287,285 @@ export const SalesPerformanceEntryModal: React.FC = () => {
         </div>
 
         {formError && (
-          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2 font-medium">
             <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
             <span>{formError}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Employee & Period Selectors */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-1 space-y-1.5">
-              <label className="block text-xs font-black text-[#101010]">
-                Sales Employee <span className="text-rose-500">*</span>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Employee & Profile Selection */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-black text-[#101010] flex items-center justify-between">
+                <span>Sales Member <span className="text-rose-500">*</span></span>
+                {!isPrivileged && (
+                  <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-slate-400" /> Locked to Account
+                  </span>
+                )}
               </label>
               <select
                 value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
-                disabled={!!editingSalesRecord || (currentUser?.role === 'team_member' && !defaultEmpIdForEntry)}
-                className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
+                onChange={(e) => handleEmployeeChange(e.target.value)}
+                disabled={!!editingSalesRecord || !isPrivileged}
+                className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none disabled:opacity-75 disabled:bg-slate-100"
               >
-                {activeEmployees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.name} ({emp.department} - {emp.profileCode})
+                {!isPrivileged && matchedUserEmp ? (
+                  <option value={matchedUserEmp.id}>
+                    {matchedUserEmp.name} ({matchedUserEmp.assignedProfiles?.join(', ') || matchedUserEmp.profileCode})
                   </option>
-                ))}
+                ) : (
+                  activeEmployees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} ({emp.assignedProfiles?.join(', ') || emp.profileCode})
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-black text-[#101010]">Month</label>
+              <label className="block text-xs font-black text-[#101010]">
+                Select Profile (for this entry) <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={profileCode}
+                onChange={(e) => setProfileCode(e.target.value as SalesProfileCode)}
+                disabled={!!editingSalesRecord || !isAuthorizedToEdit}
+                className="w-full bg-[#f8faf6] border border-[#8cc540]/40 rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none disabled:opacity-75 disabled:bg-slate-100"
+              >
+                {employeeProfiles.map((code) => {
+                  const meta = SALES_PROFILES_META[code];
+                  return (
+                    <option key={code} value={code}>
+                      {code} - {meta?.name || code} ({meta?.department} Sales)
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
+
+          {/* Period Selectors: Week, Month, Year */}
+          <div className="grid grid-cols-3 gap-3 bg-[#f8faf6] p-3 rounded-2xl border border-[#e2ebd9]">
+            <div className="space-y-1">
+              <label className="block text-[11px] font-black text-[#101010]">Week</label>
+              <select
+                value={week}
+                onChange={(e) => setWeek(e.target.value)}
+                disabled={!!editingSalesRecord}
+                className="w-full bg-white border border-[#e2ebd9] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#101010] focus:ring-1 focus:ring-[#8cc540]"
+              >
+                {WEEKS_OPTIONS.map((w) => (
+                  <option key={w} value={w}>{w}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-[11px] font-black text-[#101010]">Month</label>
               <select
                 value={month}
                 onChange={(e) => setMonth(e.target.value)}
                 disabled={!!editingSalesRecord}
-                className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
+                className="w-full bg-white border border-[#e2ebd9] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#101010] focus:ring-1 focus:ring-[#8cc540]"
               >
                 {availableMonths.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
+                  <option key={m} value={m}>{m}</option>
                 ))}
               </select>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-xs font-black text-[#101010]">Year</label>
+            <div className="space-y-1">
+              <label className="block text-[11px] font-black text-[#101010]">Year</label>
               <select
                 value={year}
                 onChange={(e) => setYear(Number(e.target.value))}
                 disabled={!!editingSalesRecord}
-                className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
+                className="w-full bg-white border border-[#e2ebd9] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#101010] focus:ring-1 focus:ring-[#8cc540]"
               >
                 {availableYears.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
+                  <option key={y} value={y}>{y}</option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* Profile Targets Context Banner */}
-          <div className="p-3.5 rounded-2xl bg-[#f3f8ef] border border-[#8cc540]/40 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="font-black px-2 py-0.5 rounded bg-white text-[#436320] border border-[#8cc540]/40">
-                {profileCode} Profile ({department} Sales)
-              </span>
-              <span className="text-[#555555]">
-                Targets: Reachout ({profileConfig.reachoutTarget}) • Orders ({profileConfig.orderConvertTarget}) • Repeat ({profileConfig.repeatOrdersTarget}) • Follow-ups ({profileConfig.followupTarget})
-              </span>
-            </div>
-            <div className="font-bold text-[#335017]">
-              Conversion Hurdle: {profileConfig.minConversionRate}%
-            </div>
-          </div>
-
-          {/* 4 Performance Input Fields */}
+          {/* Metric Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* 1. Total Reachout */}
-            <div className="p-3.5 rounded-2xl bg-white border border-[#e2ebd9] space-y-1.5 shadow-xs">
+            {/* Metric 1: Reachouts (0% weight) */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-black text-[#101010]">1. Total Reachout</label>
-                <span className="text-[10px] font-bold text-[#666666]">
-                  Target: {profileConfig.reachoutTarget} ({profileConfig.reachoutWeight} pts)
+                <label className="block text-xs font-black text-slate-800">
+                  Total Reachouts <span className="text-rose-500">*</span>
+                </label>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
+                  0% Weight (Denominator)
                 </span>
               </div>
               <input
                 type="number"
                 min="0"
-                step="1"
-                placeholder="e.g. 200"
-                value={totalReachout}
-                onChange={(e) => setTotalReachout(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-sm font-black text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
-              />
-              <div className="text-[11px] text-[#555555] flex justify-between font-medium">
-                <span>Achievement: {liveScores.reachoutAchievementPct}%</span>
-                <span className="font-bold text-[#436320]">{liveScores.reachoutScore} / {profileConfig.reachoutWeight} pts</span>
-              </div>
-            </div>
-
-            {/* 2. Order Convert */}
-            <div className="p-3.5 rounded-2xl bg-white border border-[#e2ebd9] space-y-1.5 shadow-xs">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-black text-[#101010]">2. Order Convert</label>
-                <span className="text-[10px] font-bold text-[#666666]">
-                  Target: {profileConfig.orderConvertTarget} ({profileConfig.orderConvertWeight} pts)
-                </span>
-              </div>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                placeholder="e.g. 20"
-                value={orderConvert}
-                onChange={(e) => setOrderConvert(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-sm font-black text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
-              />
-              <div className="text-[11px] text-[#555555] flex justify-between font-medium">
-                <span>Achievement: {liveScores.orderAchievementPct}%</span>
-                <span className="font-bold text-[#436320]">{liveScores.orderConvertScore} / {profileConfig.orderConvertWeight} pts</span>
-              </div>
-            </div>
-
-            {/* 3. Repeat Orders */}
-            <div className="p-3.5 rounded-2xl bg-white border border-[#e2ebd9] space-y-1.5 shadow-xs">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-black text-[#101010]">3. Repeat Orders</label>
-                <span className="text-[10px] font-bold text-[#666666]">
-                  Target: {profileConfig.repeatOrdersTarget} ({profileConfig.repeatOrdersWeight} pts)
-                </span>
-              </div>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                placeholder="e.g. 8"
-                value={repeatOrders}
-                onChange={(e) => setRepeatOrders(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-sm font-black text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
-              />
-              <div className="text-[11px] text-[#555555] flex justify-between font-medium">
-                <span>Achievement: {liveScores.repeatAchievementPct}%</span>
-                <span className="font-bold text-[#436320]">{liveScores.repeatOrdersScore} / {profileConfig.repeatOrdersWeight} pts</span>
-              </div>
-            </div>
-
-            {/* 4. Follow-up Sent */}
-            <div className="p-3.5 rounded-2xl bg-white border border-[#e2ebd9] space-y-1.5 shadow-xs">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-black text-[#101010]">4. Follow-up Sent</label>
-                <span className="text-[10px] font-bold text-[#666666]">
-                  Target: {profileConfig.followupTarget} ({profileConfig.followupWeight} pts)
-                </span>
-              </div>
-              <input
-                type="number"
-                min="0"
-                step="1"
+                required
                 placeholder="e.g. 100"
-                value={followupSent}
-                onChange={(e) => setFollowupSent(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-sm font-black text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
+                value={reachouts}
+                onChange={(e) => setReachouts(e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-slate-400 focus:outline-none"
               />
-              <div className="text-[11px] text-[#555555] flex justify-between font-medium">
-                <span>Achievement: {liveScores.followupAchievementPct}%</span>
-                <span className="font-bold text-[#436320]">{liveScores.followupScore} / {profileConfig.followupWeight} pts</span>
+              <p className="text-[10px] text-slate-500">
+                Used to compute conversion rate (Conversions / Reachouts).
+              </p>
+            </div>
+
+            {/* Metric 2: Conversions (50% weight) */}
+            <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-black text-emerald-950">
+                  Conversions (Orders) <span className="text-rose-500">*</span>
+                </label>
+                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-900">
+                  50% Weight
+                </span>
+              </div>
+              <input
+                type="number"
+                min="0"
+                required
+                placeholder="e.g. 5"
+                value={conversions}
+                onChange={(e) => setConversions(e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-full bg-white border border-emerald-300 rounded-xl px-3 py-2 text-xs font-bold text-emerald-950 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              />
+              <div className="flex items-center justify-between text-[10px] text-emerald-800 font-semibold">
+                <span>Conv. Rate: {liveConversionRate}%</span>
+                <span>Target: {profileConfig.targetConversionRate ?? profileConfig.conversionTarget}%</span>
+              </div>
+            </div>
+
+            {/* Metric 3: Follow-ups (20% weight) */}
+            <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-black text-blue-950">
+                  Follow-ups Done <span className="text-rose-500">*</span>
+                </label>
+                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-blue-200 text-blue-900">
+                  20% Weight
+                </span>
+              </div>
+              <input
+                type="number"
+                min="0"
+                required
+                placeholder="e.g. 20"
+                value={followups}
+                onChange={(e) => setFollowups(e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-full bg-white border border-blue-300 rounded-xl px-3 py-2 text-xs font-bold text-blue-950 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+              <div className="flex items-center justify-between text-[10px] text-blue-800 font-semibold">
+                <span>Score: {liveScores.followupScore}/20 pts</span>
+                <span>Target: {profileConfig.targetFollowups ?? profileConfig.followupTarget}</span>
+              </div>
+            </div>
+
+            {/* Metric 4: Order Value (30% weight) */}
+            <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-black text-amber-950">
+                  Total Order Value ($) <span className="text-rose-500">*</span>
+                </label>
+                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-200 text-amber-900">
+                  30% Weight
+                </span>
+              </div>
+              <input
+                type="number"
+                min="0"
+                required
+                placeholder="e.g. 10000"
+                value={orderValue}
+                onChange={(e) => setOrderValue(e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 text-xs font-bold text-amber-950 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              />
+              <div className="flex items-center justify-between text-[10px] text-amber-800 font-semibold">
+                <span>Score: {liveScores.orderValueScore}/30 pts</span>
+                <span>Target: ${(profileConfig.targetOrderValue ?? profileConfig.orderValueTarget ?? 10000).toLocaleString()}</span>
               </div>
             </div>
           </div>
 
-          {/* Live Calculated Metric Cards (Clean, No Rewards) */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Conversion Rate */}
-            <div className="p-3.5 rounded-2xl bg-[#f8faf6] border border-[#e2ebd9] text-center space-y-1">
-              <span className="text-[11px] font-bold text-[#666666] uppercase tracking-wider block">
-                Conversion Rate
+          {/* Live Score Evaluation Card */}
+          <div className="p-4 rounded-2xl bg-[#f8faf6] border border-[#8cc540]/50 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-[#101010] flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-[#436320]" />
+                Live Performance Score Calculation
               </span>
-              <span className="text-2xl font-black text-[#101010]">
-                {liveConversionRate}%
+              <span className="text-base font-black text-[#436320]">
+                {liveScores.totalPerformanceScore} / 100 pts
               </span>
-              <div className="text-[10px] font-bold">
-                {liveConversionRate >= profileConfig.minConversionRate ? (
-                  <span className="text-emerald-700">✓ Meets {profileConfig.minConversionRate}% Hurdle</span>
-                ) : (
-                  <span className="text-amber-700">Below {profileConfig.minConversionRate}% Target</span>
-                )}
+            </div>
+
+            <div className="grid grid-cols-4 gap-2 text-center text-[10px]">
+              <div className="bg-white p-2 rounded-xl border border-[#e2ebd9]">
+                <span className="text-[#666666] block">Reachout</span>
+                <span className="font-bold text-slate-700">{numReachouts} (0%)</span>
+              </div>
+              <div className="bg-white p-2 rounded-xl border border-emerald-200">
+                <span className="text-emerald-700 block">Conversion (50%)</span>
+                <span className="font-bold text-emerald-900">{liveScores.conversionScore}/50</span>
+              </div>
+              <div className="bg-white p-2 rounded-xl border border-blue-200">
+                <span className="text-blue-700 block">Follow-up (20%)</span>
+                <span className="font-bold text-blue-900">{liveScores.followupScore}/20</span>
+              </div>
+              <div className="bg-white p-2 rounded-xl border border-amber-200">
+                <span className="text-amber-700 block">Value (30%)</span>
+                <span className="font-bold text-amber-900">{liveScores.orderValueScore}/30</span>
               </div>
             </div>
 
-            {/* Total Performance Score */}
-            <div className="p-3.5 rounded-2xl bg-[#f3f8ef] border border-[#8cc540]/40 text-center space-y-1">
-              <span className="text-[11px] font-bold text-[#436320] uppercase tracking-wider block">
-                Performance Score
+            <div className="flex items-center justify-between text-xs pt-1 border-t border-[#e2ebd9]">
+              <span className="text-[#666666]">Benchmark Eligibility:</span>
+              <span
+                className={`font-black px-2 py-0.5 rounded-full text-[10px] ${
+                  meetsBenchmark
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-rose-100 text-rose-800'
+                }`}
+              >
+                {meetsBenchmark ? '✓ Eligible for Rewards' : `✗ Ineligible (< ${profileConfig.minConversionRate}% conv)`}
               </span>
-              <span className="text-2xl font-black text-[#101010]">
-                {liveScores.totalPerformanceScore}
-                <span className="text-xs text-[#598327]"> / 100 PTS</span>
-              </span>
-              <div className="text-[10px] font-bold text-[#666666]">
-                Weighted 4-Metric Sum
-              </div>
-            </div>
-
-            {/* Benchmark Status */}
-            <div
-              className={`p-3.5 rounded-2xl border text-center space-y-1 ${
-                liveScores.totalPerformanceScore >= 80
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                  : liveScores.totalPerformanceScore >= 60
-                  ? 'bg-blue-50 border-blue-200 text-blue-900'
-                  : 'bg-amber-50 border-amber-200 text-amber-900'
-              }`}
-            >
-              <span className="text-[11px] font-bold uppercase tracking-wider block">
-                Performance Tier
-              </span>
-              <span className="text-xl font-black">
-                {liveScores.totalPerformanceScore >= 85
-                  ? 'Top Tier'
-                  : liveScores.totalPerformanceScore >= 70
-                  ? 'High Performing'
-                  : liveScores.totalPerformanceScore >= 50
-                  ? 'On Track'
-                  : 'Developing'}
-              </span>
-              <div className="text-[11px] font-bold">
-                {liveConversionRate >= profileConfig.minConversionRate ? (
-                  <span className="text-emerald-700">✓ Qualified Conversion</span>
-                ) : (
-                  <span className="text-amber-700">Conversion Pending</span>
-                )}
-              </div>
             </div>
           </div>
 
-          {/* Remarks */}
           <div className="space-y-1.5">
             <label className="block text-xs font-black text-[#101010]">
-              Performance Notes / Remarks (Optional)
+              Notes / Manager Remarks (Optional)
             </label>
-            <input
-              type="text"
-              placeholder="e.g., Exceeded conversion goals on IT cloud product pipeline"
+            <textarea
+              rows={2}
+              placeholder="e.g. Strong outbound pipeline, closed key enterprise account..."
               value={managerRemarks}
               onChange={(e) => setManagerRemarks(e.target.value)}
               className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
             />
           </div>
 
-          {/* Actions */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#e2ebd9]">
             <button
               type="button"
               onClick={closeSalesEntryModal}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f5f5f5] cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f5f5f5] cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] text-[#101010] shadow-md shadow-[#8cc540]/30 transition-all cursor-pointer flex items-center gap-2"
+              className="px-6 py-2 rounded-xl text-xs font-black bg-[#8cc540] text-white hover:bg-[#7cb334] shadow-md shadow-[#8cc540]/30 transition-all cursor-pointer disabled:opacity-50"
             >
-              {isSubmitting ? (
-                <span>Saving...</span>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>{editingSalesRecord ? 'Update Performance' : 'Save Performance Record'}</span>
-                </>
-              )}
+              {isSubmitting ? 'Saving Record...' : editingSalesRecord ? 'Update Record' : 'Save Performance Record'}
             </button>
           </div>
         </form>

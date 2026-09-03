@@ -157,7 +157,7 @@ export const SalesProfilePerformanceView: React.FC = () => {
                 <div>
                   <span className="text-[10px] font-bold text-[#666666] uppercase block">Total Rewards</span>
                   <span className="text-lg font-black text-[#436320]">
-                    {salesSettings.currencySymbol}{summary.totalRewards.toLocaleString()}
+                    {salesSettings.currencySymbol}{(summary.totalRewards ?? 0).toLocaleString()}
                   </span>
                 </div>
               </div>

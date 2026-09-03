@@ -203,7 +203,7 @@ export const SalesMonthlyHistoryView: React.FC = () => {
                               )}
                             </td>
                             <td className="p-3 text-right font-black text-[#436320]">
-                              {salesSettings.currencySymbol}{h.rewardAmount.toLocaleString()}
+                              {salesSettings.currencySymbol}{(h.rewardAmount ?? 0).toLocaleString()}
                             </td>
                             <td className="p-3 text-center">
                               <span

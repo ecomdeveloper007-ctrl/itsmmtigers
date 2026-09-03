@@ -9,6 +9,7 @@ import {
   SalesDashboardSummary,
   SalesDepartmentSummary,
   SalesProfileSummary,
+  SalesAuditLog,
 } from '../types/sales';
 import { SalesDataService, INITIAL_SALES_EMPLOYEES } from '../services/salesDataService';
 import {
@@ -19,6 +20,7 @@ import {
   getProfilePerformance,
   computeCompleteSalesRecord,
 } from '../services/salesCalculationService';
+import { isUserSuperAdmin, findMatchingSalesEmployee } from '../utils/salesAuthUtils';
 import { useApp } from './AppContext';
 import { useAuth } from './AuthContext';
 
@@ -30,6 +32,7 @@ export type SalesTab =
   | 'sales-analytics'
   | 'sales-history'
   | 'sales-reports'
+  | 'sales-audit'
   | 'sales-settings';
 
 export type ActiveModule = 'pm' | 'sales';
@@ -44,9 +47,12 @@ interface SalesContextType {
   salesEmployees: SalesEmployee[];
   salesRecords: SalesPerformanceRecord[];
   salesSettings: SalesRewardSettings;
+  auditLogs: SalesAuditLog[];
   isLoading: boolean;
 
   // Filters
+  selectedWeek: string; // 'all' | 'Week 1' | 'Week 2' ...
+  setSelectedWeek: (week: string) => void;
   selectedDepartment: 'all' | 'IT' | 'SMM';
   setSelectedDepartment: (dept: 'all' | 'IT' | 'SMM') => void;
   selectedProfile: 'all' | SalesProfileCode;
@@ -69,10 +75,11 @@ interface SalesContextType {
 
   // Modals
   isSalesEntryModalOpen: boolean;
-  openSalesEntryModal: (record?: SalesPerformanceRecord, defaultEmpId?: string) => void;
+  openSalesEntryModal: (record?: SalesPerformanceRecord, defaultEmpId?: string, defaultProfile?: SalesProfileCode) => void;
   closeSalesEntryModal: () => void;
   editingSalesRecord: SalesPerformanceRecord | null;
   defaultEmpIdForEntry: string | null;
+  defaultProfileForEntry: SalesProfileCode | null;
 
   isSalesEmployeeModalOpen: boolean;
   openSalesEmployeeModal: (emp?: SalesEmployee) => void;
@@ -88,11 +95,12 @@ interface SalesContextType {
   // Actions
   saveSalesEmployee: (employee: SalesEmployee) => Promise<boolean>;
   deleteSalesEmployee: (empId: string) => Promise<boolean>;
-  saveSalesPerformanceRecord: (record: SalesPerformanceRecord) => Promise<boolean>;
+  saveSalesPerformanceRecord: (record: SalesPerformanceRecord) => Promise<{ success: boolean; message?: string }>;
   deleteSalesPerformanceRecord: (recordId: string) => Promise<boolean>;
   saveSalesRewardSettings: (settings: SalesRewardSettings) => Promise<boolean>;
   resetSalesRewardSettings: () => Promise<boolean>;
   importSalesCSV: (csvText: string) => Promise<{ success: boolean; count: number; errors: string[] }>;
+  refreshAuditLogs: () => Promise<void>;
   refreshSalesData: () => Promise<void>;
 }
 
@@ -108,9 +116,11 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [salesEmployees, setSalesEmployees] = useState<SalesEmployee[]>([]);
   const [salesRecords, setSalesRecords] = useState<SalesPerformanceRecord[]>([]);
   const [salesSettings, setSalesSettings] = useState<SalesRewardSettings>(DEFAULT_SALES_SETTINGS);
+  const [auditLogs, setAuditLogs] = useState<SalesAuditLog[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Filters
+  const [selectedWeek, setSelectedWeek] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<'all' | 'IT' | 'SMM'>('all');
   const [selectedProfile, setSelectedProfile] = useState<'all' | SalesProfileCode>('all');
   const [selectedRewardLevel, setSelectedRewardLevel] = useState<string>('all');
@@ -120,6 +130,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [isSalesEntryModalOpen, setIsSalesEntryModalOpen] = useState<boolean>(false);
   const [editingSalesRecord, setEditingSalesRecord] = useState<SalesPerformanceRecord | null>(null);
   const [defaultEmpIdForEntry, setDefaultEmpIdForEntry] = useState<string | null>(null);
+  const [defaultProfileForEntry, setDefaultProfileForEntry] = useState<SalesProfileCode | null>(null);
 
   const [isSalesEmployeeModalOpen, setIsSalesEmployeeModalOpen] = useState<boolean>(false);
   const [editingSalesEmployee, setEditingSalesEmployee] = useState<SalesEmployee | null>(null);
@@ -127,19 +138,30 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [isSalesImportModalOpen, setIsSalesImportModalOpen] = useState<boolean>(false);
   const [selectedEmployeeForDetail, setSelectedEmployeeForDetail] = useState<SalesEmployee | null>(null);
 
+  const refreshAuditLogs = async () => {
+    try {
+      const logs = await SalesDataService.getAuditLogs();
+      setAuditLogs(logs);
+    } catch (e) {
+      console.warn('Error refreshing audit logs:', e);
+    }
+  };
+
   const refreshSalesData = async () => {
     setIsLoading(true);
     try {
-      await SalesDataService.initializeSalesData();
-      const [fetchedEmp, fetchedRecs, fetchedSettings] = await Promise.all([
+      await SalesDataService.initializeSalesStore();
+      const [fetchedEmp, fetchedRecs, fetchedSettings, fetchedLogs] = await Promise.all([
         SalesDataService.getEmployees(),
         SalesDataService.getRecords(),
         SalesDataService.getSettings(),
+        SalesDataService.getAuditLogs(),
       ]);
 
       setSalesEmployees(fetchedEmp);
       setSalesRecords(fetchedRecs);
       setSalesSettings(fetchedSettings);
+      setAuditLogs(fetchedLogs);
     } catch (e) {
       console.warn('Error loading sales data:', e);
     } finally {
@@ -177,6 +199,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       salesSettings,
       selectedMonth,
       selectedYear,
+      selectedWeek,
       selectedDepartment,
       selectedProfile,
       selectedRewardLevel,
@@ -188,6 +211,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     salesSettings,
     selectedMonth,
     selectedYear,
+    selectedWeek,
     selectedDepartment,
     selectedProfile,
     selectedRewardLevel,
@@ -201,42 +225,57 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       salesRecords,
       salesSettings,
       selectedMonth,
-      selectedYear
+      selectedYear,
+      selectedWeek
     );
-  }, [salesEmployees, salesRecords, salesSettings, selectedMonth, selectedYear]);
+  }, [salesEmployees, salesRecords, salesSettings, selectedMonth, selectedYear, selectedWeek]);
 
   // Compute Department Summaries
   const itDepartmentSummary = useMemo(() => {
-    const currentRecs = salesRecords.filter(
-      (r) => r.month.toLowerCase() === selectedMonth.toLowerCase() && Number(r.year) === Number(selectedYear)
-    );
+    const currentRecs = salesRecords.filter((r) => {
+      const matchMonth = r.month.toLowerCase() === selectedMonth.toLowerCase() && Number(r.year) === Number(selectedYear);
+      if (!matchMonth) return false;
+      if (selectedWeek !== 'all') return r.week === selectedWeek;
+      return true;
+    });
     return getDepartmentPerformance(currentRecs, salesEmployees, 'IT', salesSettings);
-  }, [salesRecords, salesEmployees, selectedMonth, selectedYear, salesSettings]);
+  }, [salesRecords, salesEmployees, selectedMonth, selectedYear, selectedWeek, salesSettings]);
 
   const smmDepartmentSummary = useMemo(() => {
-    const currentRecs = salesRecords.filter(
-      (r) => r.month.toLowerCase() === selectedMonth.toLowerCase() && Number(r.year) === Number(selectedYear)
-    );
+    const currentRecs = salesRecords.filter((r) => {
+      const matchMonth = r.month.toLowerCase() === selectedMonth.toLowerCase() && Number(r.year) === Number(selectedYear);
+      if (!matchMonth) return false;
+      if (selectedWeek !== 'all') return r.week === selectedWeek;
+      return true;
+    });
     return getDepartmentPerformance(currentRecs, salesEmployees, 'SMM', salesSettings);
-  }, [salesRecords, salesEmployees, selectedMonth, selectedYear, salesSettings]);
+  }, [salesRecords, salesEmployees, selectedMonth, selectedYear, selectedWeek, salesSettings]);
 
   // Compute Profile Summaries
   const profileSummaries = useMemo(() => {
-    const currentRecs = salesRecords.filter(
-      (r) => r.month.toLowerCase() === selectedMonth.toLowerCase() && Number(r.year) === Number(selectedYear)
-    );
+    const currentRecs = salesRecords.filter((r) => {
+      const matchMonth = r.month.toLowerCase() === selectedMonth.toLowerCase() && Number(r.year) === Number(selectedYear);
+      if (!matchMonth) return false;
+      if (selectedWeek !== 'all') return r.week === selectedWeek;
+      return true;
+    });
     const codes: SalesProfileCode[] = ['PR', 'WR', 'HW', 'DR', 'RR'];
     const res: Record<SalesProfileCode, SalesProfileSummary> = {} as any;
     codes.forEach((code) => {
       res[code] = getProfilePerformance(currentRecs, salesEmployees, code, salesSettings);
     });
     return res;
-  }, [salesRecords, salesEmployees, selectedMonth, selectedYear, salesSettings]);
+  }, [salesRecords, salesEmployees, selectedMonth, selectedYear, selectedWeek, salesSettings]);
 
   // Modal handlers
-  const openSalesEntryModal = (record?: SalesPerformanceRecord, defaultEmpId?: string) => {
+  const openSalesEntryModal = (
+    record?: SalesPerformanceRecord,
+    defaultEmpId?: string,
+    defaultProfile?: SalesProfileCode
+  ) => {
     setEditingSalesRecord(record || null);
     setDefaultEmpIdForEntry(defaultEmpId || null);
+    setDefaultProfileForEntry(defaultProfile || null);
     setIsSalesEntryModalOpen(true);
   };
 
@@ -244,6 +283,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setIsSalesEntryModalOpen(false);
     setEditingSalesRecord(null);
     setDefaultEmpIdForEntry(null);
+    setDefaultProfileForEntry(null);
   };
 
   const openSalesEmployeeModal = (emp?: SalesEmployee) => {
@@ -257,16 +297,28 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   // Actions
+  const actor = useMemo(() => {
+    return {
+      id: currentUser?.uid || 'anonymous_user',
+      uid: currentUser?.uid || 'anonymous_user',
+      userId: currentUser?.userId,
+      email: currentUser?.email,
+      name: currentUser?.name || 'User',
+      role: currentUser?.role || 'team_member',
+    };
+  }, [currentUser]);
+
   const saveSalesEmployee = async (employee: SalesEmployee): Promise<boolean> => {
     try {
-      await SalesDataService.saveEmployee(employee);
+      await SalesDataService.saveEmployee(employee, actor);
       const updated = await SalesDataService.getEmployees();
       setSalesEmployees(updated);
-      addToast('success', 'Sales Employee Saved', `${employee.name} (${employee.profileCode}) profile is ready.`);
+      refreshAuditLogs();
+      addToast('success', 'Sales Employee Saved', `${employee.name} profiles updated: ${employee.assignedProfiles?.join(', ')}.`);
       return true;
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      addToast('error', 'Failed to save sales employee');
+      addToast('error', 'Failed to save sales employee', e.message || 'Access Denied');
       return false;
     }
   };
@@ -282,131 +334,145 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setSalesRecords((prev) =>
         prev.filter((r) => r.employeeId !== empId && (r.employeeName || '').toLowerCase() !== empId.toLowerCase())
       );
-      await SalesDataService.deleteEmployee(empId);
+      await SalesDataService.deleteEmployee(empId, actor);
       const [updatedEmp, updatedRecs] = await Promise.all([
         SalesDataService.getEmployees(),
         SalesDataService.getRecords(),
       ]);
       setSalesEmployees(updatedEmp);
       setSalesRecords(updatedRecs);
+      refreshAuditLogs();
       addToast('info', 'Sales Employee Removed', 'Employee permanently deleted from Sales roster.');
       return true;
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      addToast('error', 'Failed to delete sales employee');
+      addToast('error', 'Failed to delete sales employee', e.message || 'Access Denied');
       return false;
     }
   };
 
-  const saveSalesPerformanceRecord = async (record: SalesPerformanceRecord): Promise<boolean> => {
+  const saveSalesPerformanceRecord = async (
+    record: SalesPerformanceRecord
+  ): Promise<{ success: boolean; message?: string }> => {
     try {
+      // Backend/Database level security check
+      if (currentUser) {
+        const check = SalesDataService.validatePerformancePermission(
+          currentUser,
+          record.employeeId,
+          record.profileCode,
+          salesEmployees
+        );
+        if (!check.allowed) {
+          addToast('error', 'Unauthorized Action', check.message || 'Access Denied');
+          return { success: false, message: check.message };
+        }
+      }
+
       const computed = computeCompleteSalesRecord(
         {
           ...record,
-          submittedBy: currentUser?.name || 'Manager',
+          submittedBy: currentUser?.name || 'Team Member',
         },
         salesSettings
       );
-      await SalesDataService.saveRecord(computed);
+
+      await SalesDataService.saveRecord(computed, actor);
       const updated = await SalesDataService.getRecords();
       setSalesRecords(updated);
+      refreshAuditLogs();
+
       addToast(
         'success',
-        'Sales Performance Recorded',
-        `Score: ${computed.totalPerformanceScore} PTS • Conversion: ${computed.conversionRate}% • Reward: ${computed.rewardLevel}`
+        'Performance Recorded',
+        `${computed.profileCode} (${computed.week}): Score ${computed.totalPerformanceScore}/100 • Conv: ${computed.conversionRate}% • Reward: ${computed.rewardLevel}`
       );
-      return true;
-    } catch (e) {
+      return { success: true };
+    } catch (e: any) {
       console.error(e);
-      addToast('error', 'Failed to save sales performance');
-      return false;
+      addToast('error', 'Failed to save performance record', e.message);
+      return { success: false, message: e.message };
     }
   };
 
   const deleteSalesPerformanceRecord = async (recordId: string): Promise<boolean> => {
     try {
       setSalesRecords((prev) => prev.filter((r) => r.id !== recordId));
-      await SalesDataService.deleteRecord(recordId);
+      await SalesDataService.deleteRecord(recordId, actor);
+      refreshAuditLogs();
       addToast('info', 'Performance Record Deleted');
       return true;
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      addToast('error', 'Failed to delete record');
+      addToast('error', 'Failed to delete record', e.message || 'Access Denied');
       return false;
     }
   };
 
   const saveSalesRewardSettings = async (settings: SalesRewardSettings): Promise<boolean> => {
     try {
-      await SalesDataService.saveSettings(settings);
+      if (!isUserSuperAdmin(currentUser)) {
+        addToast('error', 'Unauthorized Action', '403 Forbidden: Only Super Admin can modify targets, KPIs, and reward settings.');
+        return false;
+      }
+
+      await SalesDataService.saveSettings(settings, actor);
       setSalesSettings(settings);
 
-      // Recompute all records with new settings
+      // Recalibrate all records
       const existing = await SalesDataService.getRecords();
       const recomputed = existing.map((r) => computeCompleteSalesRecord(r, settings));
       for (const rec of recomputed) {
-        await SalesDataService.saveRecord(rec);
+        await SalesDataService.saveRecord(rec, actor);
       }
       setSalesRecords(recomputed);
+      refreshAuditLogs();
 
-      addToast('success', 'Sales Settings Updated', 'Target rules and reward slabs have been recalibrated.');
+      addToast('success', 'Sales Settings Updated', 'Target rules, weights, and reward slabs recalibrated.');
       return true;
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      addToast('error', 'Failed to save sales settings');
+      addToast('error', 'Failed to save sales settings', e?.message || 'Access Denied');
       return false;
     }
   };
 
   const resetSalesRewardSettings = async (): Promise<boolean> => {
     try {
-      await SalesDataService.resetSettingsToDefault();
+      if (!isUserSuperAdmin(currentUser)) {
+        addToast('error', 'Unauthorized Action', '403 Forbidden: Only Super Admin can reset targets and settings.');
+        return false;
+      }
+      await SalesDataService.resetSettingsToDefault(actor);
       setSalesSettings(DEFAULT_SALES_SETTINGS);
-      addToast('info', 'Settings Reset', 'Sales targets and weights reset to factory default standards.');
+      refreshAuditLogs();
+      addToast('info', 'Settings Reset', 'Sales targets and scoring weights reset to standards.');
       return true;
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      addToast('error', 'Failed to reset settings');
+      addToast('error', 'Failed to reset settings', e?.message || 'Access Denied');
       return false;
     }
   };
 
-  const importSalesCSV = async (
-    csvText: string
-  ): Promise<{ success: boolean; count: number; errors: string[] }> => {
+  const importSalesCSV = async (csvText: string): Promise<{ success: boolean; count: number; errors: string[] }> => {
     try {
-      const parsed = SalesDataService.parseSalesCSV(
-        csvText,
-        salesEmployees,
-        salesSettings,
-        selectedMonth,
-        selectedYear
-      );
-
-      if (parsed.errors.length > 0 && parsed.records.length === 0) {
-        return { success: false, count: 0, errors: parsed.errors };
+      if (!isUserSuperAdmin(currentUser)) {
+        addToast('error', 'Unauthorized Action', '403 Forbidden: Only Super Admin can import performance records.');
+        return { success: false, count: 0, errors: ['403 Forbidden: Only Super Admin can import performance records.'] };
       }
-
-      // Save new employees
-      for (const newEmp of parsed.newEmployees) {
-        await SalesDataService.saveEmployee(newEmp);
+      const res = await SalesDataService.importSalesCSV(csvText, actor);
+      if (res.success) {
+        const updated = await SalesDataService.getRecords();
+        setSalesRecords(updated);
+        refreshAuditLogs();
+        addToast('success', 'Import Completed', `Imported ${res.count} records successfully.`);
       }
-
-      // Save records
-      for (const rec of parsed.records) {
-        await SalesDataService.saveRecord(rec);
-      }
-
-      const updatedEmp = await SalesDataService.getEmployees();
-      const updatedRecs = await SalesDataService.getRecords();
-      setSalesEmployees(updatedEmp);
-      setSalesRecords(updatedRecs);
-
-      addToast('success', 'CSV Import Completed', `Imported ${parsed.records.length} sales performance records.`);
-      return { success: true, count: parsed.records.length, errors: parsed.errors };
+      return res;
     } catch (e: any) {
       console.error(e);
-      return { success: false, count: 0, errors: [e.message || 'Unknown import error'] };
+      addToast('error', 'Import Failed', e?.message || 'Access Denied');
+      return { success: false, count: 0, errors: [e?.message || 'Access Denied'] };
     }
   };
 
@@ -420,7 +486,10 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         salesEmployees,
         salesRecords,
         salesSettings,
+        auditLogs,
         isLoading,
+        selectedWeek,
+        setSelectedWeek,
         selectedDepartment,
         setSelectedDepartment,
         selectedProfile,
@@ -439,6 +508,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         closeSalesEntryModal,
         editingSalesRecord,
         defaultEmpIdForEntry,
+        defaultProfileForEntry,
         isSalesEmployeeModalOpen,
         openSalesEmployeeModal,
         closeSalesEmployeeModal,
@@ -454,6 +524,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         saveSalesRewardSettings,
         resetSalesRewardSettings,
         importSalesCSV,
+        refreshAuditLogs,
         refreshSalesData,
       }}
     >
