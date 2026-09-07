@@ -683,20 +683,35 @@ export class SalesDataService {
       }
     }
 
-    // Unique match key: employeeId + profileCode + week + month + year
-    const idx = all.findIndex(
-      (r) =>
-        r.id === record.id ||
-        (r.employeeId === record.employeeId &&
+    // Unique match key:
+    // If daily: employeeId + profileCode + entryDate
+    // If weekly: employeeId + profileCode + week + month + year
+    const isDaily = record.entryType === 'daily' || Boolean(record.entryDate);
+    const idx = all.findIndex((r) => {
+      if (r.id === record.id) return true;
+      if (isDaily) {
+        return (
+          r.entryType === 'daily' &&
+          r.employeeId === record.employeeId &&
+          r.profileCode === record.profileCode &&
+          r.entryDate === record.entryDate
+        );
+      } else {
+        return (
+          r.entryType !== 'daily' &&
+          r.employeeId === record.employeeId &&
           r.profileCode === record.profileCode &&
           r.week === record.week &&
           r.month === record.month &&
-          Number(r.year) === Number(record.year))
-    );
+          Number(r.year) === Number(record.year)
+        );
+      }
+    });
 
     let updated: SalesPerformanceRecord[];
     const recToSave: SalesPerformanceRecord = {
       ...record,
+      entryType: isDaily ? 'daily' : 'weekly',
       updatedAt: new Date().toISOString(),
     };
 
@@ -724,15 +739,21 @@ export class SalesDataService {
     }
 
     if (actor) {
+      const periodLabel = isDaily ? `Daily (${recToSave.entryDate})` : `Weekly (${recToSave.week}, ${recToSave.month} ${recToSave.year})`;
       this.logAudit({
         userId: actor.id,
         userName: actor.name,
         userRole: actor.role,
         action: idx >= 0 ? 'UPDATE_PERFORMANCE_RECORD' : 'CREATE_PERFORMANCE_RECORD',
+        actionCategory: 'performance',
         entityType: 'record',
+        recordType: isDaily ? 'Performance Record (Daily)' : 'Performance Record (Weekly)',
         entityId: recToSave.id,
-        details: `${actor.name} ${idx >= 0 ? 'updated' : 'entered'} ${recToSave.profileCode} (${recToSave.week}, ${recToSave.month} ${recToSave.year}) performance for ${recToSave.employeeName} (Score: ${recToSave.totalPerformanceScore}/100)`,
+        details: `${actor.name} ${idx >= 0 ? 'updated' : 'entered'} ${recToSave.profileCode} ${periodLabel} performance for ${recToSave.employeeName} (Reachouts: ${recToSave.reachouts}, Conversions: ${recToSave.conversions}, Follow-ups: ${recToSave.followups}, Order Value: ₹${recToSave.orderValue}, Score: ${recToSave.totalPerformanceScore}/100)`,
+        previousValue: idx >= 0 ? all[idx] : undefined,
         newValue: recToSave,
+        status: 'Success',
+        source: 'UI',
       });
     }
 
@@ -771,14 +792,21 @@ export class SalesDataService {
     }
 
     if (actor) {
+      const isDaily = targetRec?.entryType === 'daily';
+      const periodLabel = isDaily ? `Daily (${targetRec?.entryDate})` : `Weekly (${targetRec?.week}, ${targetRec?.month} ${targetRec?.year})`;
       this.logAudit({
         userId: actor.id,
         userName: actor.name,
         userRole: actor.role,
         action: 'DELETE_PERFORMANCE_RECORD',
+        actionCategory: 'performance',
         entityType: 'record',
+        recordType: isDaily ? 'Performance Record (Daily)' : 'Performance Record (Weekly)',
         entityId: recordId,
-        details: `${actor.name} deleted performance record for ${targetRec?.employeeName || recordId} (${targetRec?.profileCode || ''} - ${targetRec?.week || ''}).`,
+        details: `${actor.name} deleted ${targetRec?.profileCode || ''} performance record for ${targetRec?.employeeName || recordId} (${periodLabel}).`,
+        previousValue: targetRec,
+        status: 'Success',
+        source: 'UI',
       });
     }
   }
@@ -956,7 +984,12 @@ export class SalesDataService {
   }
 
   // --- AUDIT LOGS ---
-  static async getAuditLogs(): Promise<SalesAuditLog[]> {
+  static async getAuditLogs(actor?: { role?: string; email?: string }): Promise<SalesAuditLog[]> {
+    // Backend security check: Only Super Admin can view Audit Logs
+    if (actor && !isUserSuperAdmin(actor)) {
+      throw new Error('403 Forbidden: Sales Members are not permitted to access Audit Logs.');
+    }
+
     try {
       if (db) {
         const snap = await getDocs(collection(db, 'sales_audit_logs'));
@@ -971,18 +1004,80 @@ export class SalesDataService {
       console.warn('Firestore fetch audit logs failed:', e);
     }
     const local = getFromStorage<SalesAuditLog[]>(SALES_LS_KEYS.AUDIT_LOGS, []);
+    if (local.length === 0) {
+      // Seed initial high-quality audit logs
+      const seedLogs: SalesAuditLog[] = [
+        {
+          id: 'audit_init_1',
+          timestamp: new Date(Date.now() - 3600000 * 24).toISOString(),
+          module: 'Sales',
+          action: 'UPDATE_SALES_SETTINGS',
+          actionCategory: 'configuration',
+          recordType: 'Target & Reward Configuration',
+          entityType: 'settings',
+          entityId: 'global_config',
+          userId: 'admin_1',
+          userName: 'Super Admin',
+          userRole: 'super_admin',
+          ipAddress: '192.168.1.10 (Admin Web Console)',
+          source: 'UI',
+          status: 'Success',
+          details: 'Super Admin configured profile-specific targets and reward slabs for PR, WR, HW, DR, RR profiles.',
+        },
+        {
+          id: 'audit_init_2',
+          timestamp: new Date(Date.now() - 3600000 * 12).toISOString(),
+          module: 'Sales',
+          action: 'ASSIGN_PROFILE',
+          actionCategory: 'member',
+          recordType: 'Sales Member Profile Assignment',
+          entityType: 'employee',
+          entityId: 'emp_pr_1',
+          userId: 'admin_1',
+          userName: 'Super Admin',
+          userRole: 'super_admin',
+          ipAddress: '192.168.1.10 (Admin Web Console)',
+          source: 'UI',
+          status: 'Success',
+          details: 'Super Admin assigned PR and WR profiles to Sales Member Rahul Sharma.',
+        },
+        {
+          id: 'audit_init_3',
+          timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
+          module: 'Sales',
+          action: 'CREATE_PERFORMANCE_RECORD',
+          actionCategory: 'performance',
+          recordType: 'Performance Record (Daily)',
+          entityType: 'record',
+          entityId: 'sales_rec_daily_init',
+          userId: 'emp_pr_1',
+          userName: 'Rahul Sharma',
+          userRole: 'sales_member',
+          ipAddress: '127.0.0.1 (Web UI)',
+          source: 'UI',
+          status: 'Success',
+          details: 'Rahul Sharma entered Daily performance for PR (Reachouts: 45, Conversions: 6, Follow-ups: 22, Value: ₹30,000, Score: 84/100)',
+        },
+      ];
+      saveToStorage(SALES_LS_KEYS.AUDIT_LOGS, seedLogs);
+      return seedLogs;
+    }
     return local.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
 
   static async logAudit(entry: Omit<SalesAuditLog, 'id' | 'timestamp'>): Promise<void> {
     const newLog: SalesAuditLog = {
       ...entry,
-      id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       timestamp: new Date().toISOString(),
+      module: entry.module || 'Sales',
+      ipAddress: entry.ipAddress || '127.0.0.1 (Web UI)',
+      source: entry.source || 'UI',
+      status: entry.status || 'Success',
     };
 
     const existing = getFromStorage<SalesAuditLog[]>(SALES_LS_KEYS.AUDIT_LOGS, []);
-    const updated = [newLog, ...existing].slice(0, 500); // Keep latest 500
+    const updated = [newLog, ...existing].slice(0, 1000); // Keep latest 1000
     saveToStorage(SALES_LS_KEYS.AUDIT_LOGS, updated);
 
     if (db) {
@@ -992,6 +1087,26 @@ export class SalesDataService {
         console.warn('Firestore audit log failed:', e);
       }
     }
+  }
+
+  static async logExportAction(
+    format: string,
+    details: string,
+    actor: { id: string; name: string; role: string }
+  ): Promise<void> {
+    await this.logAudit({
+      userId: actor.id,
+      userName: actor.name,
+      userRole: actor.role,
+      action: 'EXPORT_SALES_DATA',
+      actionCategory: 'import_export',
+      entityType: 'import_export',
+      recordType: `Export (${format})`,
+      entityId: `export_${Date.now()}`,
+      details: `${actor.name} exported Sales data: ${details}`,
+      status: 'Success',
+      source: 'UI',
+    });
   }
 
   // --- SECURITY VALIDATION ---

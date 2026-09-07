@@ -12,8 +12,11 @@ import {
   getProfileSettings,
   calculateConversionRate,
   calculateSalesPerformanceScore,
+  calculateReward,
   validateSalesPerformanceInputs,
   sanitizeSalesNumber,
+  getWeekFromDate,
+  getMonthAndYearFromDate,
 } from '../../services/salesCalculationService';
 import {
   isUserAdminOrSuperAdmin,
@@ -21,7 +24,16 @@ import {
   canUserManageRecord,
   validateRecordAccess,
 } from '../../utils/salesAuthUtils';
-import { X, CheckCircle2, AlertTriangle, Calculator, Sparkles, User, Calendar, Target, Check, DollarSign, RefreshCw, Layers, Lock } from 'lucide-react';
+import {
+  X,
+  Calculator,
+  Sparkles,
+  Calendar,
+  Lock,
+  Clock,
+  RotateCcw,
+  AlertTriangle,
+} from 'lucide-react';
 
 const WEEKS_OPTIONS = ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'];
 
@@ -32,13 +44,19 @@ export const SalesPerformanceEntryModal: React.FC = () => {
     editingSalesRecord,
     defaultEmpIdForEntry,
     defaultProfileForEntry,
+    defaultEntryTypeForEntry,
     salesEmployees,
+    salesRecords,
     salesSettings,
     saveSalesPerformanceRecord,
   } = useSales();
 
   const { selectedMonth, selectedYear, availableMonths, availableYears } = useApp();
-  const { currentUser, isAdmin, isSuperAdmin } = useAuth();
+  const { currentUser } = useAuth();
+
+  // Mode: Daily or Weekly
+  const [entryType, setEntryType] = useState<'daily' | 'weekly'>('daily');
+  const [entryDate, setEntryDate] = useState<string>(new Date().toISOString().slice(0, 10));
 
   const [employeeId, setEmployeeId] = useState<string>('');
   const [profileCode, setProfileCode] = useState<SalesProfileCode>('PR');
@@ -89,12 +107,54 @@ export const SalesPerformanceEntryModal: React.FC = () => {
   const department: SalesDepartment = ['PR', 'WR', 'HW'].includes(profileCode) ? 'IT' : 'SMM';
   const profileConfig = getProfileSettings(salesSettings, profileCode);
 
+  // Check for duplicate record
+  const existingDuplicateRecord = useMemo(() => {
+    if (!selectedEmp) return null;
+    if (editingSalesRecord) return null;
+
+    if (entryType === 'daily') {
+      return salesRecords.find(
+        (r) =>
+          r.entryType === 'daily' &&
+          r.employeeId === selectedEmp.id &&
+          r.profileCode === profileCode &&
+          r.entryDate === entryDate
+      ) || null;
+    } else {
+      return salesRecords.find(
+        (r) =>
+          r.entryType !== 'daily' &&
+          r.employeeId === selectedEmp.id &&
+          r.profileCode === profileCode &&
+          r.week === week &&
+          r.month.toLowerCase() === month.toLowerCase() &&
+          Number(r.year) === Number(year)
+      ) || null;
+    }
+  }, [selectedEmp, profileCode, entryType, entryDate, week, month, year, salesRecords, editingSalesRecord]);
+
+  // When entryDate changes in daily mode, sync week, month, and year automatically
+  const handleDateChange = (newDate: string) => {
+    setEntryDate(newDate);
+    if (newDate) {
+      const computedWeek = getWeekFromDate(newDate);
+      const { month: compMonth, year: compYear } = getMonthAndYearFromDate(newDate);
+      setWeek(computedWeek);
+      setMonth(compMonth);
+      setYear(compYear);
+    }
+  };
+
   useEffect(() => {
     if (editingSalesRecord) {
       if (!canUserManageRecord(editingSalesRecord, currentUser, salesEmployees)) {
         setFormError('Security Violation: You are not authorized to edit another member\'s performance record.');
       } else {
         setFormError('');
+      }
+      setEntryType(editingSalesRecord.entryType || (editingSalesRecord.entryDate ? 'daily' : 'weekly'));
+      if (editingSalesRecord.entryDate) {
+        setEntryDate(editingSalesRecord.entryDate);
       }
       setEmployeeId(editingSalesRecord.employeeId);
       setProfileCode(editingSalesRecord.profileCode);
@@ -110,22 +170,26 @@ export const SalesPerformanceEntryModal: React.FC = () => {
       const initialEmpId = (!isPrivileged && matchedUserEmp)
         ? matchedUserEmp.id
         : (defaultEmpIdForEntry || (matchedUserEmp ? matchedUserEmp.id : (activeEmployees.length > 0 ? activeEmployees[0].id : '')));
-      
+
       setEmployeeId(initialEmpId);
 
       const targetEmp = activeEmployees.find((e) => e.id === initialEmpId);
       const initialProfiles = targetEmp?.assignedProfiles && targetEmp.assignedProfiles.length > 0
         ? targetEmp.assignedProfiles
         : [targetEmp?.profileCode || 'PR'];
-      
+
       const initialProfile = defaultProfileForEntry && initialProfiles.includes(defaultProfileForEntry)
         ? defaultProfileForEntry
         : initialProfiles[0] || 'PR';
 
       setProfileCode(initialProfile);
-      setWeek('Week 1');
-      setMonth(selectedMonth);
-      setYear(selectedYear);
+      setEntryType(defaultEntryTypeForEntry || 'daily');
+      const todayStr = new Date().toISOString().slice(0, 10);
+      setEntryDate(todayStr);
+      setWeek(getWeekFromDate(todayStr));
+      const my = getMonthAndYearFromDate(todayStr);
+      setMonth(my.month);
+      setYear(my.year);
       setReachouts('');
       setConversions('');
       setFollowups('');
@@ -133,11 +197,34 @@ export const SalesPerformanceEntryModal: React.FC = () => {
       setManagerRemarks('');
       setFormError('');
     }
-  }, [isSalesEntryModalOpen, editingSalesRecord, defaultEmpIdForEntry, defaultProfileForEntry, selectedMonth, selectedYear, matchedUserEmp, isPrivileged, currentUser, salesEmployees]);
+  }, [
+    isSalesEntryModalOpen,
+    editingSalesRecord,
+    defaultEmpIdForEntry,
+    defaultProfileForEntry,
+    defaultEntryTypeForEntry,
+    selectedMonth,
+    selectedYear,
+    matchedUserEmp,
+    isPrivileged,
+    currentUser,
+    salesEmployees,
+  ]);
+
+  // Load existing duplicate values for easy updating
+  const handleLoadExisting = () => {
+    if (!existingDuplicateRecord) return;
+    setReachouts(existingDuplicateRecord.reachouts);
+    setConversions(existingDuplicateRecord.conversions);
+    setFollowups(existingDuplicateRecord.followups);
+    setOrderValue(existingDuplicateRecord.orderValue);
+    setManagerRemarks(existingDuplicateRecord.managerRemarks || '');
+    setFormError('');
+  };
 
   // When selected employee changes, ensure profileCode is valid for that employee
   const handleEmployeeChange = (newEmpId: string) => {
-    if (!isPrivileged) return; // Prevent tampering by team members
+    if (!isPrivileged) return;
     setEmployeeId(newEmpId);
     const emp = activeEmployees.find((e) => e.id === newEmpId);
     const profs = emp?.assignedProfiles && emp.assignedProfiles.length > 0
@@ -167,7 +254,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
     profileConfig
   );
 
-  const meetsBenchmark = liveConversionRate >= profileConfig.minConversionRate;
+  const liveReward = calculateReward(liveScores.totalPerformanceScore, profileConfig);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,14 +296,22 @@ export const SalesPerformanceEntryModal: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const recordId = editingSalesRecord?.id || `sales_rec_${selectedEmp.id}_${profileCode}_${week.replace(' ', '_')}_${month}_${year}`;
-      
+      const recordId =
+        editingSalesRecord?.id ||
+        (existingDuplicateRecord ? existingDuplicateRecord.id : (
+          entryType === 'daily'
+            ? `sales_rec_daily_${selectedEmp.id}_${profileCode}_${entryDate}`
+            : `sales_rec_${selectedEmp.id}_${profileCode}_${week.replace(/\s+/g, '_')}_${month}_${year}`
+        ));
+
       const record: SalesPerformanceRecord = {
         id: recordId,
         employeeId: selectedEmp.id,
         employeeName: selectedEmp.name,
         department,
         profileCode,
+        entryType,
+        entryDate: entryType === 'daily' ? entryDate : undefined,
         week,
         month,
         year,
@@ -232,12 +327,12 @@ export const SalesPerformanceEntryModal: React.FC = () => {
         followupScore: liveScores.followupScore,
         orderValueScore: liveScores.orderValueScore,
         totalPerformanceScore: liveScores.totalPerformanceScore,
-        rewardEligibility: meetsBenchmark ? 'Eligible' : 'Not Eligible',
-        ineligibilityReason: meetsBenchmark ? undefined : `Conversion rate (${liveConversionRate}%) below profile benchmark (${profileConfig.minConversionRate}%)`,
-        rewardLevel: 'Standard',
-        rewardAmount: 0,
+        rewardEligibility: liveReward.rewardEligibility,
+        ineligibilityReason: liveReward.ineligibilityReason,
+        rewardLevel: liveReward.rewardLevel,
+        rewardAmount: liveReward.rewardAmount,
         submittedBy: currentUser?.name || 'Self Entry',
-        createdAt: editingSalesRecord?.createdAt || new Date().toISOString(),
+        createdAt: editingSalesRecord?.createdAt || existingDuplicateRecord?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -258,7 +353,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="relative bg-white rounded-3xl border border-[#e2ebd9] shadow-2xl max-w-2xl w-full p-6 sm:p-8 space-y-6 overflow-hidden">
+      <div className="relative bg-white rounded-3xl border border-[#e2ebd9] shadow-2xl max-w-2xl w-full p-6 sm:p-8 space-y-5 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#e2ebd9] pb-4">
           <div className="flex items-center gap-3">
@@ -268,10 +363,10 @@ export const SalesPerformanceEntryModal: React.FC = () => {
             <div>
               <h2 className="text-xl font-black text-[#101010] tracking-tight">
                 {editingSalesRecord
-                  ? 'Edit Profile Performance Entry'
+                  ? `Edit ${editingSalesRecord.entryType === 'daily' ? 'Daily' : 'Weekly'} Performance`
                   : isSelfEntry
-                  ? 'Submit Weekly Performance'
-                  : 'Record Weekly Profile Performance'}
+                  ? `Submit ${entryType === 'daily' ? 'Daily' : 'Weekly'} Performance`
+                  : `Record ${entryType === 'daily' ? 'Daily' : 'Weekly'} Performance`}
               </h2>
               <p className="text-xs text-[#666666]">
                 50% Conversion • 20% Follow-ups • 30% Order Value • 0% Reachouts weight
@@ -286,6 +381,62 @@ export const SalesPerformanceEntryModal: React.FC = () => {
           </button>
         </div>
 
+        {/* Entry Mode Switcher: Daily vs Weekly */}
+        {!editingSalesRecord && (
+          <div className="flex items-center justify-between bg-[#f4f7f0] p-1.5 rounded-2xl border border-[#e2ebd9]">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setEntryType('daily')}
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                  entryType === 'daily'
+                    ? 'bg-[#8cc540] text-[#101010] shadow-sm'
+                    : 'text-[#666666] hover:text-[#101010]'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Daily Entry</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEntryType('weekly')}
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                  entryType === 'weekly'
+                    ? 'bg-[#8cc540] text-[#101010] shadow-sm'
+                    : 'text-[#666666] hover:text-[#101010]'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Weekly Entry</span>
+              </button>
+            </div>
+            <span className="text-[11px] font-bold text-[#598327] hidden sm:inline px-3">
+              {entryType === 'daily' ? 'Aggregates automatically into weekly totals' : 'Consolidated weekly metrics'}
+            </span>
+          </div>
+        )}
+
+        {/* Existing Record Notice / Duplicate Handler */}
+        {existingDuplicateRecord && (
+          <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-2 font-medium">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                Existing {entryType} record found for {entryType === 'daily' ? entryDate : `${week}, ${month} ${year}`}.
+                Submitting will update this record.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleLoadExisting}
+              className="px-2.5 py-1 bg-white rounded-lg border border-amber-300 text-amber-900 font-bold hover:bg-amber-100 flex items-center gap-1 shrink-0 cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Load Existing Values</span>
+            </button>
+          </div>
+        )}
+
         {formError && (
           <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2 font-medium">
             <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
@@ -293,7 +444,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Employee & Profile Selection */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -347,50 +498,80 @@ export const SalesPerformanceEntryModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Period Selectors: Week, Month, Year */}
-          <div className="grid grid-cols-3 gap-3 bg-[#f8faf6] p-3 rounded-2xl border border-[#e2ebd9]">
-            <div className="space-y-1">
-              <label className="block text-[11px] font-black text-[#101010]">Week</label>
-              <select
-                value={week}
-                onChange={(e) => setWeek(e.target.value)}
-                disabled={!!editingSalesRecord}
-                className="w-full bg-white border border-[#e2ebd9] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#101010] focus:ring-1 focus:ring-[#8cc540]"
-              >
-                {WEEKS_OPTIONS.map((w) => (
-                  <option key={w} value={w}>{w}</option>
-                ))}
-              </select>
+          {/* Period Selectors: Daily Date vs Weekly Selectors */}
+          {entryType === 'daily' ? (
+            <div className="bg-[#f8faf6] p-3 rounded-2xl border border-[#e2ebd9] space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-black text-[#101010]">
+                    Performance Date <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={entryDate}
+                    onChange={(e) => handleDateChange(e.target.value)}
+                    disabled={!!editingSalesRecord}
+                    className="w-full bg-white border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-1 focus:ring-[#8cc540]"
+                  />
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-[#e2ebd9] text-xs">
+                  <span className="text-[10px] text-[#666666] font-bold block">Assigned Time Period:</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="px-2 py-0.5 rounded-md bg-[#8cc540]/20 text-[#598327] font-black text-[11px]">
+                      {week}
+                    </span>
+                    <span className="font-bold text-[#101010]">
+                      {month} {year}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3 bg-[#f8faf6] p-3 rounded-2xl border border-[#e2ebd9]">
+              <div className="space-y-1">
+                <label className="block text-[11px] font-black text-[#101010]">Week</label>
+                <select
+                  value={week}
+                  onChange={(e) => setWeek(e.target.value)}
+                  disabled={!!editingSalesRecord}
+                  className="w-full bg-white border border-[#e2ebd9] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#101010] focus:ring-1 focus:ring-[#8cc540]"
+                >
+                  {WEEKS_OPTIONS.map((w) => (
+                    <option key={w} value={w}>{w}</option>
+                  ))}
+                </select>
+              </div>
 
-            <div className="space-y-1">
-              <label className="block text-[11px] font-black text-[#101010]">Month</label>
-              <select
-                value={month}
-                onChange={(e) => setMonth(e.target.value)}
-                disabled={!!editingSalesRecord}
-                className="w-full bg-white border border-[#e2ebd9] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#101010] focus:ring-1 focus:ring-[#8cc540]"
-              >
-                {availableMonths.map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-            </div>
+              <div className="space-y-1">
+                <label className="block text-[11px] font-black text-[#101010]">Month</label>
+                <select
+                  value={month}
+                  onChange={(e) => setMonth(e.target.value)}
+                  disabled={!!editingSalesRecord}
+                  className="w-full bg-white border border-[#e2ebd9] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#101010] focus:ring-1 focus:ring-[#8cc540]"
+                >
+                  {availableMonths.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
 
-            <div className="space-y-1">
-              <label className="block text-[11px] font-black text-[#101010]">Year</label>
-              <select
-                value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
-                disabled={!!editingSalesRecord}
-                className="w-full bg-white border border-[#e2ebd9] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#101010] focus:ring-1 focus:ring-[#8cc540]"
-              >
-                {availableYears.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
+              <div className="space-y-1">
+                <label className="block text-[11px] font-black text-[#101010]">Year</label>
+                <select
+                  value={year}
+                  onChange={(e) => setYear(Number(e.target.value))}
+                  disabled={!!editingSalesRecord}
+                  className="w-full bg-white border border-[#e2ebd9] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#101010] focus:ring-1 focus:ring-[#8cc540]"
+                >
+                  {availableYears.map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Metric Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -401,20 +582,20 @@ export const SalesPerformanceEntryModal: React.FC = () => {
                   Total Reachouts <span className="text-rose-500">*</span>
                 </label>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
-                  0% Weight (Denominator)
+                  0% Weight (Activity)
                 </span>
               </div>
               <input
                 type="number"
                 min="0"
                 required
-                placeholder="e.g. 100"
+                placeholder="e.g. 50"
                 value={reachouts}
                 onChange={(e) => setReachouts(e.target.value === '' ? '' : Number(e.target.value))}
                 className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-slate-400 focus:outline-none"
               />
               <p className="text-[10px] text-slate-500">
-                Used to compute conversion rate (Conversions / Reachouts).
+                Denominator for conversion rate. Benchmark: {profileConfig.reachoutBenchmark || 200}/wk.
               </p>
             </div>
 
@@ -439,7 +620,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
               />
               <div className="flex items-center justify-between text-[10px] text-emerald-800 font-semibold">
                 <span>Conv. Rate: {liveConversionRate}%</span>
-                <span>Target: {profileConfig.targetConversionRate ?? profileConfig.conversionTarget}%</span>
+                <span>Target: {profileConfig.conversionTarget}%</span>
               </div>
             </div>
 
@@ -464,7 +645,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
               />
               <div className="flex items-center justify-between text-[10px] text-blue-800 font-semibold">
                 <span>Score: {liveScores.followupScore}/20 pts</span>
-                <span>Target: {profileConfig.targetFollowups ?? profileConfig.followupTarget}</span>
+                <span>Target: {profileConfig.followupTarget}/wk</span>
               </div>
             </div>
 
@@ -472,7 +653,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
             <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-black text-amber-950">
-                  Total Order Value ($) <span className="text-rose-500">*</span>
+                  Total Order Value (₹) <span className="text-rose-500">*</span>
                 </label>
                 <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-200 text-amber-900">
                   30% Weight
@@ -482,14 +663,14 @@ export const SalesPerformanceEntryModal: React.FC = () => {
                 type="number"
                 min="0"
                 required
-                placeholder="e.g. 10000"
+                placeholder="e.g. 25000"
                 value={orderValue}
                 onChange={(e) => setOrderValue(e.target.value === '' ? '' : Number(e.target.value))}
                 className="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 text-xs font-bold text-amber-950 focus:ring-2 focus:ring-amber-500 focus:outline-none"
               />
               <div className="flex items-center justify-between text-[10px] text-amber-800 font-semibold">
                 <span>Score: {liveScores.orderValueScore}/30 pts</span>
-                <span>Target: ${(profileConfig.targetOrderValue ?? profileConfig.orderValueTarget ?? 10000).toLocaleString()}</span>
+                <span>Target: ₹{(profileConfig.orderValueTarget || 100000).toLocaleString('en-IN')}/wk</span>
               </div>
             </div>
           </div>
@@ -508,7 +689,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
 
             <div className="grid grid-cols-4 gap-2 text-center text-[10px]">
               <div className="bg-white p-2 rounded-xl border border-[#e2ebd9]">
-                <span className="text-[#666666] block">Reachout</span>
+                <span className="text-[#666666] block">Reachouts</span>
                 <span className="font-bold text-slate-700">{numReachouts} (0%)</span>
               </div>
               <div className="bg-white p-2 rounded-xl border border-emerald-200">
@@ -525,27 +706,30 @@ export const SalesPerformanceEntryModal: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-xs pt-1 border-t border-[#e2ebd9]">
-              <span className="text-[#666666]">Benchmark Eligibility:</span>
+            <div className="flex items-center justify-between text-xs pt-2 border-t border-[#e2ebd9]">
+              <span className="text-[#666666]">
+                Reward Slab:{' '}
+                <strong className="text-[#101010]">{liveReward.rewardLevel}</strong> (₹{liveReward.rewardAmount.toLocaleString('en-IN')})
+              </span>
               <span
                 className={`font-black px-2 py-0.5 rounded-full text-[10px] ${
-                  meetsBenchmark
+                  liveReward.rewardEligibility === 'Eligible'
                     ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-rose-100 text-rose-800'
+                    : 'bg-slate-100 text-slate-700'
                 }`}
               >
-                {meetsBenchmark ? '✓ Eligible for Rewards' : `✗ Ineligible (< ${profileConfig.minConversionRate}% conv)`}
+                {liveReward.rewardEligibility === 'Eligible' ? '✓ Eligible' : 'Ineligible'}
               </span>
             </div>
           </div>
 
           <div className="space-y-1.5">
             <label className="block text-xs font-black text-[#101010]">
-              Notes / Manager Remarks (Optional)
+              Remarks / Notes (Optional)
             </label>
             <textarea
               rows={2}
-              placeholder="e.g. Strong outbound pipeline, closed key enterprise account..."
+              placeholder="e.g. Daily client follow-ups completed, closed high-ticket enterprise order..."
               value={managerRemarks}
               onChange={(e) => setManagerRemarks(e.target.value)}
               className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
@@ -563,9 +747,13 @@ export const SalesPerformanceEntryModal: React.FC = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2 rounded-xl text-xs font-black bg-[#8cc540] text-white hover:bg-[#7cb334] shadow-md shadow-[#8cc540]/30 transition-all cursor-pointer disabled:opacity-50"
+              className="px-6 py-2 rounded-xl text-xs font-black bg-[#8cc540] text-[#101010] hover:bg-[#7cb730] shadow-md shadow-[#8cc540]/30 transition-all cursor-pointer disabled:opacity-50"
             >
-              {isSubmitting ? 'Saving Record...' : editingSalesRecord ? 'Update Record' : 'Save Performance Record'}
+              {isSubmitting
+                ? 'Saving Record...'
+                : editingSalesRecord || existingDuplicateRecord
+                ? 'Update Performance Record'
+                : `Save ${entryType === 'daily' ? 'Daily' : 'Weekly'} Performance`}
             </button>
           </div>
         </form>

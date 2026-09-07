@@ -11,6 +11,8 @@ import {
   TrendingUp,
   FileText,
   Sliders,
+  ShieldCheck,
+  UserCheck,
 } from 'lucide-react';
 import { SalesDashboard } from './SalesDashboard';
 import { SalesEmployeesView } from './SalesEmployeesView';
@@ -21,6 +23,8 @@ import { SalesDepartmentPerformanceView } from './SalesDepartmentPerformanceView
 import { SalesMonthlyHistoryView } from './SalesMonthlyHistoryView';
 import { SalesReportsView } from './SalesReportsView';
 import { SalesSettingsView } from './SalesSettingsView';
+import { SalesAuditLogsView } from './SalesAuditLogsView';
+import { SalesMyPerformanceView } from './SalesMyPerformanceView';
 import { SalesPerformanceEntryModal } from './SalesPerformanceEntryModal';
 import { SalesEmployeeModal } from './SalesEmployeeModal';
 import { SalesEmployeeDetailModal } from './SalesEmployeeDetailModal';
@@ -34,7 +38,13 @@ export const SalesModuleRoot: React.FC = () => {
   // If a Sales Member tries to land on an admin-only tab, redirect to sales-dashboard
   useEffect(() => {
     if (!isSuperAdmin) {
-      const adminOnlyTabs: SalesTab[] = ['sales-employees', 'sales-reports', 'sales-settings', 'sales-leaderboard'];
+      const adminOnlyTabs: SalesTab[] = [
+        'sales-employees',
+        'sales-reports',
+        'sales-settings',
+        'sales-leaderboard',
+        'sales-audit',
+      ];
       if (adminOnlyTabs.includes(salesActiveTab)) {
         setSalesActiveTab('sales-dashboard');
       }
@@ -43,12 +53,14 @@ export const SalesModuleRoot: React.FC = () => {
 
   const allNavTabs: { id: SalesTab; label: string; icon: React.FC<{ className?: string }>; adminOnly?: boolean }[] = [
     { id: 'sales-dashboard', label: isSuperAdmin ? 'Sales Dashboard' : 'My Dashboard', icon: LayoutDashboard },
+    { id: 'sales-my-performance', label: 'My Performance', icon: UserCheck },
     { id: 'sales-leaderboard', label: 'Sales Leaderboard', icon: Trophy, adminOnly: true },
-    { id: 'sales-performance', label: isSuperAdmin ? 'Performance Records' : 'My Performance Records', icon: Calculator },
+    { id: 'sales-performance', label: isSuperAdmin ? 'Performance Records' : 'My Records', icon: Calculator },
     { id: 'sales-employees', label: 'Sales Members', icon: Users, adminOnly: true },
-    { id: 'sales-analytics', label: isSuperAdmin ? 'Profile Benchmarks' : 'My Profile Targets', icon: Target },
-    { id: 'sales-history', label: isSuperAdmin ? 'Monthly History' : 'My Progression History', icon: TrendingUp },
+    { id: 'sales-analytics', label: isSuperAdmin ? 'Profile Benchmarks' : 'Profile Targets', icon: Target },
+    { id: 'sales-history', label: isSuperAdmin ? 'Monthly History' : 'Progression History', icon: TrendingUp },
     { id: 'sales-reports', label: 'Reports & Export', icon: FileText, adminOnly: true },
+    { id: 'sales-audit', label: 'Audit Logs', icon: ShieldCheck, adminOnly: true },
     { id: 'sales-settings', label: 'Target & Rewards', icon: Sliders, adminOnly: true },
   ];
 
@@ -83,12 +95,14 @@ export const SalesModuleRoot: React.FC = () => {
       {/* Tab Content */}
       <div className="transition-all duration-150">
         {salesActiveTab === 'sales-dashboard' && <SalesDashboard />}
+        {salesActiveTab === 'sales-my-performance' && <SalesMyPerformanceView />}
         {salesActiveTab === 'sales-leaderboard' && isSuperAdmin && <SalesLeaderboardView />}
         {salesActiveTab === 'sales-performance' && <SalesPerformanceView />}
         {salesActiveTab === 'sales-employees' && isSuperAdmin && <SalesEmployeesView />}
         {salesActiveTab === 'sales-analytics' && <SalesProfilePerformanceView />}
         {salesActiveTab === 'sales-history' && <SalesMonthlyHistoryView />}
         {salesActiveTab === 'sales-reports' && isSuperAdmin && <SalesReportsView />}
+        {salesActiveTab === 'sales-audit' && isSuperAdmin && <SalesAuditLogsView />}
         {salesActiveTab === 'sales-settings' && isSuperAdmin && <SalesSettingsView />}
       </div>
 

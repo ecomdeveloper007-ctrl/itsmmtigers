@@ -28,6 +28,8 @@ import {
   Building,
   Target,
   Calculator,
+  ShieldCheck,
+  UserCheck,
 } from 'lucide-react';
 import { EditProfileModal } from './EditProfileModal';
 
@@ -51,7 +53,7 @@ export const Header: React.FC = () => {
     setActiveModule,
   } = useApp();
 
-  const { openSalesEntryModal, setSalesActiveTab } = useSales();
+  const { openSalesEntryModal, setSalesActiveTab, salesActiveTab } = useSales();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isDemoSwitchOpen, setIsDemoSwitchOpen] = useState(false);
@@ -504,131 +506,290 @@ export const Header: React.FC = () => {
 
         {/* Desktop Navigation Tabs */}
         <div className="hidden lg:flex items-center space-x-1 border-t border-[#f0f4ec] py-2 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'dashboard'
-                ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-            }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            Main Dashboard
-          </button>
-
-          <button
-            onClick={() => setActiveTab('leaderboard')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'leaderboard'
-                ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-            }`}
-          >
-            <Trophy className="w-3.5 h-3.5" />
-            Leaderboard
-          </button>
-
-          <button
-            onClick={() => setActiveTab('my-performance')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'my-performance'
-                ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-            }`}
-          >
-            <User className="w-3.5 h-3.5" />
-            My Performance
-          </button>
-
-          {isSuperAdmin && (
-            <button
-              onClick={() => setActiveTab('admin-data')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'admin-data'
-                  ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                  : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-              }`}
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              Team Submissions & Data
-            </button>
-          )}
-
-          <button
-            onClick={() => setActiveTab('reports')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'reports'
-                ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" />
-            Monthly R&R Report
-          </button>
-
-          {isSuperAdmin && (
+          {activeModule === 'pm' ? (
             <>
-              <div className="h-4 w-px bg-[#e2ebd9] mx-1"></div>
-
               <button
-                onClick={() => setActiveTab('user-management')}
+                onClick={() => setActiveTab('dashboard')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === 'user-management'
+                  activeTab === 'dashboard'
                     ? 'bg-[#8cc540] text-[#101010] shadow-xs'
                     : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
                 }`}
               >
-                <Users className="w-3.5 h-3.5" />
-                <span>Team Members & Approvals</span>
-                {pendingCount > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-[#101010] text-[#8cc540]">
-                    {pendingCount}
-                  </span>
-                )}
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                Main Dashboard
               </button>
 
               <button
-                onClick={() => setActiveTab('kpi-settings')}
+                onClick={() => setActiveTab('leaderboard')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === 'kpi-settings'
+                  activeTab === 'leaderboard'
                     ? 'bg-[#8cc540] text-[#101010] shadow-xs'
                     : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
                 }`}
               >
-                <Sliders className="w-3.5 h-3.5" />
-                KPI Config (100%)
+                <Trophy className="w-3.5 h-3.5" />
+                Leaderboard
               </button>
 
               <button
-                onClick={() => setActiveTab('period-management')}
+                onClick={() => setActiveTab('my-performance')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === 'period-management'
+                  activeTab === 'my-performance'
                     ? 'bg-[#8cc540] text-[#101010] shadow-xs'
                     : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
                 }`}
               >
-                <Calendar className="w-3.5 h-3.5" />
-                Weeks & Lock
+                <User className="w-3.5 h-3.5" />
+                My Performance
               </button>
 
+              {isSuperAdmin && (
+                <button
+                  onClick={() => setActiveTab('admin-data')}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'admin-data'
+                      ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                      : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                  }`}
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  Team Submissions & Data
+                </button>
+              )}
+
               <button
-                onClick={() => setActiveTab('audit-logs')}
+                onClick={() => setActiveTab('reports')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === 'audit-logs'
+                  activeTab === 'reports'
                     ? 'bg-[#8cc540] text-[#101010] shadow-xs'
                     : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
                 }`}
               >
-                <Activity className="w-3.5 h-3.5" />
-                Audit Logs
+                <FileText className="w-3.5 h-3.5" />
+                Monthly R&R Report
               </button>
+
+              {isSuperAdmin && (
+                <>
+                  <div className="h-4 w-px bg-[#e2ebd9] mx-1"></div>
+
+                  <button
+                    onClick={() => setActiveTab('user-management')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                      activeTab === 'user-management'
+                        ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                        : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                    }`}
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Team Members & Approvals</span>
+                    {pendingCount > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-[#101010] text-[#8cc540]">
+                        {pendingCount}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('kpi-settings')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                      activeTab === 'kpi-settings'
+                        ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                        : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                    }`}
+                  >
+                    <Sliders className="w-3.5 h-3.5" />
+                    KPI Config (100%)
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('period-management')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                      activeTab === 'period-management'
+                        ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                        : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                    }`}
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    Weeks & Lock
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('audit-logs')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                      activeTab === 'audit-logs'
+                        ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                        : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                    }`}
+                  >
+                    <Activity className="w-3.5 h-3.5" />
+                    Audit Logs
+                  </button>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Sales Module Tabs */}
+              <button
+                onClick={() => setSalesActiveTab('sales-dashboard')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  salesActiveTab === 'sales-dashboard'
+                    ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                    : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                }`}
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                {isSuperAdmin ? 'Sales Dashboard' : 'My Dashboard'}
+              </button>
+
+              <button
+                onClick={() => setSalesActiveTab('sales-my-performance')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  salesActiveTab === 'sales-my-performance'
+                    ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                    : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                }`}
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                My Performance
+              </button>
+
+              {isSuperAdmin && (
+                <button
+                  onClick={() => setSalesActiveTab('sales-leaderboard')}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    salesActiveTab === 'sales-leaderboard'
+                      ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                      : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                  }`}
+                >
+                  <Trophy className="w-3.5 h-3.5" />
+                  Sales Leaderboard
+                </button>
+              )}
+
+              <button
+                onClick={() => setSalesActiveTab('sales-performance')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  salesActiveTab === 'sales-performance'
+                    ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                    : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                }`}
+              >
+                <Calculator className="w-3.5 h-3.5" />
+                {isSuperAdmin ? 'Performance Records' : 'My Records'}
+              </button>
+
+              {isSuperAdmin && (
+                <button
+                  onClick={() => setSalesActiveTab('sales-employees')}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    salesActiveTab === 'sales-employees'
+                      ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                      : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  Sales Members
+                </button>
+              )}
+
+              <button
+                onClick={() => setSalesActiveTab('sales-analytics')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  salesActiveTab === 'sales-analytics'
+                    ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                    : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                }`}
+              >
+                <Target className="w-3.5 h-3.5" />
+                {isSuperAdmin ? 'Profile Benchmarks' : 'Profile Targets'}
+              </button>
+
+              <button
+                onClick={() => setSalesActiveTab('sales-history')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  salesActiveTab === 'sales-history'
+                    ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                    : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                }`}
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                {isSuperAdmin ? 'Monthly History' : 'Progression History'}
+              </button>
+
+              {isSuperAdmin && (
+                <>
+                  <div className="h-4 w-px bg-[#e2ebd9] mx-1"></div>
+
+                  <button
+                    onClick={() => setSalesActiveTab('sales-reports')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                      salesActiveTab === 'sales-reports'
+                        ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                        : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    Reports & Export
+                  </button>
+
+                  <button
+                    onClick={() => setSalesActiveTab('sales-audit')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                      salesActiveTab === 'sales-audit'
+                        ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                        : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                    }`}
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Audit Logs
+                  </button>
+
+                  <button
+                    onClick={() => setSalesActiveTab('sales-settings')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                      salesActiveTab === 'sales-settings'
+                        ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                        : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                    }`}
+                  >
+                    <Sliders className="w-3.5 h-3.5" />
+                    Target & Rewards
+                  </button>
+                </>
+              )}
             </>
           )}
         </div>
 
         {/* Mobile Navigation Menu */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden border-t border-[#e2ebd9] py-3 space-y-2 bg-white">
+          <div className="lg:hidden border-t border-[#e2ebd9] py-3 space-y-3 bg-white">
+            {/* Mobile Module Switcher */}
+            <div className="flex items-center bg-[#f0f4ec] p-1 rounded-xl border border-[#e2ebd9]">
+              <button
+                onClick={() => setActiveModule('pm')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activeModule === 'pm' ? 'bg-[#101010] text-white shadow-xs' : 'text-[#666666]'
+                }`}
+              >
+                <Building className="w-3.5 h-3.5 text-[#8cc540]" />
+                <span>PM Module</span>
+              </button>
+              <button
+                onClick={() => setActiveModule('sales')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activeModule === 'sales' ? 'bg-[#8cc540] text-[#101010] shadow-xs' : 'text-[#666666]'
+                }`}
+              >
+                <TrendingUp className="w-3.5 h-3.5 text-[#101010]" />
+                <span>Sales Division</span>
+              </button>
+            </div>
+
             {/* Mobile Period Selectors */}
             <div className="grid grid-cols-3 gap-2 pb-3 border-b border-[#e2ebd9]">
               <select
@@ -674,95 +835,202 @@ export const Header: React.FC = () => {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                onClick={() => {
-                  setActiveTab('dashboard');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-              >
-                <LayoutDashboard className="w-4 h-4 text-[#598327]" /> Main Dashboard
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('leaderboard');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-              >
-                <Trophy className="w-4 h-4 text-amber-500" /> Leaderboard
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('my-performance');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-              >
-                <User className="w-4 h-4 text-[#598327]" /> My Performance
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('reports');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-              >
-                <FileText className="w-4 h-4 text-blue-600" /> R&R Report
-              </button>
-              {isSuperAdmin && (
+            {activeModule === 'pm' ? (
+              <div className="grid grid-cols-2 gap-1.5">
                 <button
                   onClick={() => {
-                    setActiveTab('admin-data');
+                    setActiveTab('dashboard');
                     setIsMobileMenuOpen(false);
                   }}
                   className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
                 >
-                  <FileSpreadsheet className="w-4 h-4 text-blue-600" /> Submissions
+                  <LayoutDashboard className="w-4 h-4 text-[#598327]" /> Main Dashboard
                 </button>
-              )}
-              {isSuperAdmin && (
-                <>
+                <button
+                  onClick={() => {
+                    setActiveTab('leaderboard');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                >
+                  <Trophy className="w-4 h-4 text-amber-500" /> Leaderboard
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab('my-performance');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                >
+                  <User className="w-4 h-4 text-[#598327]" /> My Performance
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab('reports');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                >
+                  <FileText className="w-4 h-4 text-blue-600" /> R&R Report
+                </button>
+                {isSuperAdmin && (
                   <button
                     onClick={() => {
-                      setActiveTab('user-management');
+                      setActiveTab('admin-data');
                       setIsMobileMenuOpen(false);
                     }}
                     className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
                   >
-                    <Users className="w-4 h-4 text-indigo-600" /> Team Members
+                    <FileSpreadsheet className="w-4 h-4 text-blue-600" /> Submissions
                   </button>
+                )}
+                {isSuperAdmin && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setActiveTab('user-management');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                    >
+                      <Users className="w-4 h-4 text-indigo-600" /> Team Members
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveTab('kpi-settings');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                    >
+                      <Sliders className="w-4 h-4 text-pink-600" /> KPI Weights
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveTab('period-management');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                    >
+                      <Calendar className="w-4 h-4 text-teal-600" /> Weeks / Lock
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveTab('audit-logs');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                    >
+                      <Activity className="w-4 h-4 text-amber-600" /> Audit Logs
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={() => {
+                    setSalesActiveTab('sales-dashboard');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                >
+                  <LayoutDashboard className="w-4 h-4 text-[#598327]" />
+                  <span>{isSuperAdmin ? 'Sales Dashboard' : 'My Dashboard'}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setSalesActiveTab('sales-my-performance');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                >
+                  <UserCheck className="w-4 h-4 text-[#598327]" />
+                  <span>My Performance</span>
+                </button>
+                {isSuperAdmin && (
                   <button
                     onClick={() => {
-                      setActiveTab('kpi-settings');
+                      setSalesActiveTab('sales-leaderboard');
                       setIsMobileMenuOpen(false);
                     }}
                     className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
                   >
-                    <Sliders className="w-4 h-4 text-pink-600" /> KPI Weights
+                    <Trophy className="w-4 h-4 text-amber-500" /> Sales Leaderboard
                   </button>
+                )}
+                <button
+                  onClick={() => {
+                    setSalesActiveTab('sales-performance');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                >
+                  <Calculator className="w-4 h-4 text-[#598327]" />
+                  <span>{isSuperAdmin ? 'Performance Records' : 'My Records'}</span>
+                </button>
+                {isSuperAdmin && (
                   <button
                     onClick={() => {
-                      setActiveTab('period-management');
+                      setSalesActiveTab('sales-employees');
                       setIsMobileMenuOpen(false);
                     }}
                     className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
                   >
-                    <Calendar className="w-4 h-4 text-teal-600" /> Weeks / Lock
+                    <Users className="w-4 h-4 text-indigo-600" /> Sales Members
                   </button>
-                  <button
-                    onClick={() => {
-                      setActiveTab('audit-logs');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                  >
-                    <Activity className="w-4 h-4 text-amber-600" /> Audit Logs
-                  </button>
-                </>
-              )}
-            </div>
+                )}
+                <button
+                  onClick={() => {
+                    setSalesActiveTab('sales-analytics');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                >
+                  <Target className="w-4 h-4 text-pink-600" />
+                  <span>{isSuperAdmin ? 'Profile Targets' : 'My Targets'}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setSalesActiveTab('sales-history');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                >
+                  <TrendingUp className="w-4 h-4 text-teal-600" /> Progression History
+                </button>
+                {isSuperAdmin && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setSalesActiveTab('sales-reports');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                    >
+                      <FileText className="w-4 h-4 text-blue-600" /> Reports & Export
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSalesActiveTab('sales-audit');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                    >
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" /> Audit Logs
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSalesActiveTab('sales-settings');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                    >
+                      <Sliders className="w-4 h-4 text-amber-600" /> Target & Rewards
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )}
         {/* Edit Profile Modal */}

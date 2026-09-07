@@ -26,6 +26,7 @@ import { useAuth } from './AuthContext';
 
 export type SalesTab =
   | 'sales-dashboard'
+  | 'sales-my-performance'
   | 'sales-employees'
   | 'sales-performance'
   | 'sales-leaderboard'
@@ -75,11 +76,17 @@ interface SalesContextType {
 
   // Modals
   isSalesEntryModalOpen: boolean;
-  openSalesEntryModal: (record?: SalesPerformanceRecord, defaultEmpId?: string, defaultProfile?: SalesProfileCode) => void;
+  openSalesEntryModal: (
+    record?: SalesPerformanceRecord,
+    defaultEmpId?: string,
+    defaultProfile?: SalesProfileCode,
+    defaultEntryType?: 'daily' | 'weekly'
+  ) => void;
   closeSalesEntryModal: () => void;
   editingSalesRecord: SalesPerformanceRecord | null;
   defaultEmpIdForEntry: string | null;
   defaultProfileForEntry: SalesProfileCode | null;
+  defaultEntryTypeForEntry: 'daily' | 'weekly';
 
   isSalesEmployeeModalOpen: boolean;
   openSalesEmployeeModal: (emp?: SalesEmployee) => void;
@@ -131,6 +138,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [editingSalesRecord, setEditingSalesRecord] = useState<SalesPerformanceRecord | null>(null);
   const [defaultEmpIdForEntry, setDefaultEmpIdForEntry] = useState<string | null>(null);
   const [defaultProfileForEntry, setDefaultProfileForEntry] = useState<SalesProfileCode | null>(null);
+  const [defaultEntryTypeForEntry, setDefaultEntryTypeForEntry] = useState<'daily' | 'weekly'>('daily');
 
   const [isSalesEmployeeModalOpen, setIsSalesEmployeeModalOpen] = useState<boolean>(false);
   const [editingSalesEmployee, setEditingSalesEmployee] = useState<SalesEmployee | null>(null);
@@ -271,11 +279,13 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const openSalesEntryModal = (
     record?: SalesPerformanceRecord,
     defaultEmpId?: string,
-    defaultProfile?: SalesProfileCode
+    defaultProfile?: SalesProfileCode,
+    defaultEntryType?: 'daily' | 'weekly'
   ) => {
     setEditingSalesRecord(record || null);
     setDefaultEmpIdForEntry(defaultEmpId || null);
     setDefaultProfileForEntry(defaultProfile || null);
+    setDefaultEntryTypeForEntry(defaultEntryType || (record?.entryType ?? 'daily'));
     setIsSalesEntryModalOpen(true);
   };
 
@@ -509,6 +519,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         editingSalesRecord,
         defaultEmpIdForEntry,
         defaultProfileForEntry,
+        defaultEntryTypeForEntry,
         isSalesEmployeeModalOpen,
         openSalesEmployeeModal,
         closeSalesEmployeeModal,

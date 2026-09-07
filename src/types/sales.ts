@@ -140,6 +140,10 @@ export interface SalesPerformanceRecord {
   department: SalesDepartment;
   profileCode: SalesProfileCode;
 
+  // Period & Entry Type (Daily or Weekly)
+  entryType?: 'daily' | 'weekly'; // Option A (Weekly) or Option B (Daily)
+  entryDate?: string; // e.g. '2026-09-07' for daily entry
+
   // Weekly Association
   week: string; // e.g. 'Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'
   weekStartDate?: string; // e.g. '2026-09-01'
@@ -262,16 +266,22 @@ export interface SalesDashboardSummary {
 
 export interface SalesAuditLog {
   id: string;
+  timestamp: string;
+  action: string;
+  module?: 'Sales' | string;
+  recordType?: string; // e.g. 'Sales Member', 'Performance Record (Daily)', 'PR Target', 'Reward Slabs', 'CSV Import'
+  entityType: 'profile' | 'employee' | 'record' | 'target' | 'settings' | 'user' | 'kpi' | 'import_export';
+  entityId: string;
   userId: string;
   userName: string;
   userRole: string;
-  action: string;
-  entityType: 'profile' | 'employee' | 'record' | 'target' | 'settings' | 'user';
-  entityId: string;
-  details: string;
+  actionCategory?: 'member' | 'performance' | 'configuration' | 'import_export';
   previousValue?: any;
   newValue?: any;
-  timestamp: string;
+  ipAddress?: string; // e.g. '127.0.0.1 (Web UI)'
+  source?: 'UI' | 'API' | 'Server Action' | 'Bulk Operation';
+  status?: 'Success' | 'Failed';
+  details: string; // Description / reason
 }
 
 export interface SalesEmployeeHistoryComparison {

@@ -295,6 +295,8 @@ export function computeCompleteSalesRecord(
     conversions?: number;
     followups?: number;
     orderValue?: number;
+    entryType?: 'daily' | 'weekly';
+    entryDate?: string;
     // Backward compat aliases
     totalReachout?: number;
     orderConvert?: number;
@@ -316,9 +318,12 @@ export function computeCompleteSalesRecord(
   const followups = sanitizeSalesNumber(raw.followups ?? raw.followupSent);
   const orderValue = sanitizeSalesNumber(raw.orderValue ?? ((raw.orderConvert || conversions) * 5000 + (raw.repeatOrders || 0) * 8000));
 
-  const week = raw.week || 'Week 1';
-  const weekStartDate = raw.weekStartDate || '2026-09-01';
-  const weekEndDate = raw.weekEndDate || '2026-09-07';
+  const entryType = raw.entryType || (raw.entryDate ? 'daily' : 'weekly');
+  const entryDate = raw.entryDate;
+
+  const week = raw.week || (entryDate ? getWeekFromDate(entryDate) : 'Week 1');
+  const weekStartDate = raw.weekStartDate || (entryDate ? entryDate : '2026-09-01');
+  const weekEndDate = raw.weekEndDate || (entryDate ? entryDate : '2026-09-07');
 
   const scoreBreakdown = calculateSalesPerformanceScore(
     { reachouts, conversions, followups, orderValue },
@@ -327,7 +332,9 @@ export function computeCompleteSalesRecord(
   const rewardInfo = calculateReward(scoreBreakdown.totalPerformanceScore, config);
 
   const now = new Date().toISOString();
-  const id = raw.id || `sales_rec_${raw.employeeId}_${profileCode}_${week.replace(/\s+/g, '_')}_${raw.month}_${raw.year}`;
+  const id = raw.id || (entryType === 'daily' && entryDate
+    ? `sales_rec_daily_${raw.employeeId}_${profileCode}_${entryDate}`
+    : `sales_rec_${raw.employeeId}_${profileCode}_${week.replace(/\s+/g, '_')}_${raw.month}_${raw.year}`);
 
   return {
     id,
@@ -335,6 +342,8 @@ export function computeCompleteSalesRecord(
     employeeName: raw.employeeName,
     department,
     profileCode,
+    entryType,
+    entryDate,
     week,
     weekStartDate,
     weekEndDate,
@@ -365,6 +374,99 @@ export function computeCompleteSalesRecord(
     createdAt: raw.createdAt || now,
     updatedAt: now,
   };
+}
+
+/**
+ * Helper to determine week from a calendar date (e.g. '2026-09-07' -> 'Week 1')
+ */
+export function getWeekFromDate(dateStr: string): string {
+  if (!dateStr) return 'Week 1';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'Week 1';
+  const day = d.getDate();
+  if (day <= 7) return 'Week 1';
+  if (day <= 14) return 'Week 2';
+  if (day <= 21) return 'Week 3';
+  if (day <= 28) return 'Week 4';
+  return 'Week 5';
+}
+
+export function getMonthAndYearFromDate(dateStr: string): { month: string; year: number } {
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  if (!dateStr) return { month: 'September', year: 2026 };
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return { month: 'September', year: 2026 };
+  return {
+    month: months[d.getMonth()],
+    year: d.getFullYear(),
+  };
+}
+
+/**
+ * Normalizes a list of performance records (which may contain both daily and weekly entries)
+ * by aggregating underlying daily records into their corresponding weekly record so that
+ * no double-counting occurs.
+ */
+export function normalizeAndAggregateRecords(
+  records: SalesPerformanceRecord[],
+  settings: SalesRewardSettings
+): SalesPerformanceRecord[] {
+  const groups = new Map<string, SalesPerformanceRecord[]>();
+
+  for (const r of records) {
+    const key = `${r.employeeId}__${r.profileCode}__${r.month.toLowerCase()}__${r.year}__${r.week}`;
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key)!.push(r);
+  }
+
+  const result: SalesPerformanceRecord[] = [];
+
+  for (const [, groupRecs] of groups.entries()) {
+    const dailyRecs = groupRecs.filter((r) => r.entryType === 'daily');
+    const weeklyRecs = groupRecs.filter((r) => r.entryType !== 'daily');
+
+    if (dailyRecs.length > 0) {
+      const first = dailyRecs[0];
+      let totalReachouts = 0;
+      let totalConversions = 0;
+      let totalFollowups = 0;
+      let totalOrderValue = 0;
+
+      for (const d of dailyRecs) {
+        totalReachouts += d.reachouts ?? d.totalReachout ?? 0;
+        totalConversions += d.conversions ?? d.orderConvert ?? 0;
+        totalFollowups += d.followups ?? d.followupSent ?? 0;
+        totalOrderValue += d.orderValue ?? 0;
+      }
+
+      const consolidated = computeCompleteSalesRecord(
+        {
+          id: `aggregated_${first.employeeId}_${first.profileCode}_${first.week.replace(/\s+/g, '_')}_${first.month}_${first.year}`,
+          employeeId: first.employeeId,
+          employeeName: first.employeeName,
+          department: first.department,
+          profileCode: first.profileCode,
+          week: first.week,
+          month: first.month,
+          year: first.year,
+          reachouts: totalReachouts,
+          conversions: totalConversions,
+          followups: totalFollowups,
+          orderValue: totalOrderValue,
+          managerRemarks: `Aggregated from ${dailyRecs.length} daily performance ${dailyRecs.length === 1 ? 'entry' : 'entries'}.`,
+        },
+        settings
+      );
+      consolidated.entryType = 'weekly';
+      result.push(consolidated);
+    } else if (weeklyRecs.length > 0) {
+      result.push(weeklyRecs[0]);
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -516,8 +618,11 @@ export function calculateSalesLeaderboard(
   top3: SalesLeaderboardItem[];
   winner?: SalesLeaderboardItem;
 } {
+  // Normalize and aggregate any underlying daily records into non-double-counted weekly records
+  const aggregatedRecords = normalizeAndAggregateRecords(records, settings);
+
   // Filter active records for month, year, and optional week
-  let activeRecords = records.filter(
+  let activeRecords = aggregatedRecords.filter(
     (r) => r.month.toLowerCase() === filterMonth.toLowerCase() && Number(r.year) === Number(filterYear)
   );
 
