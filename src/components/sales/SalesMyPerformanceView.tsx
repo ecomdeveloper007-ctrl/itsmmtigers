@@ -34,10 +34,14 @@ export const SalesMyPerformanceView: React.FC = () => {
     salesSettings,
     openSalesEntryModal,
     deleteSalesPerformanceRecord,
+    addToast,
   } = useSales();
   const { currentUser } = useAuth();
   const { selectedMonth, selectedYear } = useApp();
   const isSuperAdmin = isUserSuperAdmin(currentUser);
+
+  const [deletingRecord, setDeletingRecord] = useState<SalesPerformanceRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   // Determine current sales member
   const currentEmp = useMemo(() => {
@@ -464,11 +468,7 @@ export const SalesMyPerformanceView: React.FC = () => {
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => {
-                              if (window.confirm('Are you sure you want to delete this performance record?')) {
-                                deleteSalesPerformanceRecord(rec.id);
-                              }
-                            }}
+                            onClick={() => setDeletingRecord(rec)}
                             title="Delete Record"
                             className="p-1.5 hover:bg-red-50 rounded-lg text-red-500 hover:text-red-700 cursor-pointer"
                           >
@@ -484,6 +484,89 @@ export const SalesMyPerformanceView: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Delete Record Confirmation Modal */}
+      {deletingRecord && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-red-200 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center border border-red-200 shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-[#101010]">Delete Performance Record</h3>
+                <p className="text-xs text-[#666666]">Permanent removal confirmation</p>
+              </div>
+            </div>
+
+            <div className="bg-[#fdf8f8] border border-red-100 rounded-2xl p-4 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[#666666]">Member:</span>
+                <strong className="text-[#101010] font-black">{deletingRecord.employeeName}</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#666666]">Profile & Period:</span>
+                <span className="font-bold text-[#101010]">
+                  {deletingRecord.profileCode} • {deletingRecord.entryType === 'daily' ? `Daily (${deletingRecord.entryDate})` : (deletingRecord.week || 'Weekly')}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#666666]">Month & Year:</span>
+                <span className="font-bold text-[#101010]">{deletingRecord.month} {deletingRecord.year}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-red-100 text-center">
+                <div>
+                  <span className="text-[10px] text-[#777777] block">Reachouts</span>
+                  <span className="font-bold text-[#101010]">{deletingRecord.reachouts ?? 0}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-[#777777] block">Conv. Rate</span>
+                  <span className="font-bold text-emerald-800">{deletingRecord.conversionRate}%</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-[#777777] block">Score</span>
+                  <span className="font-black text-[#101010]">{deletingRecord.totalPerformanceScore} pts</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#777777] leading-relaxed">
+              Are you sure you want to delete this performance record? This will permanently remove the metrics from reports, leaderboard, and history.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeletingRecord(null)}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-[#666666] hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={async () => {
+                  if (!deletingRecord) return;
+                  setIsDeleting(true);
+                  try {
+                    await deleteSalesPerformanceRecord(deletingRecord.id);
+                    setDeletingRecord(null);
+                  } catch (err: any) {
+                    addToast('error', 'Deletion Failed', err?.message || 'Unable to delete record.');
+                  } finally {
+                    setIsDeleting(false);
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/30 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isDeleting ? 'Deleting...' : 'Yes, Delete Record'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

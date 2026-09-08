@@ -20,7 +20,7 @@ import {
   getProfilePerformance,
   computeCompleteSalesRecord,
 } from '../services/salesCalculationService';
-import { isUserSuperAdmin, findMatchingSalesEmployee } from '../utils/salesAuthUtils';
+import { isUserSuperAdmin, isUserAdminOrSuperAdmin, findMatchingSalesEmployee } from '../utils/salesAuthUtils';
 import { useApp } from './AppContext';
 import { useAuth } from './AuthContext';
 
@@ -52,6 +52,12 @@ interface SalesContextType {
   isLoading: boolean;
 
   // Filters
+  selectedPeriodType: 'daily' | 'weekly' | 'monthly';
+  setSelectedPeriodType: (period: 'daily' | 'weekly' | 'monthly') => void;
+  selectedDate: string;
+  setSelectedDate: (date: string) => void;
+  selectedMemberId: string;
+  setSelectedMemberId: (id: string) => void;
   selectedWeek: string; // 'all' | 'Week 1' | 'Week 2' ...
   setSelectedWeek: (week: string) => void;
   selectedDepartment: 'all' | 'IT' | 'SMM';
@@ -127,6 +133,9 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Filters
+  const [selectedPeriodType, setSelectedPeriodType] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
+  const [selectedDate, setSelectedDate] = useState<string>('2026-09-07');
+  const [selectedMemberId, setSelectedMemberId] = useState<string>('all');
   const [selectedWeek, setSelectedWeek] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<'all' | 'IT' | 'SMM'>('all');
   const [selectedProfile, setSelectedProfile] = useState<'all' | SalesProfileCode>('all');
@@ -211,7 +220,10 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       selectedDepartment,
       selectedProfile,
       selectedRewardLevel,
-      salesSearchQuery
+      salesSearchQuery,
+      selectedPeriodType,
+      selectedDate,
+      selectedMemberId
     );
   }, [
     salesEmployees,
@@ -224,6 +236,9 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     selectedProfile,
     selectedRewardLevel,
     salesSearchQuery,
+    selectedPeriodType,
+    selectedDate,
+    selectedMemberId,
   ]);
 
   // Compute Dashboard Summary
@@ -234,9 +249,24 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       salesSettings,
       selectedMonth,
       selectedYear,
-      selectedWeek
+      selectedWeek,
+      selectedPeriodType,
+      selectedDate,
+      selectedProfile,
+      selectedMemberId
     );
-  }, [salesEmployees, salesRecords, salesSettings, selectedMonth, selectedYear, selectedWeek]);
+  }, [
+    salesEmployees,
+    salesRecords,
+    salesSettings,
+    selectedMonth,
+    selectedYear,
+    selectedWeek,
+    selectedPeriodType,
+    selectedDate,
+    selectedProfile,
+    selectedMemberId,
+  ]);
 
   // Compute Department Summaries
   const itDepartmentSummary = useMemo(() => {
@@ -365,6 +395,17 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     record: SalesPerformanceRecord
   ): Promise<{ success: boolean; message?: string }> => {
     try {
+      // If current user is not in salesEmployees yet, sync them automatically
+      if (currentUser && !findMatchingSalesEmployee(currentUser, salesEmployees)) {
+        try {
+          await SalesDataService.syncUserToSales(currentUser);
+          const refreshedEmps = await SalesDataService.getEmployees();
+          setSalesEmployees(refreshedEmps);
+        } catch (syncErr) {
+          console.warn('Auto-sync sales employee warning:', syncErr);
+        }
+      }
+
       // Backend/Database level security check
       if (currentUser) {
         const check = SalesDataService.validatePerformancePermission(
@@ -387,6 +428,17 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         salesSettings
       );
 
+      // Optimistically update local state so team member sees their record instantly
+      setSalesRecords((prev) => {
+        const idx = prev.findIndex((r) => r.id === computed.id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = computed;
+          return next;
+        }
+        return [computed, ...prev];
+      });
+
       await SalesDataService.saveRecord(computed, actor);
       const updated = await SalesDataService.getRecords();
       setSalesRecords(updated);
@@ -407,13 +459,16 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const deleteSalesPerformanceRecord = async (recordId: string): Promise<boolean> => {
     try {
-      setSalesRecords((prev) => prev.filter((r) => r.id !== recordId));
-      await SalesDataService.deleteRecord(recordId, actor);
+      const cleanId = (recordId || '').trim();
+      setSalesRecords((prev) => prev.filter((r) => r.id !== cleanId && r.id !== recordId));
+      await SalesDataService.deleteRecord(cleanId, actor);
+      const updated = await SalesDataService.getRecords();
+      setSalesRecords(updated);
       refreshAuditLogs();
-      addToast('info', 'Performance Record Deleted');
+      addToast('info', 'Performance Record Deleted', 'The performance record was successfully deleted.');
       return true;
     } catch (e: any) {
-      console.error(e);
+      console.error('Delete performance record error:', e);
       addToast('error', 'Failed to delete record', e.message || 'Access Denied');
       return false;
     }
@@ -421,8 +476,8 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const saveSalesRewardSettings = async (settings: SalesRewardSettings): Promise<boolean> => {
     try {
-      if (!isUserSuperAdmin(currentUser)) {
-        addToast('error', 'Unauthorized Action', '403 Forbidden: Only Super Admin can modify targets, KPIs, and reward settings.');
+      if (!isUserAdminOrSuperAdmin(currentUser)) {
+        addToast('error', 'Unauthorized Action', '403 Forbidden: Only Administrators and Super Admin can modify targets, KPIs, and reward settings.');
         return false;
       }
 
@@ -449,8 +504,8 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const resetSalesRewardSettings = async (): Promise<boolean> => {
     try {
-      if (!isUserSuperAdmin(currentUser)) {
-        addToast('error', 'Unauthorized Action', '403 Forbidden: Only Super Admin can reset targets and settings.');
+      if (!isUserAdminOrSuperAdmin(currentUser)) {
+        addToast('error', 'Unauthorized Action', '403 Forbidden: Only Administrators and Super Admin can reset targets and settings.');
         return false;
       }
       await SalesDataService.resetSettingsToDefault(actor);
@@ -467,9 +522,9 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const importSalesCSV = async (csvText: string): Promise<{ success: boolean; count: number; errors: string[] }> => {
     try {
-      if (!isUserSuperAdmin(currentUser)) {
-        addToast('error', 'Unauthorized Action', '403 Forbidden: Only Super Admin can import performance records.');
-        return { success: false, count: 0, errors: ['403 Forbidden: Only Super Admin can import performance records.'] };
+      if (!isUserAdminOrSuperAdmin(currentUser)) {
+        addToast('error', 'Unauthorized Action', '403 Forbidden: Only Administrators and Super Admin can import performance records.');
+        return { success: false, count: 0, errors: ['403 Forbidden: Only Administrators and Super Admin can import performance records.'] };
       }
       const res = await SalesDataService.importSalesCSV(csvText, actor);
       if (res.success) {
@@ -498,6 +553,12 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         salesSettings,
         auditLogs,
         isLoading,
+        selectedPeriodType,
+        setSelectedPeriodType,
+        selectedDate,
+        setSelectedDate,
+        selectedMemberId,
+        setSelectedMemberId,
         selectedWeek,
         setSelectedWeek,
         selectedDepartment,

@@ -135,25 +135,73 @@ export function formatINR(amount: number): string {
  */
 export function getProfileSettings(
   settings: SalesRewardSettings | undefined,
-  profileCode: SalesProfileCode
+  profileCode: SalesProfileCode,
+  context?: {
+    month?: string;
+    year?: number;
+    week?: string;
+    isWeekly?: boolean;
+  }
 ): SalesProfileTargetConfig {
   const safeSettings = settings || DEFAULT_SALES_SETTINGS;
-  const config = safeSettings.profiles?.[profileCode];
-  if (config) {
-    // Ensure default weights and benchmarks exist if missing from older data
-    return {
-      ...config,
-      conversionWeight: config.conversionWeight ?? 50,
-      followupWeight: config.followupWeight ?? 20,
-      orderValueWeight: config.orderValueWeight ?? 30,
-      reachoutWeight: 0,
-      conversionTarget: config.conversionTarget || (config.orderConvertTarget ? 10 : 10),
-      followupTarget: config.followupTarget || 100,
-      orderValueTarget: config.orderValueTarget || 100000,
-      reachoutBenchmark: config.reachoutBenchmark || config.reachoutTarget || 200,
-    };
+  const config = safeSettings.profiles?.[profileCode] || DEFAULT_SALES_SETTINGS.profiles[profileCode] || DEFAULT_SALES_SETTINGS.profiles.PR;
+
+  let conversionTarget = config.conversionTarget || (config.orderConvertTarget ? 10 : 10);
+  let followupTarget = config.followupTarget || 100;
+  let orderValueTarget = config.orderValueTarget || 100000;
+  let reachoutBenchmark = config.reachoutBenchmark || config.reachoutTarget || 200;
+
+  // Check periodTargets if context is provided
+  if (context?.month && context?.year) {
+    const pt = config.periodTargets || safeSettings.periodTargets || {};
+    const isWeekly = context.isWeekly || (context.week && context.week !== 'all');
+    if (isWeekly && context.week) {
+      const weekKeyWithProfile = `week_${context.month}_${context.year}_${context.week}_${profileCode}`;
+      const weekKey = `week_${context.month}_${context.year}_${context.week}`;
+      const targetObj = pt[weekKeyWithProfile] || pt[weekKey];
+      if (targetObj) {
+        if (targetObj.conversionTarget !== undefined && targetObj.conversionTarget > 0) conversionTarget = targetObj.conversionTarget;
+        if (targetObj.followupTarget !== undefined && targetObj.followupTarget > 0) followupTarget = targetObj.followupTarget;
+        if (targetObj.orderValueTarget !== undefined && targetObj.orderValueTarget > 0) orderValueTarget = targetObj.orderValueTarget;
+        if (targetObj.reachoutBenchmark !== undefined && targetObj.reachoutBenchmark > 0) reachoutBenchmark = targetObj.reachoutBenchmark;
+      } else if (config.weeklyFollowupTarget !== undefined && config.weeklyFollowupTarget > 0) {
+        followupTarget = config.weeklyFollowupTarget;
+        if (config.weeklyOrderValueTarget) orderValueTarget = config.weeklyOrderValueTarget;
+        if (config.weeklyReachoutBenchmark) reachoutBenchmark = config.weeklyReachoutBenchmark;
+        if (config.weeklyConversionTarget) conversionTarget = config.weeklyConversionTarget;
+      }
+    } else {
+      const monthKeyWithProfile = `month_${context.month}_${context.year}_${profileCode}`;
+      const monthKey = `month_${context.month}_${context.year}`;
+      const targetObj = pt[monthKeyWithProfile] || pt[monthKey];
+      if (targetObj) {
+        if (targetObj.conversionTarget !== undefined && targetObj.conversionTarget > 0) conversionTarget = targetObj.conversionTarget;
+        if (targetObj.followupTarget !== undefined && targetObj.followupTarget > 0) followupTarget = targetObj.followupTarget;
+        if (targetObj.orderValueTarget !== undefined && targetObj.orderValueTarget > 0) orderValueTarget = targetObj.orderValueTarget;
+        if (targetObj.reachoutBenchmark !== undefined && targetObj.reachoutBenchmark > 0) reachoutBenchmark = targetObj.reachoutBenchmark;
+      }
+    }
   }
-  return DEFAULT_SALES_SETTINGS.profiles[profileCode] || DEFAULT_SALES_SETTINGS.profiles.PR;
+
+  return {
+    ...config,
+    conversionWeight: config.conversionWeight ?? 50,
+    followupWeight: config.followupWeight ?? 20,
+    orderValueWeight: config.orderValueWeight ?? 30,
+    reachoutWeight: 0,
+    conversionTarget,
+    followupTarget,
+    orderValueTarget,
+    reachoutBenchmark,
+    weeklyConversionTarget: config.weeklyConversionTarget ?? conversionTarget,
+    weeklyFollowupTarget: config.weeklyFollowupTarget ?? followupTarget,
+    weeklyOrderValueTarget: config.weeklyOrderValueTarget ?? orderValueTarget,
+    weeklyReachoutBenchmark: config.weeklyReachoutBenchmark ?? reachoutBenchmark,
+    monthlyConversionTarget: config.monthlyConversionTarget ?? conversionTarget,
+    monthlyFollowupTarget: config.monthlyFollowupTarget ?? followupTarget * 4,
+    monthlyOrderValueTarget: config.monthlyOrderValueTarget ?? orderValueTarget * 4,
+    monthlyReachoutBenchmark: config.monthlyReachoutBenchmark ?? reachoutBenchmark * 4,
+  };
 }
 
 /**
@@ -343,10 +391,10 @@ export function computeCompleteSalesRecord(
     department,
     profileCode,
     entryType,
-    entryDate,
+    entryDate: entryDate || '',
     week,
-    weekStartDate,
-    weekEndDate,
+    weekStartDate: weekStartDate || '',
+    weekEndDate: weekEndDate || '',
     month: raw.month,
     year: raw.year,
     monthYearKey: `${raw.month} ${raw.year}`,
@@ -367,10 +415,10 @@ export function computeCompleteSalesRecord(
     reachoutScore: 0, // 0% Weight!
     totalPerformanceScore: scoreBreakdown.totalPerformanceScore,
     rewardEligibility: rewardInfo.rewardEligibility,
-    ineligibilityReason: rewardInfo.ineligibilityReason,
-    rewardLevel: rewardInfo.rewardLevel,
-    rewardAmount: rewardInfo.rewardAmount,
-    submittedBy: raw.submittedBy || 'manager',
+    ineligibilityReason: rewardInfo.ineligibilityReason || '',
+    rewardLevel: rewardInfo.rewardLevel || 'None',
+    rewardAmount: rewardInfo.rewardAmount || 0,
+    submittedBy: raw.submittedBy || 'Team Member',
     createdAt: raw.createdAt || now,
     updatedAt: now,
   };
@@ -600,7 +648,44 @@ export function aggregateMonthlyRecords(
 }
 
 /**
- * Calculate Sales Leaderboard with sorting and tie-breakers
+ * Helper to format readable performance period label for announcements and dashboard
+ */
+export function formatPerformancePeriodLabel(
+  periodType: 'daily' | 'weekly' | 'monthly' = 'weekly',
+  month: string = 'September',
+  year: number = 2026,
+  week: string = 'Week 1',
+  dateStr?: string
+): string {
+  if (periodType === 'daily') {
+    if (dateStr) {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+      return dateStr;
+    }
+    return `07 Sep ${year}`;
+  }
+
+  if (periodType === 'monthly') {
+    const shortMonth = month.slice(0, 3);
+    return `${month} ${year} (01–30 ${shortMonth} ${year})`;
+  }
+
+  // Weekly period
+  const shortMonth = month.slice(0, 3);
+  if (week === 'Week 1') return `01–07 ${shortMonth} ${year}`;
+  if (week === 'Week 2') return `08–14 ${shortMonth} ${year}`;
+  if (week === 'Week 3') return `15–21 ${shortMonth} ${year}`;
+  if (week === 'Week 4') return `22–28 ${shortMonth} ${year}`;
+  if (week === 'Week 5') return `29–30 ${shortMonth} ${year}`;
+  return `01–30 ${shortMonth} ${year}`;
+}
+
+/**
+ * Calculate Sales Leaderboard with sorting, period aggregation (daily/weekly/monthly),
+ * multi-profile support (Overall vs Profile-specific), and tie-breakers.
  */
 export function calculateSalesLeaderboard(
   employees: SalesEmployee[],
@@ -612,57 +697,233 @@ export function calculateSalesLeaderboard(
   departmentFilter: 'all' | 'IT' | 'SMM' = 'all',
   profileFilter: 'all' | SalesProfileCode = 'all',
   rewardLevelFilter: string = 'all',
-  searchQuery: string = ''
+  searchQuery: string = '',
+  periodType: 'daily' | 'weekly' | 'monthly' = 'weekly',
+  selectedDate?: string,
+  memberFilter: string = 'all'
 ): {
   items: SalesLeaderboardItem[];
   top3: SalesLeaderboardItem[];
   winner?: SalesLeaderboardItem;
 } {
-  // Normalize and aggregate any underlying daily records into non-double-counted weekly records
-  const aggregatedRecords = normalizeAndAggregateRecords(records, settings);
-
-  // Filter active records for month, year, and optional week
-  let activeRecords = aggregatedRecords.filter(
-    (r) => r.month.toLowerCase() === filterMonth.toLowerCase() && Number(r.year) === Number(filterYear)
-  );
-
-  if (filterWeek !== 'all') {
-    activeRecords = activeRecords.filter((r) => r.week === filterWeek);
-  }
-
-  // Map employee avatars & assigned profiles
+  // Map employee avatars & metadata
   const empMap = new Map<string, SalesEmployee>();
   employees.forEach((e) => empMap.set(e.id, e));
 
-  // Build complete list of items
-  let items: SalesLeaderboardItem[] = activeRecords.map((rec) => {
-    const emp = empMap.get(rec.employeeId);
-    const config = getProfileSettings(settings, rec.profileCode);
+  let candidateRecords: SalesPerformanceRecord[] = [];
 
-    const conversionAchievementPct = config.conversionTarget > 0 ? Number(((rec.conversionRate / config.conversionTarget) * 100).toFixed(1)) : 0;
-    const followupAchievementPct = config.followupTarget > 0 ? Number((((rec.followups ?? rec.followupSent ?? 0) / config.followupTarget) * 100).toFixed(1)) : 0;
-    const orderValueAchievementPct = config.orderValueTarget > 0 ? Number((((rec.orderValue ?? 0) / config.orderValueTarget) * 100).toFixed(1)) : 0;
-    const reachoutBenchmarkPct = (config.reachoutBenchmark || 200) > 0 ? Number((((rec.reachouts ?? rec.totalReachout ?? 0) / (config.reachoutBenchmark || 200)) * 100).toFixed(1)) : 0;
+  if (periodType === 'daily') {
+    // Filter daily records matching date or fallback to all daily records in month
+    const dailyRecs = records.filter(
+      (r) =>
+        r.entryType === 'daily' &&
+        r.month.toLowerCase() === filterMonth.toLowerCase() &&
+        Number(r.year) === Number(filterYear)
+    );
 
-    let performanceBand: 'Platinum Tier' | 'Gold Tier' | 'Silver Tier' | 'Bronze Tier' | 'Developing' = 'Developing';
-    if (rec.totalPerformanceScore >= 90) performanceBand = 'Platinum Tier';
-    else if (rec.totalPerformanceScore >= 80) performanceBand = 'Gold Tier';
-    else if (rec.totalPerformanceScore >= 70) performanceBand = 'Silver Tier';
-    else if (rec.totalPerformanceScore >= 60) performanceBand = 'Bronze Tier';
+    if (selectedDate) {
+      const dateMatched = dailyRecs.filter((r) => r.entryDate === selectedDate || (r as any).date === selectedDate);
+      candidateRecords = dateMatched.length > 0 ? dateMatched : dailyRecs;
+    } else {
+      candidateRecords = dailyRecs;
+    }
 
-    return {
-      ...rec,
-      rank: 0,
-      avatarUrl: emp?.avatarUrl,
-      assignedProfiles: emp?.assignedProfiles || (emp?.profileCode ? [emp.profileCode] : [rec.profileCode]),
-      joiningDate: emp?.joiningDate,
-      conversionAchievementPct,
-      followupAchievementPct,
-      orderValueAchievementPct,
-      reachoutBenchmarkPct,
-      performanceBand,
-    };
-  });
+    // If candidateRecords is empty (e.g. no daily entries yet), fallback to normalized weekly
+    if (candidateRecords.length === 0) {
+      candidateRecords = normalizeAndAggregateRecords(records, settings).filter(
+        (r) =>
+          r.month.toLowerCase() === filterMonth.toLowerCase() &&
+          Number(r.year) === Number(filterYear) &&
+          (filterWeek === 'all' || r.week === filterWeek)
+      );
+    }
+  } else if (periodType === 'monthly') {
+    // True monthly aggregation: group by employee and profile
+    const normalizedWeekly = normalizeAndAggregateRecords(records, settings).filter(
+      (r) => r.month.toLowerCase() === filterMonth.toLowerCase() && Number(r.year) === Number(filterYear)
+    );
+
+    const empProfileGroups = new Map<string, SalesPerformanceRecord[]>();
+    for (const r of normalizedWeekly) {
+      const key = `${r.employeeId}__${r.profileCode}`;
+      if (!empProfileGroups.has(key)) empProfileGroups.set(key, []);
+      empProfileGroups.get(key)!.push(r);
+    }
+
+    for (const [, groupRecs] of empProfileGroups.entries()) {
+      const first = groupRecs[0];
+      const config = getProfileSettings(settings, first.profileCode);
+      const weeksCount = Math.max(1, groupRecs.length);
+
+      let totReachouts = 0;
+      let totConversions = 0;
+      let totFollowups = 0;
+      let totOrderVal = 0;
+
+      for (const gr of groupRecs) {
+        totReachouts += gr.reachouts ?? gr.totalReachout ?? 0;
+        totConversions += gr.conversions ?? gr.orderConvert ?? 0;
+        totFollowups += gr.followups ?? gr.followupSent ?? 0;
+        totOrderVal += gr.orderValue ?? 0;
+      }
+
+      const convRate = calculateConversionRate(totConversions, totReachouts);
+      const convScore = calculateMetricScore(convRate, config.conversionTarget || 10, config.conversionWeight ?? 50);
+      const folScore = calculateMetricScore(totFollowups, (config.followupTarget || 100) * weeksCount, config.followupWeight ?? 20);
+      const ordScore = calculateMetricScore(totOrderVal, (config.orderValueTarget || 100000) * weeksCount, config.orderValueWeight ?? 30);
+      const totScore = Math.min(100, Number((convScore + folScore + ordScore).toFixed(2)));
+
+      const monthlyRec: SalesPerformanceRecord = {
+        ...first,
+        id: `monthly_${first.employeeId}_${first.profileCode}_${filterMonth}_${filterYear}`,
+        week: 'All Weeks (Monthly)',
+        entryType: 'weekly',
+        reachouts: totReachouts,
+        conversions: totConversions,
+        conversionRate: convRate,
+        followups: totFollowups,
+        orderValue: totOrderVal,
+        conversionScore: convScore,
+        followupScore: folScore,
+        orderValueScore: ordScore,
+        reachoutScore: 0,
+        totalPerformanceScore: totScore,
+        rewardEligibility: totReachouts >= ((config.reachoutBenchmark || 200) * weeksCount) * 0.5 ? 'Eligible' : 'Not Eligible',
+        rewardLevel: calculateReward(totScore, config).rewardLevel,
+        rewardAmount: calculateReward(totScore, config).rewardAmount,
+        managerRemarks: `Monthly rollup across ${weeksCount} weekly performance cycles.`,
+      };
+      candidateRecords.push(monthlyRec);
+    }
+  } else {
+    // Weekly period
+    const aggregatedRecords = normalizeAndAggregateRecords(records, settings);
+    candidateRecords = aggregatedRecords.filter(
+      (r) => r.month.toLowerCase() === filterMonth.toLowerCase() && Number(r.year) === Number(filterYear)
+    );
+    if (filterWeek !== 'all') {
+      candidateRecords = candidateRecords.filter((r) => r.week === filterWeek);
+    }
+  }
+
+  let items: SalesLeaderboardItem[] = [];
+
+  if (profileFilter !== 'all') {
+    // Profile-Specific Leaderboard: Filter strictly by profileCode
+    const profileSpecificRecs = candidateRecords.filter((r) => r.profileCode === profileFilter);
+
+    items = profileSpecificRecs.map((rec) => {
+      const emp = empMap.get(rec.employeeId);
+      const config = getProfileSettings(settings, rec.profileCode);
+
+      const conversionAchievementPct = config.conversionTarget > 0 ? Number(((rec.conversionRate / config.conversionTarget) * 100).toFixed(1)) : 0;
+      const followupAchievementPct = config.followupTarget > 0 ? Number((((rec.followups ?? rec.followupSent ?? 0) / config.followupTarget) * 100).toFixed(1)) : 0;
+      const orderValueAchievementPct = config.orderValueTarget > 0 ? Number((((rec.orderValue ?? 0) / config.orderValueTarget) * 100).toFixed(1)) : 0;
+      const reachoutBenchmarkPct = (config.reachoutBenchmark || 200) > 0 ? Number((((rec.reachouts ?? rec.totalReachout ?? 0) / (config.reachoutBenchmark || 200)) * 100).toFixed(1)) : 0;
+
+      let performanceBand: 'Platinum Tier' | 'Gold Tier' | 'Silver Tier' | 'Bronze Tier' | 'Developing' = 'Developing';
+      if (rec.totalPerformanceScore >= 90) performanceBand = 'Platinum Tier';
+      else if (rec.totalPerformanceScore >= 80) performanceBand = 'Gold Tier';
+      else if (rec.totalPerformanceScore >= 70) performanceBand = 'Silver Tier';
+      else if (rec.totalPerformanceScore >= 60) performanceBand = 'Bronze Tier';
+
+      return {
+        ...rec,
+        rank: 0,
+        avatarUrl: emp?.avatarUrl,
+        assignedProfiles: emp?.assignedProfiles || (emp?.profileCode ? [emp.profileCode] : [rec.profileCode]),
+        joiningDate: emp?.joiningDate,
+        conversionAchievementPct,
+        followupAchievementPct,
+        orderValueAchievementPct,
+        reachoutBenchmarkPct,
+        performanceBand,
+      };
+    });
+  } else {
+    // Overall Leaderboard (All eligible Sales Members combined, handling multiple profiles without inflation)
+    const empGroups = new Map<string, SalesPerformanceRecord[]>();
+    for (const r of candidateRecords) {
+      if (!empGroups.has(r.employeeId)) empGroups.set(r.employeeId, []);
+      empGroups.get(r.employeeId)!.push(r);
+    }
+
+    for (const [empId, empRecs] of empGroups.entries()) {
+      const emp = empMap.get(empId);
+      const first = empRecs[0];
+
+      let totalReachouts = 0;
+      let totalConversions = 0;
+      let totalFollowups = 0;
+      let totalOrderValue = 0;
+      let scoreSum = 0;
+      let totalRewardAmount = 0;
+
+      const profileCodesUsed = Array.from(new Set(empRecs.map((r) => r.profileCode)));
+
+      for (const r of empRecs) {
+        totalReachouts += r.reachouts ?? r.totalReachout ?? 0;
+        totalConversions += r.conversions ?? r.orderConvert ?? 0;
+        totalFollowups += r.followups ?? r.followupSent ?? 0;
+        totalOrderValue += r.orderValue ?? 0;
+        scoreSum += r.totalPerformanceScore;
+        totalRewardAmount += r.rewardAmount ?? 0;
+      }
+
+      const conversionRate = calculateConversionRate(totalConversions, totalReachouts);
+      // Average score across profiles to maintain target integrity
+      const avgPerformanceScore = Number((scoreSum / empRecs.length).toFixed(2));
+
+      let performanceBand: 'Platinum Tier' | 'Gold Tier' | 'Silver Tier' | 'Bronze Tier' | 'Developing' = 'Developing';
+      if (avgPerformanceScore >= 90) performanceBand = 'Platinum Tier';
+      else if (avgPerformanceScore >= 80) performanceBand = 'Gold Tier';
+      else if (avgPerformanceScore >= 70) performanceBand = 'Silver Tier';
+      else if (avgPerformanceScore >= 60) performanceBand = 'Bronze Tier';
+
+      items.push({
+        ...first,
+        id: `overall_${empId}_${filterMonth}_${filterYear}_${filterWeek}`,
+        profileCode: (profileCodesUsed.length === 1 ? profileCodesUsed[0] : (profileCodesUsed.join(' + ') as any)),
+        reachouts: totalReachouts,
+        conversions: totalConversions,
+        conversionRate,
+        followups: totalFollowups,
+        orderValue: totalOrderValue,
+        totalPerformanceScore: avgPerformanceScore,
+        rewardAmount: totalRewardAmount,
+        rank: 0,
+        avatarUrl: emp?.avatarUrl,
+        assignedProfiles: emp?.assignedProfiles || profileCodesUsed,
+        joiningDate: emp?.joiningDate,
+        conversionAchievementPct: 0,
+        followupAchievementPct: 0,
+        orderValueAchievementPct: 0,
+        reachoutBenchmarkPct: 0,
+        performanceBand,
+      });
+    }
+  }
+
+  // Apply filters (department, member, reward level, search) BEFORE sorting and ranking
+  let filtered = items;
+  if (departmentFilter !== 'all') {
+    filtered = filtered.filter((i) => i.department === departmentFilter);
+  }
+  if (memberFilter !== 'all') {
+    filtered = filtered.filter((i) => i.employeeId === memberFilter);
+  }
+  if (rewardLevelFilter !== 'all') {
+    filtered = filtered.filter((i) => i.rewardLevel.toLowerCase() === rewardLevelFilter.toLowerCase());
+  }
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    filtered = filtered.filter(
+      (i) =>
+        i.employeeName.toLowerCase().includes(q) ||
+        String(i.profileCode).toLowerCase().includes(q) ||
+        i.department.toLowerCase().includes(q)
+    );
+  }
 
   // Multi-Tier Sorting Rule:
   // 1. Total Performance Score desc
@@ -670,7 +931,7 @@ export function calculateSalesLeaderboard(
   // 3. Order Value desc
   // 4. Follow-ups desc
   // 5. Reachouts desc (activity tie-breaker)
-  items.sort((a, b) => {
+  filtered.sort((a, b) => {
     if (Math.abs(b.totalPerformanceScore - a.totalPerformanceScore) > 0.001) {
       return b.totalPerformanceScore - a.totalPerformanceScore;
     }
@@ -686,11 +947,11 @@ export function calculateSalesLeaderboard(
     return (b.reachouts ?? b.totalReachout ?? 0) - (a.reachouts ?? a.totalReachout ?? 0);
   });
 
-  // Assign ranks
+  // Assign ranks strictly within filtered view
   let currentRank = 1;
-  items.forEach((item, index) => {
+  filtered.forEach((item, index) => {
     if (index > 0) {
-      const prev = items[index - 1];
+      const prev = filtered[index - 1];
       const isTie =
         Math.abs(prev.totalPerformanceScore - item.totalPerformanceScore) < 0.001 &&
         Math.abs(prev.conversionRate - item.conversionRate) < 0.001 &&
@@ -709,29 +970,8 @@ export function calculateSalesLeaderboard(
     currentRank++;
   });
 
-  // Apply filters
-  let filtered = items;
-  if (departmentFilter !== 'all') {
-    filtered = filtered.filter((i) => i.department === departmentFilter);
-  }
-  if (profileFilter !== 'all') {
-    filtered = filtered.filter((i) => i.profileCode === profileFilter);
-  }
-  if (rewardLevelFilter !== 'all') {
-    filtered = filtered.filter((i) => i.rewardLevel.toLowerCase() === rewardLevelFilter.toLowerCase());
-  }
-  if (searchQuery.trim()) {
-    const q = searchQuery.toLowerCase();
-    filtered = filtered.filter(
-      (i) =>
-        i.employeeName.toLowerCase().includes(q) ||
-        i.profileCode.toLowerCase().includes(q) ||
-        i.department.toLowerCase().includes(q)
-    );
-  }
-
-  const top3 = items.slice(0, 3);
-  const winner = items.length > 0 ? items[0] : undefined;
+  const top3 = filtered.slice(0, 3);
+  const winner = filtered.length > 0 ? filtered[0] : undefined;
 
   return {
     items: filtered,
@@ -749,16 +989,27 @@ export function calculateSalesDashboardSummary(
   settings: SalesRewardSettings,
   month: string,
   year: number,
-  week: string = 'all'
+  week: string = 'all',
+  periodType: 'daily' | 'weekly' | 'monthly' = 'weekly',
+  selectedDate?: string,
+  profileFilter: 'all' | SalesProfileCode = 'all',
+  memberFilter: string = 'all'
 ): SalesDashboardSummary {
-  const currentRecords = records.filter((r) => {
-    const mMatch = r.month.toLowerCase() === month.toLowerCase() && Number(r.year) === Number(year);
-    if (!mMatch) return false;
-    if (week !== 'all') return r.week === week;
-    return true;
-  });
-
-  const leaderboardResult = calculateSalesLeaderboard(employees, currentRecords, settings, month, year, week);
+  const leaderboardResult = calculateSalesLeaderboard(
+    employees,
+    records,
+    settings,
+    month,
+    year,
+    week,
+    'all',
+    profileFilter,
+    'all',
+    '',
+    periodType,
+    selectedDate,
+    memberFilter
+  );
   const items = leaderboardResult.items;
 
   let totalReachouts = 0;
@@ -769,14 +1020,17 @@ export function calculateSalesDashboardSummary(
   let totalRewards = 0;
   let eligibleCount = 0;
 
+  const activeEmpIdSet = new Set<string>();
+
   items.forEach((item) => {
+    activeEmpIdSet.add(item.employeeId);
     totalReachouts += item.reachouts ?? item.totalReachout ?? 0;
     totalConversions += item.conversions ?? item.orderConvert ?? 0;
     totalFollowups += item.followups ?? item.followupSent ?? 0;
     totalOrderValue += item.orderValue ?? 0;
     totalScoreSum += item.totalPerformanceScore;
-    totalRewards += item.rewardAmount;
-    if (item.rewardEligibility === 'Eligible' && item.rewardAmount > 0) {
+    totalRewards += item.rewardAmount ?? 0;
+    if (item.rewardEligibility === 'Eligible' && (item.rewardAmount ?? 0) > 0) {
       eligibleCount++;
     }
   });
@@ -790,6 +1044,7 @@ export function calculateSalesDashboardSummary(
 
   // Highlights
   const topSalesPerformer = items[0];
+  const salesWinner = leaderboardResult.winner;
   const topItPerformer = items.find((i) => i.department === 'IT');
   const topSmmPerformer = items.find((i) => i.department === 'SMM');
 
@@ -800,6 +1055,7 @@ export function calculateSalesDashboardSummary(
 
   return {
     totalEmployees: activeEmployees.length,
+    activeEmployeesCount: activeEmpIdSet.size,
     itEmployeesCount,
     smmEmployeesCount,
     totalReachouts,
@@ -811,6 +1067,7 @@ export function calculateSalesDashboardSummary(
     totalRewards,
     eligibleCount,
     topSalesPerformer,
+    salesWinner,
     topItPerformer,
     topSmmPerformer,
     highestConversionPerformer,
@@ -983,3 +1240,12 @@ export function calculateSalesHistoryComparison(
 
   return history;
 }
+
+/**
+ * Format sales currency with symbol
+ */
+export function formatSalesCurrency(amount: number, symbol = '$'): string {
+  const safe = sanitizeSalesNumber(amount);
+  return `${symbol}${safe.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+

@@ -108,6 +108,25 @@ export interface SalesProfileTargetConfig {
   targetOrderValue?: number;
   followupsWeight?: number;
 
+  // Weekly and Monthly KPI targets (similar to Project Management module)
+  weeklyConversionTarget?: number;
+  weeklyFollowupTarget?: number;
+  weeklyOrderValueTarget?: number;
+  weeklyReachoutBenchmark?: number;
+
+  monthlyConversionTarget?: number;
+  monthlyFollowupTarget?: number;
+  monthlyOrderValueTarget?: number;
+  monthlyReachoutBenchmark?: number;
+
+  // Period targets: specific month/year/week overrides
+  periodTargets?: Record<string, {
+    conversionTarget?: number;
+    followupTarget?: number;
+    orderValueTarget?: number;
+    reachoutBenchmark?: number;
+  }>;
+
   // Scoring Weights (Must total 100%)
   conversionWeight: number; // default 50%
   followupWeight: number; // default 20%
@@ -130,6 +149,12 @@ export interface SalesRewardSettings {
   currency: string; // 'INR'
   currencySymbol: string; // '₹'
   profiles: Record<SalesProfileCode, SalesProfileTargetConfig>;
+  periodTargets?: Record<string, {
+    conversionTarget?: number;
+    followupTarget?: number;
+    orderValueTarget?: number;
+    reachoutBenchmark?: number;
+  }>;
   updatedAt?: string;
 }
 
@@ -243,6 +268,7 @@ export interface SalesDepartmentSummary {
 
 export interface SalesDashboardSummary {
   totalEmployees: number;
+  activeEmployeesCount?: number;
   itEmployeesCount: number;
   smmEmployeesCount: number;
   totalReachouts: number;
@@ -256,6 +282,7 @@ export interface SalesDashboardSummary {
 
   // Highlights
   topSalesPerformer?: SalesLeaderboardItem;
+  salesWinner?: SalesLeaderboardItem;
   topItPerformer?: SalesLeaderboardItem;
   topSmmPerformer?: SalesLeaderboardItem;
   highestConversionPerformer?: SalesLeaderboardItem;

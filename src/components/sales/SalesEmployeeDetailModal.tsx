@@ -6,7 +6,7 @@ import {
   getProfileSettings,
   calculateSalesHistoryComparison,
 } from '../../services/salesCalculationService';
-import { isUserAdminOrSuperAdmin } from '../../utils/salesAuthUtils';
+import { isUserAdminOrSuperAdmin, canUserManageRecord } from '../../utils/salesAuthUtils';
 import {
   X,
   User,
@@ -34,15 +34,19 @@ export const SalesEmployeeDetailModal: React.FC = () => {
     setSelectedEmployeeForDetail,
     salesRecords,
     salesSettings,
+    salesEmployees,
     openSalesEntryModal,
     openSalesEmployeeModal,
     deleteSalesEmployee,
+    deleteSalesPerformanceRecord,
   } = useSales();
 
   const { selectedMonth, selectedYear, addToast } = useApp();
   const { currentUser, isAdmin, isSuperAdmin } = useAuth();
   const isPrivileged = isUserAdminOrSuperAdmin(currentUser);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingRecordId, setDeletingRecordId] = useState<string | null>(null);
+  const [isDeletingRec, setIsDeletingRec] = useState<boolean>(false);
 
   if (!selectedEmployeeForDetail) return null;
 
@@ -205,19 +209,57 @@ export const SalesEmployeeDetailModal: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5">
                       <span className="text-sm font-black text-[#436320]">
                         Score: {rec.totalPerformanceScore}/100 pts
                       </span>
-                      <button
-                        onClick={() => {
-                          setSelectedEmployeeForDetail(null);
-                          openSalesEntryModal(rec);
-                        }}
-                        className="text-xs text-[#598327] hover:underline font-bold"
-                      >
-                        Edit
-                      </button>
+                      {canUserManageRecord(rec, currentUser, salesEmployees) && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setSelectedEmployeeForDetail(null);
+                              openSalesEntryModal(rec);
+                            }}
+                            className="text-xs text-[#598327] hover:underline font-bold px-1.5 py-0.5 rounded hover:bg-[#edf4e8] transition-colors cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          {deletingRecordId !== rec.id ? (
+                            <button
+                              onClick={() => setDeletingRecordId(rec.id)}
+                              className="text-xs text-rose-500 hover:text-rose-700 font-bold px-1.5 py-0.5 rounded hover:bg-rose-50 transition-colors cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-1.5 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-lg text-xs">
+                              <span className="text-rose-700 font-bold text-[11px]">Delete?</span>
+                              <button
+                                disabled={isDeletingRec}
+                                onClick={async () => {
+                                  setIsDeletingRec(true);
+                                  try {
+                                    await deleteSalesPerformanceRecord(rec.id);
+                                    setDeletingRecordId(null);
+                                  } finally {
+                                    setIsDeletingRec(false);
+                                  }
+                                }}
+                                className="text-[11px] font-black text-white bg-rose-600 px-1.5 py-0.5 rounded hover:bg-rose-700 cursor-pointer disabled:opacity-50"
+                              >
+                                {isDeletingRec ? '...' : 'Yes'}
+                              </button>
+                              <button
+                                disabled={isDeletingRec}
+                                onClick={() => setDeletingRecordId(null)}
+                                className="text-[11px] font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                              >
+                                No
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { useSales } from '../../context/SalesContext';
@@ -30,6 +30,9 @@ import {
   Calculator,
   ShieldCheck,
   UserCheck,
+  Award,
+  UploadCloud,
+  Layers,
 } from 'lucide-react';
 import { EditProfileModal } from './EditProfileModal';
 
@@ -53,12 +56,39 @@ export const Header: React.FC = () => {
     setActiveModule,
   } = useApp();
 
-  const { openSalesEntryModal, setSalesActiveTab, salesActiveTab } = useSales();
+  const { openSalesEntryModal, setSalesActiveTab, salesActiveTab, setIsSalesImportModalOpen } = useSales();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isDemoSwitchOpen, setIsDemoSwitchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isSalesAdminMenuOpen, setIsSalesAdminMenuOpen] = useState(false);
+  const [isSalesEntryDropdownOpen, setIsSalesEntryDropdownOpen] = useState(false);
+
+  const salesEntryDropdownRef = useRef<HTMLDivElement>(null);
+  const salesAdminMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        salesEntryDropdownRef.current &&
+        !salesEntryDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsSalesEntryDropdownOpen(false);
+      }
+      if (
+        salesAdminMenuRef.current &&
+        !salesAdminMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsSalesAdminMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const currentPeriod = periods.find((p) => p.id === selectedPeriodId);
   const isCurrentLocked = currentPeriod?.status === 'locked';
@@ -505,7 +535,7 @@ export const Header: React.FC = () => {
         </div>
 
         {/* Desktop Navigation Tabs */}
-        <div className="hidden lg:flex items-center space-x-1 border-t border-[#f0f4ec] py-2 overflow-x-auto">
+        <div className="hidden lg:flex items-center space-x-1 border-t border-[#f0f4ec] py-2 overflow-visible relative z-30">
           {activeModule === 'pm' ? (
             <>
               <button
@@ -631,7 +661,8 @@ export const Header: React.FC = () => {
             </>
           ) : (
             <>
-              {/* Sales Module Tabs */}
+              {/* Sales Module Clean Structured Navigation */}
+              {/* 1. Dashboard (Main Landing Page) */}
               <button
                 onClick={() => setSalesActiveTab('sales-dashboard')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
@@ -641,9 +672,10 @@ export const Header: React.FC = () => {
                 }`}
               >
                 <LayoutDashboard className="w-3.5 h-3.5" />
-                {isSuperAdmin ? 'Sales Dashboard' : 'My Dashboard'}
+                <span>Dashboard</span>
               </button>
 
+              {/* 2. My Performance */}
               <button
                 onClick={() => setSalesActiveTab('sales-my-performance')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
@@ -653,23 +685,66 @@ export const Header: React.FC = () => {
                 }`}
               >
                 <UserCheck className="w-3.5 h-3.5" />
-                My Performance
+                <span>My Performance</span>
               </button>
 
-              {isSuperAdmin && (
+              {/* 3. Performance Entry Dropdown (Daily / Weekly) */}
+              <div className="relative" ref={salesEntryDropdownRef}>
                 <button
-                  onClick={() => setSalesActiveTab('sales-leaderboard')}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                    salesActiveTab === 'sales-leaderboard'
-                      ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                      : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                  type="button"
+                  id="sales-entry-dropdown-btn"
+                  onClick={() => setIsSalesEntryDropdownOpen(!isSalesEntryDropdownOpen)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer border ${
+                    isSalesEntryDropdownOpen
+                      ? 'bg-[#f0f4ec] border-[#8cc540]/60 text-[#101010] shadow-xs'
+                      : 'border-transparent text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
                   }`}
                 >
-                  <Trophy className="w-3.5 h-3.5" />
-                  Sales Leaderboard
+                  <PlusCircle className="w-3.5 h-3.5 text-[#598327]" />
+                  <span>Performance Entry</span>
+                  <ChevronDown className={`w-3 h-3 text-[#888888] transition-transform duration-150 ${isSalesEntryDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-              )}
 
+                {isSalesEntryDropdownOpen && (
+                  <div
+                    id="sales-entry-dropdown-menu"
+                    className="absolute left-0 top-full mt-1 w-52 bg-white border border-[#cbd5e1] rounded-xl shadow-2xl p-1.5 z-[100] divide-y divide-[#f0f4ec]"
+                  >
+                    <div className="py-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          openSalesEntryModal(undefined, undefined, undefined, 'daily');
+                          setIsSalesEntryDropdownOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg text-[#101010] hover:bg-[#f3f8ef] hover:text-[#2d4317] text-left cursor-pointer transition-colors"
+                      >
+                        <Calendar className="w-4 h-4 text-[#8cc540]" />
+                        <div>
+                          <span className="block font-bold">Daily Entry</span>
+                          <span className="block text-[10px] text-[#666666] font-normal">Log daily reachouts & closes</span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          openSalesEntryModal(undefined, undefined, undefined, 'weekly');
+                          setIsSalesEntryDropdownOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg text-[#101010] hover:bg-[#f3f8ef] hover:text-[#2d4317] text-left cursor-pointer transition-colors"
+                      >
+                        <Layers className="w-4 h-4 text-blue-600" />
+                        <div>
+                          <span className="block font-bold">Weekly Entry</span>
+                          <span className="block text-[10px] text-[#666666] font-normal">Log weekly performance targets</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 4. Performance Records */}
               <button
                 onClick={() => setSalesActiveTab('sales-performance')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
@@ -679,87 +754,151 @@ export const Header: React.FC = () => {
                 }`}
               >
                 <Calculator className="w-3.5 h-3.5" />
-                {isSuperAdmin ? 'Performance Records' : 'My Records'}
+                <span>Performance Records</span>
               </button>
 
-              {isSuperAdmin && (
-                <button
-                  onClick={() => setSalesActiveTab('sales-employees')}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                    salesActiveTab === 'sales-employees'
-                      ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                      : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-                  }`}
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  Sales Members
-                </button>
-              )}
-
+              {/* 5. Leaderboard */}
               <button
-                onClick={() => setSalesActiveTab('sales-analytics')}
+                onClick={() => setSalesActiveTab('sales-leaderboard')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                  salesActiveTab === 'sales-analytics'
+                  salesActiveTab === 'sales-leaderboard'
                     ? 'bg-[#8cc540] text-[#101010] shadow-xs'
                     : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
                 }`}
               >
-                <Target className="w-3.5 h-3.5" />
-                {isSuperAdmin ? 'Profile Benchmarks' : 'Profile Targets'}
+                <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                <span>Leaderboard</span>
               </button>
 
-              <button
-                onClick={() => setSalesActiveTab('sales-history')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                  salesActiveTab === 'sales-history'
-                    ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                    : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-                }`}
-              >
-                <TrendingUp className="w-3.5 h-3.5" />
-                {isSuperAdmin ? 'Monthly History' : 'Progression History'}
-              </button>
-
-              {isSuperAdmin && (
-                <>
-                  <div className="h-4 w-px bg-[#e2ebd9] mx-1"></div>
-
+              {/* 6. Administration (Super Admin & Admins) */}
+              {(isSuperAdmin || isAdmin) && (
+                <div className="relative" ref={salesAdminMenuRef}>
                   <button
-                    onClick={() => setSalesActiveTab('sales-reports')}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                      salesActiveTab === 'sales-reports'
-                        ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                        : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                    type="button"
+                    id="sales-admin-menu-btn"
+                    onClick={() => setIsSalesAdminMenuOpen(!isSalesAdminMenuOpen)}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer border ${
+                      isSalesAdminMenuOpen || ['sales-employees', 'sales-analytics', 'sales-settings', 'sales-reports', 'sales-audit', 'sales-history'].includes(salesActiveTab)
+                        ? 'bg-[#101010] text-white border-[#101010] shadow-xs'
+                        : 'border-transparent text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
                     }`}
                   >
-                    <FileText className="w-3.5 h-3.5" />
-                    Reports & Export
+                    <ShieldCheck className={`w-3.5 h-3.5 ${
+                      isSalesAdminMenuOpen || ['sales-employees', 'sales-analytics', 'sales-settings', 'sales-reports', 'sales-audit', 'sales-history'].includes(salesActiveTab)
+                        ? 'text-[#8cc540]'
+                        : 'text-[#598327]'
+                    }`} />
+                    <span>Administration</span>
+                    <ChevronDown className={`w-3 h-3 text-[#888888] transition-transform duration-150 ${isSalesAdminMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
 
-                  <button
-                    onClick={() => setSalesActiveTab('sales-audit')}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                      salesActiveTab === 'sales-audit'
-                        ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                        : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-                    }`}
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    Audit Logs
-                  </button>
+                  {isSalesAdminMenuOpen && (
+                    <div
+                      id="sales-admin-dropdown-menu"
+                      className="absolute left-0 top-full mt-1 w-64 bg-white border border-[#cbd5e1] rounded-xl shadow-2xl p-1.5 z-[100] divide-y divide-[#f0f4ec]"
+                    >
+                      <div className="py-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSalesActiveTab('sales-employees');
+                            setIsSalesAdminMenuOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${
+                            salesActiveTab === 'sales-employees' ? 'bg-[#8cc540]/20 text-[#101010]' : 'text-[#101010] hover:bg-[#f5f5f5]'
+                          }`}
+                        >
+                          <Users className="w-4 h-4 text-indigo-600" />
+                          <div className="text-left">
+                            <span className="block font-bold">Sales Members</span>
+                            <span className="block text-[10px] text-[#666666] font-normal">Manage team roster & profiles</span>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSalesActiveTab('sales-analytics');
+                            setIsSalesAdminMenuOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${
+                            salesActiveTab === 'sales-analytics' ? 'bg-[#8cc540]/20 text-[#101010]' : 'text-[#101010] hover:bg-[#f5f5f5]'
+                          }`}
+                        >
+                          <Target className="w-4 h-4 text-pink-600" />
+                          <div className="text-left">
+                            <span className="block font-bold">Profiles & Targets</span>
+                            <span className="block text-[10px] text-[#666666] font-normal">IT & SMM profile benchmarks</span>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSalesActiveTab('sales-settings');
+                            setIsSalesAdminMenuOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${
+                            salesActiveTab === 'sales-settings' ? 'bg-[#8cc540]/20 text-[#101010]' : 'text-[#101010] hover:bg-[#f5f5f5]'
+                          }`}
+                        >
+                          <Target className="w-4 h-4 text-amber-600" />
+                          <div className="text-left">
+                            <span className="block font-bold">KPI Targets (Weekly / Monthly)</span>
+                            <span className="block text-[10px] text-[#666666] font-normal">Configure KPI weights, tiers & rewards</span>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSalesActiveTab('sales-reports');
+                            setIsSalesAdminMenuOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${
+                            salesActiveTab === 'sales-reports' ? 'bg-[#8cc540]/20 text-[#101010]' : 'text-[#101010] hover:bg-[#f5f5f5]'
+                          }`}
+                        >
+                          <FileText className="w-4 h-4 text-emerald-600" />
+                          <div className="text-left">
+                            <span className="block font-bold">Reports & Analytics</span>
+                            <span className="block text-[10px] text-[#666666] font-normal">Reward & performance breakdowns</span>
+                          </div>
+                        </button>
+                      </div>
 
-                  <button
-                    onClick={() => setSalesActiveTab('sales-settings')}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                      salesActiveTab === 'sales-settings'
-                        ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                        : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-                    }`}
-                  >
-                    <Sliders className="w-3.5 h-3.5" />
-                    Target & Rewards
-                  </button>
-                </>
+                      <div className="py-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsSalesImportModalOpen(true);
+                            setIsSalesAdminMenuOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg text-[#101010] hover:bg-[#f5f5f5] cursor-pointer transition-colors"
+                        >
+                          <UploadCloud className="w-4 h-4 text-blue-600" />
+                          <div className="text-left">
+                            <span className="block font-bold">Import / Export Data</span>
+                            <span className="block text-[10px] text-[#666666] font-normal">CSV and Excel data management</span>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSalesActiveTab('sales-audit');
+                            setIsSalesAdminMenuOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${
+                            salesActiveTab === 'sales-audit' ? 'bg-[#8cc540]/20 text-[#101010]' : 'text-[#101010] hover:bg-[#f5f5f5]'
+                          }`}
+                        >
+                          <ShieldCheck className="w-4 h-4 text-purple-600" />
+                          <div className="text-left">
+                            <span className="block font-bold">Audit Logs</span>
+                            <span className="block text-[10px] text-[#666666] font-normal">Track all changes & submissions</span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </>
           )}
@@ -926,108 +1065,144 @@ export const Header: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-1.5">
-                <button
-                  onClick={() => {
-                    setSalesActiveTab('sales-dashboard');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                >
-                  <LayoutDashboard className="w-4 h-4 text-[#598327]" />
-                  <span>{isSuperAdmin ? 'Sales Dashboard' : 'My Dashboard'}</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setSalesActiveTab('sales-my-performance');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                >
-                  <UserCheck className="w-4 h-4 text-[#598327]" />
-                  <span>My Performance</span>
-                </button>
-                {isSuperAdmin && (
+              <div className="flex flex-col gap-1.5">
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => {
+                      setSalesActiveTab('sales-dashboard');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`p-2.5 rounded-xl text-left text-xs font-bold flex items-center gap-2 ${salesActiveTab === 'sales-dashboard' ? 'bg-[#8cc540] text-[#101010]' : 'bg-[#f5f5f5] text-[#101010] hover:bg-[#8cc540]/20'}`}
+                  >
+                    <LayoutDashboard className="w-4 h-4 text-[#598327]" />
+                    <span>Dashboard</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSalesActiveTab('sales-my-performance');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`p-2.5 rounded-xl text-left text-xs font-bold flex items-center gap-2 ${salesActiveTab === 'sales-my-performance' ? 'bg-[#8cc540] text-[#101010]' : 'bg-[#f5f5f5] text-[#101010] hover:bg-[#8cc540]/20'}`}
+                  >
+                    <UserCheck className="w-4 h-4 text-[#598327]" />
+                    <span>My Performance</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => {
+                      openSalesEntryModal(undefined, undefined, undefined, 'daily');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="p-2.5 rounded-xl text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20 cursor-pointer"
+                  >
+                    <Calendar className="w-4 h-4 text-[#8cc540]" />
+                    <span>+ Daily Entry</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      openSalesEntryModal(undefined, undefined, undefined, 'weekly');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="p-2.5 rounded-xl text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20 cursor-pointer"
+                  >
+                    <Layers className="w-4 h-4 text-blue-600" />
+                    <span>+ Weekly Entry</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => {
+                      setSalesActiveTab('sales-performance');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`p-2.5 rounded-xl text-left text-xs font-bold flex items-center gap-2 ${salesActiveTab === 'sales-performance' ? 'bg-[#8cc540] text-[#101010]' : 'bg-[#f5f5f5] text-[#101010] hover:bg-[#8cc540]/20'}`}
+                  >
+                    <Calculator className="w-4 h-4 text-[#598327]" />
+                    <span>Performance Records</span>
+                  </button>
                   <button
                     onClick={() => {
                       setSalesActiveTab('sales-leaderboard');
                       setIsMobileMenuOpen(false);
                     }}
-                    className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                    className={`p-2.5 rounded-xl text-left text-xs font-bold flex items-center gap-2 ${salesActiveTab === 'sales-leaderboard' ? 'bg-[#8cc540] text-[#101010]' : 'bg-[#f5f5f5] text-[#101010] hover:bg-[#8cc540]/20'}`}
                   >
-                    <Trophy className="w-4 h-4 text-amber-500" /> Sales Leaderboard
+                    <Trophy className="w-4 h-4 text-amber-500" />
+                    <span>Leaderboard</span>
                   </button>
-                )}
-                <button
-                  onClick={() => {
-                    setSalesActiveTab('sales-performance');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                >
-                  <Calculator className="w-4 h-4 text-[#598327]" />
-                  <span>{isSuperAdmin ? 'Performance Records' : 'My Records'}</span>
-                </button>
-                {isSuperAdmin && (
-                  <button
-                    onClick={() => {
-                      setSalesActiveTab('sales-employees');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                  >
-                    <Users className="w-4 h-4 text-indigo-600" /> Sales Members
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    setSalesActiveTab('sales-analytics');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                >
-                  <Target className="w-4 h-4 text-pink-600" />
-                  <span>{isSuperAdmin ? 'Profile Targets' : 'My Targets'}</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setSalesActiveTab('sales-history');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                >
-                  <TrendingUp className="w-4 h-4 text-teal-600" /> Progression History
-                </button>
-                {isSuperAdmin && (
-                  <>
-                    <button
-                      onClick={() => {
-                        setSalesActiveTab('sales-reports');
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                    >
-                      <FileText className="w-4 h-4 text-blue-600" /> Reports & Export
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSalesActiveTab('sales-audit');
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                    >
-                      <ShieldCheck className="w-4 h-4 text-emerald-600" /> Audit Logs
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSalesActiveTab('sales-settings');
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                    >
-                      <Sliders className="w-4 h-4 text-amber-600" /> Target & Rewards
-                    </button>
-                  </>
+                </div>
+
+                {(isSuperAdmin || isAdmin) && (
+                  <div className="mt-2 pt-2 border-t border-[#e2ebd9] space-y-1">
+                    <p className="px-2 text-[10px] font-black text-[#888888] uppercase tracking-wider">
+                      Sales Administration
+                    </p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        onClick={() => {
+                          setSalesActiveTab('sales-employees');
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className={`p-2 rounded-lg text-left text-xs font-bold flex items-center gap-2 ${salesActiveTab === 'sales-employees' ? 'bg-[#8cc540] text-[#101010]' : 'bg-[#f5f5f5] text-[#101010]'}`}
+                      >
+                        <Users className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Sales Members</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSalesActiveTab('sales-analytics');
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className={`p-2 rounded-lg text-left text-xs font-bold flex items-center gap-2 ${salesActiveTab === 'sales-analytics' ? 'bg-[#8cc540] text-[#101010]' : 'bg-[#f5f5f5] text-[#101010]'}`}
+                      >
+                        <Target className="w-3.5 h-3.5 text-pink-600" />
+                        <span>Profiles & Targets</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSalesActiveTab('sales-settings');
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className={`p-2 rounded-lg text-left text-xs font-bold flex items-center gap-2 ${salesActiveTab === 'sales-settings' ? 'bg-[#8cc540] text-[#101010]' : 'bg-[#f5f5f5] text-[#101010]'}`}
+                      >
+                        <Target className="w-3.5 h-3.5 text-amber-600" />
+                        <span>KPI Targets & Settings</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSalesActiveTab('sales-reports');
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className={`p-2 rounded-lg text-left text-xs font-bold flex items-center gap-2 ${salesActiveTab === 'sales-reports' ? 'bg-[#8cc540] text-[#101010]' : 'bg-[#f5f5f5] text-[#101010]'}`}
+                      >
+                        <FileText className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Reports</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsSalesImportModalOpen(true);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2"
+                      >
+                        <UploadCloud className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Import / Export</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSalesActiveTab('sales-audit');
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className={`p-2 rounded-lg text-left text-xs font-bold flex items-center gap-2 ${salesActiveTab === 'sales-audit' ? 'bg-[#8cc540] text-[#101010]' : 'bg-[#f5f5f5] text-[#101010]'}`}
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Audit Logs</span>
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             )}

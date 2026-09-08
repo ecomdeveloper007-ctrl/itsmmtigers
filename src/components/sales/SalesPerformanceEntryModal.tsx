@@ -6,6 +6,7 @@ import {
   SalesPerformanceRecord,
   SalesProfileCode,
   SalesDepartment,
+  SalesEmployee,
   SALES_PROFILES_META,
 } from '../../types/sales';
 import {
@@ -33,6 +34,7 @@ import {
   Clock,
   RotateCcw,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react';
 
 const WEEKS_OPTIONS = ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'];
@@ -49,6 +51,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
     salesRecords,
     salesSettings,
     saveSalesPerformanceRecord,
+    deleteSalesPerformanceRecord,
   } = useSales();
 
   const { selectedMonth, selectedYear, availableMonths, availableYears } = useApp();
@@ -72,16 +75,39 @@ export const SalesPerformanceEntryModal: React.FC = () => {
   const [managerRemarks, setManagerRemarks] = useState<string>('');
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [formError, setFormError] = useState<string>('');
 
   const activeEmployees = useMemo(() => salesEmployees.filter((e) => e.status === 'active'), [salesEmployees]);
   const isPrivileged = isUserAdminOrSuperAdmin(currentUser);
 
   // Find matching sales employee for current logged in user if team member
-  const matchedUserEmp = useMemo(
-    () => findMatchingSalesEmployee(currentUser, activeEmployees),
-    [currentUser, activeEmployees]
-  );
+  const matchedUserEmp = useMemo(() => {
+    const found = findMatchingSalesEmployee(currentUser, activeEmployees);
+    if (found) return found;
+    if (currentUser) {
+      const code: SalesProfileCode = (['PR', 'WR', 'HW', 'DR', 'RR'].includes((currentUser as any).profileCode)
+        ? (currentUser as any).profileCode
+        : ((currentUser as any).team === 'SMM' ? 'DR' : 'PR')) as SalesProfileCode;
+      const dept: SalesDepartment = ['PR', 'WR', 'HW'].includes(code) ? 'IT' : 'SMM';
+      return {
+        id: `sales_emp_${currentUser.uid || currentUser.userId || 'user'}`,
+        userId: currentUser.userId || currentUser.uid,
+        name: currentUser.name || 'Sales Member',
+        email: currentUser.email || '',
+        avatarUrl: currentUser.avatarUrl,
+        department: dept,
+        profileCode: code,
+        assignedProfiles: ['PR', 'WR', 'HW', 'DR', 'RR'],
+        joiningDate: new Date().toISOString().split('T')[0],
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as SalesEmployee;
+    }
+    return undefined;
+  }, [currentUser, activeEmployees]);
 
   // Check if current user has edit permission for the record being edited
   const isAuthorizedToEdit = useMemo(() => {
@@ -90,18 +116,19 @@ export const SalesPerformanceEntryModal: React.FC = () => {
   }, [editingSalesRecord, currentUser, salesEmployees]);
 
   const selectedEmp = useMemo(() => {
-    if (!isPrivileged && matchedUserEmp) {
-      return matchedUserEmp;
+    if (!isPrivileged) {
+      return matchedUserEmp || activeEmployees[0];
     }
     return activeEmployees.find((e) => e.id === employeeId) || (matchedUserEmp || activeEmployees[0]);
   }, [isPrivileged, matchedUserEmp, activeEmployees, employeeId]);
 
   // Available profiles for this employee
   const employeeProfiles: SalesProfileCode[] = useMemo(() => {
-    if (!selectedEmp) return ['PR'];
-    return selectedEmp.assignedProfiles && selectedEmp.assignedProfiles.length > 0
-      ? selectedEmp.assignedProfiles
-      : [selectedEmp.profileCode || 'PR'];
+    if (!selectedEmp) return ['PR', 'WR', 'HW', 'DR', 'RR'];
+    if (selectedEmp.assignedProfiles && selectedEmp.assignedProfiles.length > 0) {
+      return selectedEmp.assignedProfiles;
+    }
+    return ['PR', 'WR', 'HW', 'DR', 'RR'];
   }, [selectedEmp]);
 
   const department: SalesDepartment = ['PR', 'WR', 'HW'].includes(profileCode) ? 'IT' : 'SMM';
@@ -197,6 +224,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
       setManagerRemarks('');
       setFormError('');
     }
+    setIsConfirmingDelete(false);
   }, [
     isSalesEntryModalOpen,
     editingSalesRecord,
@@ -311,7 +339,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
         department,
         profileCode,
         entryType,
-        entryDate: entryType === 'daily' ? entryDate : undefined,
+        entryDate: entryType === 'daily' ? (entryDate || '') : '',
         week,
         month,
         year,
@@ -320,7 +348,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
         conversions: numConversions,
         followups: numFollowups,
         orderValue: numOrderValue,
-        managerRemarks,
+        managerRemarks: managerRemarks || '',
         conversionRate: liveConversionRate,
         reachoutScore: 0,
         conversionScore: liveScores.conversionScore,
@@ -328,9 +356,9 @@ export const SalesPerformanceEntryModal: React.FC = () => {
         orderValueScore: liveScores.orderValueScore,
         totalPerformanceScore: liveScores.totalPerformanceScore,
         rewardEligibility: liveReward.rewardEligibility,
-        ineligibilityReason: liveReward.ineligibilityReason,
-        rewardLevel: liveReward.rewardLevel,
-        rewardAmount: liveReward.rewardAmount,
+        ineligibilityReason: liveReward.ineligibilityReason || '',
+        rewardLevel: liveReward.rewardLevel || 'None',
+        rewardAmount: liveReward.rewardAmount || 0,
         submittedBy: currentUser?.name || 'Self Entry',
         createdAt: editingSalesRecord?.createdAt || existingDuplicateRecord?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -736,25 +764,80 @@ export const SalesPerformanceEntryModal: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#e2ebd9]">
-            <button
-              type="button"
-              onClick={closeSalesEntryModal}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f5f5f5] cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2 rounded-xl text-xs font-black bg-[#8cc540] text-[#101010] hover:bg-[#7cb730] shadow-md shadow-[#8cc540]/30 transition-all cursor-pointer disabled:opacity-50"
-            >
-              {isSubmitting
-                ? 'Saving Record...'
-                : editingSalesRecord || existingDuplicateRecord
-                ? 'Update Performance Record'
-                : `Save ${entryType === 'daily' ? 'Daily' : 'Weekly'} Performance`}
-            </button>
+          <div className="flex items-center justify-between gap-3 pt-3 border-t border-[#e2ebd9]">
+            <div>
+              {(editingSalesRecord || existingDuplicateRecord) && (
+                (() => {
+                  const targetRec = editingSalesRecord || existingDuplicateRecord;
+                  if (!targetRec || !canUserManageRecord(targetRec, currentUser, salesEmployees)) return null;
+                  return (
+                    <div>
+                      {!isConfirmingDelete ? (
+                        <button
+                          type="button"
+                          disabled={isDeleting || isSubmitting}
+                          onClick={() => setIsConfirmingDelete(true)}
+                          className="px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete Record</span>
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-xl">
+                          <span className="text-xs font-bold text-rose-700">Delete permanently?</span>
+                          <button
+                            type="button"
+                            disabled={isDeleting}
+                            onClick={async () => {
+                              setIsDeleting(true);
+                              try {
+                                await deleteSalesPerformanceRecord(targetRec.id);
+                                setIsConfirmingDelete(false);
+                                closeSalesEntryModal();
+                              } finally {
+                                setIsDeleting(false);
+                              }
+                            }}
+                            className="px-2.5 py-1 rounded-lg text-xs font-black bg-rose-600 hover:bg-rose-700 text-white cursor-pointer transition-colors disabled:opacity-50"
+                          >
+                            {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isDeleting}
+                            onClick={() => setIsConfirmingDelete(false)}
+                            className="px-2 py-1 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200/60 cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={closeSalesEntryModal}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f5f5f5] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || isDeleting}
+                className="px-6 py-2 rounded-xl text-xs font-black bg-[#8cc540] text-[#101010] hover:bg-[#7cb730] shadow-md shadow-[#8cc540]/30 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {isSubmitting
+                  ? 'Saving Record...'
+                  : editingSalesRecord || existingDuplicateRecord
+                  ? 'Update Performance Record'
+                  : `Save ${entryType === 'daily' ? 'Daily' : 'Weekly'} Performance`}
+              </button>
+            </div>
           </div>
         </form>
       </div>

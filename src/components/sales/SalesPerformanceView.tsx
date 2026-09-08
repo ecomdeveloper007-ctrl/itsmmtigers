@@ -31,6 +31,7 @@ export const SalesPerformanceView: React.FC = () => {
     setIsSalesImportModalOpen,
     selectedWeek,
     setSelectedWeek,
+    addToast,
   } = useSales();
 
   const { selectedMonth, selectedYear } = useApp();
@@ -39,6 +40,8 @@ export const SalesPerformanceView: React.FC = () => {
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState<'all' | 'IT' | 'SMM'>('all');
   const [profileFilter, setProfileFilter] = useState<'all' | SalesProfileCode>('all');
+  const [deletingRecord, setDeletingRecord] = useState<SalesPerformanceRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   // Filter records by selected month and year
   let records = salesRecords.filter(
@@ -66,14 +69,25 @@ export const SalesPerformanceView: React.FC = () => {
     );
   }
 
-  const handleDelete = async (e: React.MouseEvent, rec: SalesPerformanceRecord) => {
+  const handleDeleteClick = (e: React.MouseEvent, rec: SalesPerformanceRecord) => {
     e.stopPropagation();
     if (!canUserManageRecord(rec, currentUser, salesEmployees)) {
-      alert('Security Violation: You can only delete your own performance records.');
+      addToast('error', 'Unauthorized Action', 'Security Violation: You can only delete your own performance records.');
       return;
     }
-    if (confirm(`Delete weekly record for ${rec.employeeName} (${rec.profileCode} - ${rec.week || 'Weekly'})?`)) {
-      await deleteSalesPerformanceRecord(rec.id);
+    setDeletingRecord(rec);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingRecord) return;
+    setIsDeleting(true);
+    try {
+      await deleteSalesPerformanceRecord(deletingRecord.id);
+      setDeletingRecord(null);
+    } catch (err: any) {
+      addToast('error', 'Deletion Failed', err?.message || 'Unable to delete performance record.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -314,7 +328,7 @@ export const SalesPerformanceView: React.FC = () => {
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={(e) => handleDelete(e, rec)}
+                              onClick={(e) => handleDeleteClick(e, rec)}
                               className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
                               title="Delete Entry"
                             >
@@ -344,6 +358,78 @@ export const SalesPerformanceView: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Delete Record Confirmation Modal */}
+      {deletingRecord && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-red-200 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center border border-red-200 shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-[#101010]">Delete Performance Record</h3>
+                <p className="text-xs text-[#666666]">Permanent removal confirmation</p>
+              </div>
+            </div>
+
+            <div className="bg-[#fdf8f8] border border-red-100 rounded-2xl p-4 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[#666666]">Member:</span>
+                <strong className="text-[#101010] font-black">{deletingRecord.employeeName}</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#666666]">Profile & Period:</span>
+                <span className="font-bold text-[#101010]">
+                  {deletingRecord.profileCode} • {deletingRecord.entryType === 'daily' ? `Daily (${deletingRecord.entryDate})` : (deletingRecord.week || 'Weekly')}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#666666]">Month & Year:</span>
+                <span className="font-bold text-[#101010]">{deletingRecord.month} {deletingRecord.year}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-red-100 text-center">
+                <div>
+                  <span className="text-[10px] text-[#777777] block">Reachouts</span>
+                  <span className="font-bold text-[#101010]">{deletingRecord.reachouts ?? 0}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-[#777777] block">Conv. Rate</span>
+                  <span className="font-bold text-emerald-800">{deletingRecord.conversionRate}%</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-[#777777] block">Score</span>
+                  <span className="font-black text-[#101010]">{deletingRecord.totalPerformanceScore} pts</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#777777] leading-relaxed">
+              Are you sure you want to delete this performance record? This will permanently remove the metrics from department summaries, audit trails, and leaderboards.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeletingRecord(null)}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-[#666666] hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleConfirmDelete}
+                className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/30 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isDeleting ? 'Deleting...' : 'Yes, Delete Record'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

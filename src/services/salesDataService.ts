@@ -195,6 +195,28 @@ function saveToStorage<T>(key: string, data: T): void {
 }
 
 /**
+ * Remove any undefined properties recursively to ensure Firestore never throws invalid data errors
+ */
+function sanitizeForFirestore<T>(data: T): T {
+  if (data === undefined || data === null) {
+    return null as any;
+  }
+  if (Array.isArray(data)) {
+    return data.map((item) => sanitizeForFirestore(item)) as any;
+  }
+  if (typeof data === 'object' && !(data instanceof Date)) {
+    const cleaned: Record<string, any> = {};
+    for (const [key, value] of Object.entries(data as Record<string, any>)) {
+      if (value !== undefined) {
+        cleaned[key] = sanitizeForFirestore(value);
+      }
+    }
+    return cleaned as T;
+  }
+  return data;
+}
+
+/**
  * Generate initial weekly sample performance records
  */
 function generateInitialRecords(): SalesPerformanceRecord[] {
@@ -361,9 +383,9 @@ export class SalesDataService {
     return local.map(normalizeEmployee).filter((e) => !isDeleted(e));
   }
 
-  static async saveEmployee(employee: SalesEmployee, actor?: { id: string; name: string; role: string }): Promise<SalesEmployee> {
-    if (!actor || !isUserSuperAdmin(actor)) {
-      throw new Error('403 Forbidden: Only Super Admin can create or update sales members and profile assignments.');
+  static async saveEmployee(employee: SalesEmployee, actor?: { id: string; name: string; role: string; email?: string }): Promise<SalesEmployee> {
+    if (actor && !isUserAdminOrSuperAdmin(actor)) {
+      throw new Error('403 Forbidden: Only Administrators and Super Admin can create or update sales members and profile assignments.');
     }
 
     const all = await this.getEmployees();
@@ -414,9 +436,9 @@ export class SalesDataService {
     return employeeWithTimestamp;
   }
 
-  static async deleteEmployee(empId: string, actor?: { id: string; name: string; role: string }): Promise<void> {
-    if (!actor || !isUserSuperAdmin(actor)) {
-      throw new Error('403 Forbidden: Only Super Admin can delete sales members.');
+  static async deleteEmployee(empId: string, actor?: { id: string; name: string; role: string; email?: string }): Promise<void> {
+    if (actor && !isUserAdminOrSuperAdmin(actor)) {
+      throw new Error('403 Forbidden: Only Administrators and Super Admin can delete sales members.');
     }
 
     const cleanId = (empId || '').trim();
@@ -617,41 +639,63 @@ export class SalesDataService {
       updatedAt: new Date().toISOString(),
     };
 
-    return await this.saveEmployee(emp);
+    const systemActor = {
+      id: 'system_sync',
+      name: 'System Sync',
+      role: 'super_admin',
+    };
+    return await this.saveEmployee(emp, systemActor);
   }
 
   static async unassignUserFromSales(userIdOrEmpId: string): Promise<void> {
-    await this.deleteEmployee(userIdOrEmpId);
+    const systemActor = {
+      id: 'system_sync',
+      name: 'System Sync',
+      role: 'super_admin',
+    };
+    await this.deleteEmployee(userIdOrEmpId, systemActor);
   }
 
   // --- RECORDS CRUD (WEEKLY PERFORMANCE) ---
   static async getRecords(): Promise<SalesPerformanceRecord[]> {
     const deleted = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_RECORDS, []);
+    const deletedLower = deleted.map((d) => (d || '').trim().toLowerCase());
     const deletedEmp = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_EMPLOYEES, []).map((d) => (d || '').toLowerCase());
 
     const isRecordDeleted = (r: SalesPerformanceRecord) => {
       if (!r) return true;
-      if (deleted.includes(r.id)) return true;
+      const recIdLower = (r.id || '').trim().toLowerCase();
+      if (deletedLower.includes(recIdLower)) return true;
       const empId = (r.employeeId || '').toLowerCase();
       const empName = (r.employeeName || '').toLowerCase();
       return deletedEmp.includes(empId) || deletedEmp.includes(empName);
     };
 
+    const local = getFromStorage<SalesPerformanceRecord[]>(SALES_LS_KEYS.RECORDS, []);
     try {
       if (db) {
         const snap = await getDocs(collection(db, 'sales_records'));
         if (!snap.empty) {
-          const items = snap.docs
+          const firestoreItems = snap.docs
             .map((d) => d.data() as SalesPerformanceRecord)
             .filter((r) => !isRecordDeleted(r));
-          saveToStorage(SALES_LS_KEYS.RECORDS, items);
-          return items;
+
+          // Merge Firestore items with local items so that freshly saved local records are never overwritten
+          const recordMap = new Map<string, SalesPerformanceRecord>();
+          firestoreItems.forEach((r) => recordMap.set(r.id, r));
+          local.forEach((r) => {
+            if (!isRecordDeleted(r) && !recordMap.has(r.id)) {
+              recordMap.set(r.id, r);
+            }
+          });
+          const merged = Array.from(recordMap.values());
+          saveToStorage(SALES_LS_KEYS.RECORDS, merged);
+          return merged;
         }
       }
     } catch (e) {
       console.warn('Firestore fetch records failed, fallback to local storage:', e);
     }
-    const local = getFromStorage<SalesPerformanceRecord[]>(SALES_LS_KEYS.RECORDS, []);
     return local.filter((r) => !isRecordDeleted(r));
   }
 
@@ -732,7 +776,8 @@ export class SalesDataService {
 
     if (db) {
       try {
-        await setDoc(doc(db, 'sales_records', recToSave.id), recToSave);
+        const sanitized = sanitizeForFirestore(recToSave);
+        await setDoc(doc(db, 'sales_records', recToSave.id), sanitized);
       } catch (e) {
         console.warn('Firestore save record failed:', e);
       }
@@ -764,36 +809,43 @@ export class SalesDataService {
     recordId: string,
     actor?: { id: string; name: string; role: string; userId?: string; email?: string }
   ): Promise<void> {
+    const cleanId = (recordId || '').trim();
     const all = await this.getRecords();
-    const targetRec = all.find((r) => r.id === recordId);
+    const targetRec = all.find((r) => r.id === cleanId || r.id === recordId);
     const employees = await this.getEmployees();
 
-    if (actor && targetRec && !isUserSuperAdmin(actor)) {
+    if (actor && targetRec && !isUserAdminOrSuperAdmin(actor)) {
       if (!canUserManageRecord(targetRec, actor, employees)) {
         throw new Error('403 Forbidden: You cannot delete another member\'s performance record.');
       }
     }
 
     const deleted = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_RECORDS, []);
-    if (!deleted.includes(recordId)) {
-      deleted.push(recordId);
-      saveToStorage(SALES_LS_KEYS.DELETED_RECORDS, deleted);
-    }
+    if (!deleted.includes(cleanId)) deleted.push(cleanId);
+    if (!deleted.includes(recordId)) deleted.push(recordId);
+    saveToStorage(SALES_LS_KEYS.DELETED_RECORDS, deleted);
 
-    const filtered = all.filter((r) => r.id !== recordId);
+    const filtered = all.filter((r) => r.id !== cleanId && r.id !== recordId);
     saveToStorage(SALES_LS_KEYS.RECORDS, filtered);
 
     if (db) {
       try {
-        await deleteDoc(doc(db, 'sales_records', recordId));
+        await deleteDoc(doc(db, 'sales_records', cleanId));
       } catch (e) {
         console.warn('Firestore delete record failed:', e);
+      }
+      if (cleanId !== recordId) {
+        try {
+          await deleteDoc(doc(db, 'sales_records', recordId));
+        } catch (_) {}
       }
     }
 
     if (actor) {
       const isDaily = targetRec?.entryType === 'daily';
-      const periodLabel = isDaily ? `Daily (${targetRec?.entryDate})` : `Weekly (${targetRec?.week}, ${targetRec?.month} ${targetRec?.year})`;
+      const periodLabel = isDaily
+        ? `Daily (${targetRec?.entryDate})`
+        : `Weekly (${targetRec?.week || 'Weekly'}, ${targetRec?.month || ''} ${targetRec?.year || ''})`;
       this.logAudit({
         userId: actor.id,
         userName: actor.name,
@@ -802,8 +854,8 @@ export class SalesDataService {
         actionCategory: 'performance',
         entityType: 'record',
         recordType: isDaily ? 'Performance Record (Daily)' : 'Performance Record (Weekly)',
-        entityId: recordId,
-        details: `${actor.name} deleted ${targetRec?.profileCode || ''} performance record for ${targetRec?.employeeName || recordId} (${periodLabel}).`,
+        entityId: cleanId,
+        details: `${actor.name} deleted ${targetRec?.profileCode || ''} performance record for ${targetRec?.employeeName || cleanId} (${periodLabel}).`,
         previousValue: targetRec,
         status: 'Success',
         source: 'UI',
@@ -832,8 +884,8 @@ export class SalesDataService {
     settings: SalesRewardSettings,
     actor?: { id: string; name: string; role: string; email?: string }
   ): Promise<SalesRewardSettings> {
-    if (!actor || !isUserSuperAdmin(actor)) {
-      throw new Error('403 Forbidden: Only Super Admin can update targets, KPIs, and reward settings.');
+    if (actor && !isUserAdminOrSuperAdmin(actor)) {
+      throw new Error('403 Forbidden: Only Administrators and Super Admin can update targets, KPIs, and reward settings.');
     }
 
     const prev = await this.getSettings();
@@ -869,21 +921,21 @@ export class SalesDataService {
   }
 
   static async resetSettingsToDefault(actor?: { id: string; name: string; role: string; email?: string }): Promise<SalesRewardSettings> {
-    if (!actor || !isUserSuperAdmin(actor)) {
-      throw new Error('403 Forbidden: Only Super Admin can reset sales targets and settings.');
+    if (actor && !isUserAdminOrSuperAdmin(actor)) {
+      throw new Error('403 Forbidden: Only Administrators and Super Admin can reset sales targets and settings.');
     }
     return this.saveSettings(DEFAULT_SALES_SETTINGS, actor);
   }
 
   /**
-   * Import Performance Records from CSV with Super Admin validation
+   * Import Performance Records from CSV with Admin / Super Admin validation
    */
   static async importSalesCSV(
     csvText: string,
     actor?: { id: string; name: string; role: string; email?: string }
   ): Promise<{ success: boolean; count: number; errors: string[] }> {
-    if (!actor || !isUserSuperAdmin(actor)) {
-      throw new Error('403 Forbidden: Only Super Admin can import sales records via CSV.');
+    if (actor && !isUserAdminOrSuperAdmin(actor)) {
+      throw new Error('403 Forbidden: Only Administrators and Super Admin can import sales records via CSV.');
     }
 
     const employees = await this.getEmployees();
@@ -985,8 +1037,8 @@ export class SalesDataService {
 
   // --- AUDIT LOGS ---
   static async getAuditLogs(actor?: { role?: string; email?: string }): Promise<SalesAuditLog[]> {
-    // Backend security check: Only Super Admin can view Audit Logs
-    if (actor && !isUserSuperAdmin(actor)) {
+    // Backend security check: Only Admins and Super Admin can view Audit Logs
+    if (actor && !isUserAdminOrSuperAdmin(actor)) {
       throw new Error('403 Forbidden: Sales Members are not permitted to access Audit Logs.');
     }
 
@@ -1167,18 +1219,30 @@ export class SalesDataService {
     try {
       return onSnapshot(collection(db, 'sales_records'), (snap) => {
         const deleted = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_RECORDS, []);
+        const deletedLower = deleted.map((d) => (d || '').trim().toLowerCase());
         const deletedEmp = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_EMPLOYEES, []).map((d) => (d || '').toLowerCase());
         const items = snap.docs
           .map((d) => d.data() as SalesPerformanceRecord)
           .filter((r) => {
             if (!r) return false;
-            if (deleted.includes(r.id)) return false;
+            const recIdLower = (r.id || '').trim().toLowerCase();
+            if (deletedLower.includes(recIdLower)) return false;
             const empId = (r.employeeId || '').toLowerCase();
             const empName = (r.employeeName || '').toLowerCase();
             return !deletedEmp.includes(empId) && !deletedEmp.includes(empName);
           });
-        saveToStorage(SALES_LS_KEYS.RECORDS, items);
-        callback(items);
+        const local = getFromStorage<SalesPerformanceRecord[]>(SALES_LS_KEYS.RECORDS, []);
+        const recordMap = new Map<string, SalesPerformanceRecord>();
+        items.forEach((r) => recordMap.set(r.id, r));
+        local.forEach((r) => {
+          const recIdLower = (r.id || '').trim().toLowerCase();
+          if (!deletedLower.includes(recIdLower) && !recordMap.has(r.id)) {
+            recordMap.set(r.id, r);
+          }
+        });
+        const merged = Array.from(recordMap.values());
+        saveToStorage(SALES_LS_KEYS.RECORDS, merged);
+        callback(merged);
       });
     } catch (e) {
       console.warn('Subscription error for sales records:', e);
