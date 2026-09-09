@@ -183,15 +183,15 @@ export const SalesPerformanceEntryModal: React.FC = () => {
       if (editingSalesRecord.entryDate) {
         setEntryDate(editingSalesRecord.entryDate);
       }
-      setEmployeeId(editingSalesRecord.employeeId);
-      setProfileCode(editingSalesRecord.profileCode);
+      setEmployeeId(editingSalesRecord.employeeId || '');
+      setProfileCode(editingSalesRecord.profileCode || 'PR');
       setWeek(editingSalesRecord.week || 'Week 1');
-      setMonth(editingSalesRecord.month);
-      setYear(editingSalesRecord.year);
-      setReachouts(editingSalesRecord.reachouts);
-      setConversions(editingSalesRecord.conversions);
-      setFollowups(editingSalesRecord.followups);
-      setOrderValue(editingSalesRecord.orderValue);
+      setMonth(editingSalesRecord.month || selectedMonth);
+      setYear(editingSalesRecord.year || selectedYear);
+      setReachouts(editingSalesRecord.reachouts ?? '');
+      setConversions(editingSalesRecord.conversions ?? '');
+      setFollowups(editingSalesRecord.followups ?? '');
+      setOrderValue(editingSalesRecord.orderValue ?? '');
       setManagerRemarks(editingSalesRecord.managerRemarks || '');
     } else {
       const initialEmpId = (!isPrivileged && matchedUserEmp)
@@ -242,10 +242,10 @@ export const SalesPerformanceEntryModal: React.FC = () => {
   // Load existing duplicate values for easy updating
   const handleLoadExisting = () => {
     if (!existingDuplicateRecord) return;
-    setReachouts(existingDuplicateRecord.reachouts);
-    setConversions(existingDuplicateRecord.conversions);
-    setFollowups(existingDuplicateRecord.followups);
-    setOrderValue(existingDuplicateRecord.orderValue);
+    setReachouts(existingDuplicateRecord.reachouts ?? '');
+    setConversions(existingDuplicateRecord.conversions ?? '');
+    setFollowups(existingDuplicateRecord.followups ?? '');
+    setOrderValue(existingDuplicateRecord.orderValue ?? '');
     setManagerRemarks(existingDuplicateRecord.managerRemarks || '');
     setFormError('');
   };
@@ -485,7 +485,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
                 )}
               </label>
               <select
-                value={employeeId}
+                value={employeeId || ''}
                 onChange={(e) => handleEmployeeChange(e.target.value)}
                 disabled={!!editingSalesRecord || !isPrivileged}
                 className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none disabled:opacity-75 disabled:bg-slate-100"
@@ -509,7 +509,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
                 Select Profile (for this entry) <span className="text-rose-500">*</span>
               </label>
               <select
-                value={profileCode}
+                value={profileCode || 'PR'}
                 onChange={(e) => setProfileCode(e.target.value as SalesProfileCode)}
                 disabled={!!editingSalesRecord || !isAuthorizedToEdit}
                 className="w-full bg-[#f8faf6] border border-[#8cc540]/40 rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none disabled:opacity-75 disabled:bg-slate-100"
@@ -536,7 +536,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
                   </label>
                   <input
                     type="date"
-                    value={entryDate}
+                    value={entryDate || ''}
                     onChange={(e) => handleDateChange(e.target.value)}
                     disabled={!!editingSalesRecord}
                     className="w-full bg-white border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-1 focus:ring-[#8cc540]"
@@ -560,7 +560,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
               <div className="space-y-1">
                 <label className="block text-[11px] font-black text-[#101010]">Week</label>
                 <select
-                  value={week}
+                  value={week || 'Week 1'}
                   onChange={(e) => setWeek(e.target.value)}
                   disabled={!!editingSalesRecord}
                   className="w-full bg-white border border-[#e2ebd9] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#101010] focus:ring-1 focus:ring-[#8cc540]"
@@ -574,7 +574,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
               <div className="space-y-1">
                 <label className="block text-[11px] font-black text-[#101010]">Month</label>
                 <select
-                  value={month}
+                  value={month || selectedMonth}
                   onChange={(e) => setMonth(e.target.value)}
                   disabled={!!editingSalesRecord}
                   className="w-full bg-white border border-[#e2ebd9] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#101010] focus:ring-1 focus:ring-[#8cc540]"
@@ -588,7 +588,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
               <div className="space-y-1">
                 <label className="block text-[11px] font-black text-[#101010]">Year</label>
                 <select
-                  value={year}
+                  value={year || selectedYear}
                   onChange={(e) => setYear(Number(e.target.value))}
                   disabled={!!editingSalesRecord}
                   className="w-full bg-white border border-[#e2ebd9] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#101010] focus:ring-1 focus:ring-[#8cc540]"
@@ -618,7 +618,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
                 min="0"
                 required
                 placeholder="e.g. 50"
-                value={reachouts}
+                value={reachouts ?? ''}
                 onChange={(e) => setReachouts(e.target.value === '' ? '' : Number(e.target.value))}
                 className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-slate-400 focus:outline-none"
               />
@@ -642,7 +642,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
                 min="0"
                 required
                 placeholder="e.g. 5"
-                value={conversions}
+                value={conversions ?? ''}
                 onChange={(e) => setConversions(e.target.value === '' ? '' : Number(e.target.value))}
                 className="w-full bg-white border border-emerald-300 rounded-xl px-3 py-2 text-xs font-bold text-emerald-950 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
@@ -667,7 +667,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
                 min="0"
                 required
                 placeholder="e.g. 20"
-                value={followups}
+                value={followups ?? ''}
                 onChange={(e) => setFollowups(e.target.value === '' ? '' : Number(e.target.value))}
                 className="w-full bg-white border border-blue-300 rounded-xl px-3 py-2 text-xs font-bold text-blue-950 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               />
@@ -692,7 +692,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
                 min="0"
                 required
                 placeholder="e.g. 25000"
-                value={orderValue}
+                value={orderValue ?? ''}
                 onChange={(e) => setOrderValue(e.target.value === '' ? '' : Number(e.target.value))}
                 className="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 text-xs font-bold text-amber-950 focus:ring-2 focus:ring-amber-500 focus:outline-none"
               />
@@ -758,7 +758,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
             <textarea
               rows={2}
               placeholder="e.g. Daily client follow-ups completed, closed high-ticket enterprise order..."
-              value={managerRemarks}
+              value={managerRemarks || ''}
               onChange={(e) => setManagerRemarks(e.target.value)}
               className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
             />

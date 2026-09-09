@@ -374,7 +374,7 @@ export const SalesSettingsView: React.FC = () => {
                       <input
                         type="number"
                         min="1"
-                        value={currentConfig.reachoutTarget}
+                        value={currentConfig.reachoutTarget ?? ''}
                         onChange={(e) => handleProfileFieldChange('reachoutTarget', Number(e.target.value))}
                         className="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-black text-slate-800 focus:ring-2 focus:ring-slate-400 focus:outline-none"
                       />
@@ -399,7 +399,7 @@ export const SalesSettingsView: React.FC = () => {
                         step="0.1"
                         min="0.1"
                         max="100"
-                        value={currentConfig.targetConversionRate ?? currentConfig.orderConvertTarget}
+                        value={currentConfig.targetConversionRate ?? currentConfig.orderConvertTarget ?? ''}
                         onChange={(e) => handleProfileFieldChange('targetConversionRate', Number(e.target.value))}
                         className="w-full bg-white border border-emerald-300 rounded-xl px-3 py-1.5 text-xs font-black text-emerald-950 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                       />
@@ -433,7 +433,7 @@ export const SalesSettingsView: React.FC = () => {
                       <input
                         type="number"
                         min="1"
-                        value={currentConfig.targetFollowups ?? currentConfig.followupTarget}
+                        value={currentConfig.targetFollowups ?? currentConfig.followupTarget ?? ''}
                         onChange={(e) => {
                           handleProfileFieldChange('targetFollowups', Number(e.target.value));
                           handleProfileFieldChange('followupTarget', Number(e.target.value));
@@ -508,7 +508,7 @@ export const SalesSettingsView: React.FC = () => {
                       step="0.1"
                       min="0"
                       max="100"
-                      value={currentConfig.minConversionRate}
+                      value={currentConfig.minConversionRate ?? ''}
                       onChange={(e) => handleProfileFieldChange('minConversionRate', Number(e.target.value))}
                       className="w-24 bg-white border border-[#e2ebd9] rounded-xl px-3 py-1.5 text-xs font-black text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none text-right"
                     />
@@ -556,7 +556,7 @@ export const SalesSettingsView: React.FC = () => {
                           <td className="p-3">
                             <input
                               type="text"
-                              value={slab.level}
+                              value={slab.level || ''}
                               onChange={(e) => handleSlabChange(idx, 'level', e.target.value)}
                               className="bg-[#f8faf6] border border-[#e2ebd9] rounded-lg px-2.5 py-1 text-xs font-black text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none w-44"
                             />
@@ -567,7 +567,7 @@ export const SalesSettingsView: React.FC = () => {
                               min="0"
                               max="100"
                               step="0.01"
-                              value={slab.minScore}
+                              value={slab.minScore ?? 0}
                               onChange={(e) => handleSlabChange(idx, 'minScore', Number(e.target.value))}
                               className="bg-[#f8faf6] border border-[#e2ebd9] rounded-lg px-2.5 py-1 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none w-20 text-right"
                             />
@@ -578,7 +578,7 @@ export const SalesSettingsView: React.FC = () => {
                               min="0"
                               max="100"
                               step="0.01"
-                              value={slab.maxScore}
+                              value={slab.maxScore ?? 0}
                               onChange={(e) => handleSlabChange(idx, 'maxScore', Number(e.target.value))}
                               className="bg-[#f8faf6] border border-[#e2ebd9] rounded-lg px-2.5 py-1 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none w-20 text-right"
                             />
@@ -588,7 +588,7 @@ export const SalesSettingsView: React.FC = () => {
                               type="number"
                               min="0"
                               step="100"
-                              value={slab.rewardAmount}
+                              value={slab.rewardAmount ?? 0}
                               onChange={(e) => handleSlabChange(idx, 'rewardAmount', Number(e.target.value))}
                               className="bg-[#f8faf6] border border-[#e2ebd9] rounded-lg px-2.5 py-1 text-xs font-black text-[#436320] focus:ring-2 focus:ring-[#8cc540] focus:outline-none w-28 text-right"
                             />

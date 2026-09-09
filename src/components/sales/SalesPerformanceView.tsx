@@ -69,9 +69,17 @@ export const SalesPerformanceView: React.FC = () => {
     );
   }
 
+  const userForAuth = currentUser
+    ? {
+        ...currentUser,
+        isSuperAdmin,
+        isAdmin,
+      }
+    : null;
+
   const handleDeleteClick = (e: React.MouseEvent, rec: SalesPerformanceRecord) => {
     e.stopPropagation();
-    if (!canUserManageRecord(rec, currentUser, salesEmployees)) {
+    if (!canUserManageRecord(rec, userForAuth, salesEmployees)) {
       addToast('error', 'Unauthorized Action', 'Security Violation: You can only delete your own performance records.');
       return;
     }
@@ -82,8 +90,10 @@ export const SalesPerformanceView: React.FC = () => {
     if (!deletingRecord) return;
     setIsDeleting(true);
     try {
-      await deleteSalesPerformanceRecord(deletingRecord.id);
-      setDeletingRecord(null);
+      const ok = await deleteSalesPerformanceRecord(deletingRecord.id);
+      if (ok) {
+        setDeletingRecord(null);
+      }
     } catch (err: any) {
       addToast('error', 'Deletion Failed', err?.message || 'Unable to delete performance record.');
     } finally {
@@ -318,7 +328,7 @@ export const SalesPerformanceView: React.FC = () => {
 
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        {canUserManageRecord(rec, currentUser, salesEmployees) ? (
+                        {canUserManageRecord(rec, userForAuth, salesEmployees) ? (
                           <>
                             <button
                               onClick={() => openSalesEntryModal(rec)}

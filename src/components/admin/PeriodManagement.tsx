@@ -202,7 +202,7 @@ export const PeriodManagement: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    value={formYear}
+                    value={formYear ?? ''}
                     onChange={(e) => setFormYear(Number(e.target.value))}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
@@ -218,7 +218,7 @@ export const PeriodManagement: React.FC = () => {
                     type="text"
                     required
                     placeholder="e.g. Week 5 or Week 1"
-                    value={formWeekName}
+                    value={formWeekName || ''}
                     onChange={(e) => setFormWeekName(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
@@ -231,7 +231,7 @@ export const PeriodManagement: React.FC = () => {
                   <input
                     type="number"
                     min="1"
-                    value={formWeekNumber}
+                    value={formWeekNumber ?? ''}
                     onChange={(e) => setFormWeekNumber(Number(e.target.value))}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
@@ -245,7 +245,7 @@ export const PeriodManagement: React.FC = () => {
                   </label>
                   <input
                     type="date"
-                    value={formStartDate}
+                    value={formStartDate || ''}
                     onChange={(e) => setFormStartDate(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
@@ -257,7 +257,7 @@ export const PeriodManagement: React.FC = () => {
                   </label>
                   <input
                     type="date"
-                    value={formEndDate}
+                    value={formEndDate || ''}
                     onChange={(e) => setFormEndDate(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />

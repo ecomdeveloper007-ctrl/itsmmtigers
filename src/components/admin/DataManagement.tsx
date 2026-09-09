@@ -188,7 +188,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ onOpenImportModa
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            value={search}
+            value={search || ''}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by team member name or ID..."
             className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium"

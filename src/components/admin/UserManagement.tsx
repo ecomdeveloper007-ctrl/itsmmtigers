@@ -275,11 +275,11 @@ export const UserManagement: React.FC = () => {
 
   const openEditModal = (user: UserProfile) => {
     setEditingUser(user);
-    setFormName(user.name);
-    setFormUserId(user.userId);
-    setFormEmail(user.email);
+    setFormName(user.name || '');
+    setFormUserId(user.userId || '');
+    setFormEmail(user.email || '');
     setFormPassword(user.password || 'tiger2026');
-    setFormRole(user.role);
+    setFormRole(user.role || 'team_member');
     const resolvedCode: ProfileCode =
       user.profileCode ||
       (user.team === 'IT' || user.department?.toLowerCase().includes('it') ? 'PR' : 'RR');
@@ -288,7 +288,7 @@ export const UserManagement: React.FC = () => {
     setFormModuleAssignment(user.moduleAssignment || 'both');
     setFormSalesDepartment(user.salesDepartment || (resolvedCode === 'RR' || resolvedCode === 'DR' ? 'SMM' : 'IT'));
     setFormSalesProfileCode((user.salesProfileCode || (['PR', 'WR', 'HW', 'DR', 'RR'].includes(resolvedCode) ? resolvedCode : 'PR')) as any);
-    setFormStatus(user.status);
+    setFormStatus(user.status || 'active');
     setFormAvatarUrl(user.avatarUrl || PRESET_AVATARS[0]);
     setIsAddUserOpen(true);
   };
@@ -1146,7 +1146,7 @@ export const UserManagement: React.FC = () => {
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                value={search}
+                value={search || ''}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search member by name, user ID, or email..."
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
@@ -1417,7 +1417,7 @@ export const UserManagement: React.FC = () => {
                   type="text"
                   required
                   placeholder="e.g. Divya Bhardwaj"
-                  value={formName}
+                  value={formName || ''}
                   onChange={(e) => setFormName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
                 />
@@ -1432,7 +1432,7 @@ export const UserManagement: React.FC = () => {
                     type="text"
                     required
                     placeholder="e.g. divya.bhardwaj"
-                    value={formUserId}
+                    value={formUserId || ''}
                     onChange={(e) => setFormUserId(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
@@ -1445,7 +1445,7 @@ export const UserManagement: React.FC = () => {
                   <input
                     type="email"
                     placeholder="e.g. divya@itsmmtigers.com"
-                    value={formEmail}
+                    value={formEmail || ''}
                     onChange={(e) => setFormEmail(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
@@ -1460,7 +1460,7 @@ export const UserManagement: React.FC = () => {
                   <input
                     type="text"
                     placeholder="e.g. tiger2026"
-                    value={formPassword}
+                    value={formPassword || ''}
                     onChange={(e) => setFormPassword(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
@@ -1471,7 +1471,7 @@ export const UserManagement: React.FC = () => {
                     Assigned Role
                   </label>
                   <select
-                    value={formRole}
+                    value={formRole || 'team_member'}
                     onChange={(e) => setFormRole(e.target.value as UserRole)}
                     aria-label="Select Assigned Role"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-bold"
@@ -1540,7 +1540,7 @@ export const UserManagement: React.FC = () => {
                       <input
                         type="url"
                         placeholder="or paste image URL"
-                        value={formAvatarUrl.startsWith('data:') ? '' : formAvatarUrl}
+                        value={formAvatarUrl ? (formAvatarUrl.startsWith('data:') ? '' : formAvatarUrl) : ''}
                         onChange={(e) => setFormAvatarUrl(e.target.value)}
                         className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
                       />
@@ -1626,7 +1626,7 @@ export const UserManagement: React.FC = () => {
                         type="text"
                         required
                         placeholder="e.g. IT Solutions & Delivery"
-                        value={formDepartment}
+                        value={formDepartment || ''}
                         onChange={(e) => setFormDepartment(e.target.value)}
                         className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
                       />
@@ -1828,7 +1828,7 @@ export const UserManagement: React.FC = () => {
                 {!isCustomDept ? (
                   <div className="space-y-2">
                     <select
-                      value={quickDepartment}
+                      value={quickDepartment || ''}
                       onChange={(e) => setQuickDepartment(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium cursor-pointer"
                     >
@@ -1847,7 +1847,7 @@ export const UserManagement: React.FC = () => {
                     <input
                       type="text"
                       required
-                      value={quickDepartment}
+                      value={quickDepartment || ''}
                       onChange={(e) => setQuickDepartment(e.target.value)}
                       placeholder="e.g. IT Solutions & Technical Delivery (PR)"
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium"
@@ -1941,7 +1941,7 @@ export const UserManagement: React.FC = () => {
               </label>
               <input
                 type="text"
-                value={rejectReason}
+                value={rejectReason || ''}
                 onChange={(e) => setRejectReason(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-rose-500"
               />
@@ -1986,7 +1986,7 @@ export const UserManagement: React.FC = () => {
               <input
                 type="text"
                 placeholder="Enter new password"
-                value={newPassword}
+                value={newPassword || ''}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
               />

@@ -824,7 +824,7 @@ export const KPISettings: React.FC = () => {
                           type="number"
                           min="0"
                           step={kpi.isRating ? '0.1' : 'any'}
-                          value={currentVal}
+                          value={currentVal ?? ''}
                           onChange={(e) => handleScopeTargetChange(kpi.id, Number(e.target.value))}
                           className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-base font-black text-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-500 font-mono shadow-inner"
                         />
@@ -973,7 +973,7 @@ export const KPISettings: React.FC = () => {
                             type="number"
                             min="0"
                             step="any"
-                            value={monthVal}
+                            value={monthVal ?? ''}
                             onChange={(e) =>
                               handleMatrixMonthTargetChange(kpi.id, Number(e.target.value))
                             }
@@ -987,7 +987,7 @@ export const KPISettings: React.FC = () => {
                             type="number"
                             min="0"
                             step="any"
-                            value={w1}
+                            value={w1 ?? ''}
                             onChange={(e) =>
                               handleMatrixWeekTargetChange(kpi.id, 'Week 1', Number(e.target.value))
                             }
@@ -1001,7 +1001,7 @@ export const KPISettings: React.FC = () => {
                             type="number"
                             min="0"
                             step="any"
-                            value={w2}
+                            value={w2 ?? ''}
                             onChange={(e) =>
                               handleMatrixWeekTargetChange(kpi.id, 'Week 2', Number(e.target.value))
                             }
@@ -1015,7 +1015,7 @@ export const KPISettings: React.FC = () => {
                             type="number"
                             min="0"
                             step="any"
-                            value={w3}
+                            value={w3 ?? ''}
                             onChange={(e) =>
                               handleMatrixWeekTargetChange(kpi.id, 'Week 3', Number(e.target.value))
                             }
@@ -1029,7 +1029,7 @@ export const KPISettings: React.FC = () => {
                             type="number"
                             min="0"
                             step="any"
-                            value={w4}
+                            value={w4 ?? ''}
                             onChange={(e) =>
                               handleMatrixWeekTargetChange(kpi.id, 'Week 4', Number(e.target.value))
                             }
@@ -1078,7 +1078,7 @@ export const KPISettings: React.FC = () => {
                       </label>
                       <input
                         type="text"
-                        value={kpi.name}
+                        value={kpi.name || ''}
                         onChange={(e) => handleNameChange(kpi.id, e.target.value)}
                         className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                       />
@@ -1095,7 +1095,7 @@ export const KPISettings: React.FC = () => {
                           min="0"
                           max="100"
                           step="1"
-                          value={kpi.weight}
+                          value={kpi.weight ?? ''}
                           onChange={(e) => handleWeightChange(kpi.id, Number(e.target.value))}
                           className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-3 pr-7 py-2 text-xs font-black text-amber-300 focus:outline-none focus:ring-1 focus:ring-orange-500"
                         />
@@ -1110,7 +1110,7 @@ export const KPISettings: React.FC = () => {
                       </label>
                       <input
                         type="text"
-                        value={kpi.unit}
+                        value={kpi.unit || ''}
                         onChange={(e) =>
                           setLocalKpis((prev) =>
                             prev.map((k) => (k.id === kpi.id ? { ...k, unit: e.target.value } : k))
@@ -1203,7 +1203,7 @@ export const KPISettings: React.FC = () => {
                   type="number"
                   min="50"
                   max="200"
-                  value={localSettings.achievementCap}
+                  value={localSettings.achievementCap ?? ''}
                   onChange={(e) =>
                     setLocalSettings({
                       ...localSettings,
@@ -1232,7 +1232,7 @@ export const KPISettings: React.FC = () => {
                     type="number"
                     min="0"
                     max="100"
-                    value={localSettings.excellenceThreshold}
+                    value={localSettings.excellenceThreshold ?? ''}
                     onChange={(e) =>
                       setLocalSettings({
                         ...localSettings,
@@ -1251,7 +1251,7 @@ export const KPISettings: React.FC = () => {
                     type="number"
                     min="0"
                     max="100"
-                    value={localSettings.veryGoodThreshold}
+                    value={localSettings.veryGoodThreshold ?? ''}
                     onChange={(e) =>
                       setLocalSettings({
                         ...localSettings,
@@ -1270,7 +1270,7 @@ export const KPISettings: React.FC = () => {
                     type="number"
                     min="0"
                     max="100"
-                    value={localSettings.goodThreshold}
+                    value={localSettings.goodThreshold ?? ''}
                     onChange={(e) =>
                       setLocalSettings({
                         ...localSettings,

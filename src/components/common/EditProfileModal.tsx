@@ -263,7 +263,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                   <input
                     type="url"
                     placeholder="https://example.com/my-photo.jpg"
-                    value={customUrlInput}
+                    value={customUrlInput || ''}
                     onChange={(e) => setCustomUrlInput(e.target.value)}
                     className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
@@ -288,7 +288,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
               <input
                 type="text"
                 required
-                value={name}
+                value={name || ''}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
               />
@@ -299,7 +299,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 Department Designation
               </label>
               <select
-                value={department}
+                value={department || ''}
                 onChange={(e) => setDepartment(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium"
               >

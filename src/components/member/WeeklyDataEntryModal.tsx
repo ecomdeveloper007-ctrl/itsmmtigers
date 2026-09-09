@@ -281,7 +281,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
                 Performance Period / Week
               </label>
               <select
-                value={selectedPeriodId}
+                value={selectedPeriodId || ''}
                 onChange={(e) => setSelectedPeriodId(e.target.value)}
                 disabled={!!editingRecord}
                 aria-label="Select Performance Period"
@@ -313,7 +313,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
                 step="1"
                 disabled={isLocked}
                 placeholder="Enter number (e.g. 4)"
-                value={projectClosed}
+                value={projectClosed || ''}
                 onChange={(e) => setProjectClosed(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
               />
@@ -334,7 +334,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
                 step="any"
                 disabled={isLocked}
                 placeholder="Enter amount (e.g. 1500)"
-                value={revenueGenerated}
+                value={revenueGenerated || ''}
                 onChange={(e) => setRevenueGenerated(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-emerald-300 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
               />
@@ -355,7 +355,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
                 step="1"
                 disabled={isLocked}
                 placeholder="Enter number (e.g. 2)"
-                value={upsells}
+                value={upsells || ''}
                 onChange={(e) => setUpsells(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-cyan-300 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
               />
@@ -378,7 +378,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
                   step="0.1"
                   disabled={isLocked}
                   placeholder="Enter rating (e.g. 5.0)"
-                  value={clientRating}
+                  value={clientRating || ''}
                   onChange={(e) => setClientRating(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-amber-300 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
                 />
@@ -412,7 +412,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
                 step="1"
                 disabled={isLocked}
                 placeholder="Enter number (e.g. 15)"
-                value={followupsCompleted}
+                value={followupsCompleted || ''}
                 onChange={(e) => setFollowupsCompleted(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-purple-300 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
               />
@@ -433,7 +433,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
                 step="1"
                 disabled={isLocked}
                 placeholder="Enter number (e.g. 2)"
-                value={repeatClients}
+                value={repeatClients || ''}
                 onChange={(e) => setRepeatClients(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-pink-300 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
               />
@@ -449,7 +449,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
               type="text"
               disabled={isLocked}
               placeholder="e.g. Major retainer renewal, Instagram influencer package closed"
-              value={notes}
+              value={notes || ''}
               onChange={(e) => setNotes(e.target.value)}
               className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
             />

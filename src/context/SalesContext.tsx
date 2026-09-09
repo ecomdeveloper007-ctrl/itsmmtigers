@@ -338,13 +338,17 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   // Actions
   const actor = useMemo(() => {
+    const isSuper = isUserSuperAdmin(currentUser);
+    const isAdmin = isUserAdminOrSuperAdmin(currentUser);
     return {
-      id: currentUser?.uid || 'anonymous_user',
-      uid: currentUser?.uid || 'anonymous_user',
+      id: currentUser?.uid || currentUser?.userId || 'anonymous_user',
+      uid: currentUser?.uid || currentUser?.userId || 'anonymous_user',
       userId: currentUser?.userId,
       email: currentUser?.email,
       name: currentUser?.name || 'User',
-      role: currentUser?.role || 'team_member',
+      role: isSuper ? 'super_admin' : isAdmin ? 'admin' : (currentUser?.role || 'team_member'),
+      isSuperAdmin: isSuper,
+      isAdmin,
     };
   }, [currentUser]);
 
@@ -460,7 +464,13 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const deleteSalesPerformanceRecord = async (recordId: string): Promise<boolean> => {
     try {
       const cleanId = (recordId || '').trim();
-      setSalesRecords((prev) => prev.filter((r) => r.id !== cleanId && r.id !== recordId));
+      const cleanIdLower = cleanId.toLowerCase();
+      setSalesRecords((prev) =>
+        prev.filter((r) => {
+          const rIdLower = (r.id || '').trim().toLowerCase();
+          return rIdLower !== cleanIdLower && r.id !== cleanId && r.id !== recordId;
+        })
+      );
       await SalesDataService.deleteRecord(cleanId, actor);
       const updated = await SalesDataService.getRecords();
       setSalesRecords(updated);

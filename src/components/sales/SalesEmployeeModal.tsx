@@ -32,15 +32,15 @@ export const SalesEmployeeModal: React.FC = () => {
 
   useEffect(() => {
     if (editingSalesEmployee) {
-      setName(editingSalesEmployee.name);
-      setEmail(editingSalesEmployee.email);
-      setDepartment(editingSalesEmployee.department);
+      setName(editingSalesEmployee.name || '');
+      setEmail(editingSalesEmployee.email || '');
+      setDepartment(editingSalesEmployee.department || 'IT');
       const profiles = editingSalesEmployee.assignedProfiles && editingSalesEmployee.assignedProfiles.length > 0
         ? editingSalesEmployee.assignedProfiles
         : [editingSalesEmployee.profileCode || 'PR'];
       setAssignedProfiles(profiles);
       setJoiningDate(editingSalesEmployee.joiningDate || new Date().toISOString().split('T')[0]);
-      setStatus(editingSalesEmployee.status);
+      setStatus(editingSalesEmployee.status || 'active');
       setAvatarUrl(editingSalesEmployee.avatarUrl || '');
     } else {
       setName('');
@@ -160,7 +160,7 @@ export const SalesEmployeeModal: React.FC = () => {
               type="text"
               required
               placeholder="e.g., Rohit Sharma"
-              value={name}
+              value={name || ''}
               onChange={(e) => setName(e.target.value)}
               className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
             />
@@ -174,7 +174,7 @@ export const SalesEmployeeModal: React.FC = () => {
               type="email"
               required
               placeholder="e.g., rohit.sharma@itsmmtigers.com"
-              value={email}
+              value={email || ''}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
             />
@@ -240,7 +240,7 @@ export const SalesEmployeeModal: React.FC = () => {
               <label className="block text-xs font-black text-[#101010]">Joining Date</label>
               <input
                 type="date"
-                value={joiningDate}
+                value={joiningDate || ''}
                 onChange={(e) => setJoiningDate(e.target.value)}
                 className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
               />
@@ -249,7 +249,7 @@ export const SalesEmployeeModal: React.FC = () => {
             <div className="space-y-1.5">
               <label className="block text-xs font-black text-[#101010]">Status</label>
               <select
-                value={status}
+                value={status || 'active'}
                 onChange={(e) => setStatus(e.target.value as 'active' | 'inactive')}
                 className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
               >
@@ -264,7 +264,7 @@ export const SalesEmployeeModal: React.FC = () => {
             <input
               type="url"
               placeholder="https://images.unsplash.com/photo-..."
-              value={avatarUrl}
+              value={avatarUrl || ''}
               onChange={(e) => setAvatarUrl(e.target.value)}
               className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs text-[#101010] focus:ring-2 focus:ring-[#8cc540] focus:outline-none"
             />

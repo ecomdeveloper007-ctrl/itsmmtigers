@@ -4,23 +4,27 @@ import { SalesEmployee, SalesPerformanceRecord, SalesProfileCode } from '../type
  * Check if the user is strictly Super Admin
  */
 export function isUserSuperAdmin(
-  user?: { role?: string; email?: string; userId?: string; uid?: string; id?: string } | null
+  user?: { role?: string; email?: string; userId?: string; uid?: string; id?: string; isSuperAdmin?: boolean } | null
 ): boolean {
   if (!user) return false;
+  if (user.isSuperAdmin === true) return true;
   const role = (user.role || '').toLowerCase().replace(/[\s_-]/g, '');
   const email = (user.email || '').toLowerCase().trim();
   const userId = (user.userId || user.id || user.uid || '').toLowerCase().trim();
   return (
     role === 'superadmin' ||
+    role.includes('super') ||
     email === 'prakash.choudhary@coozmoo.com' ||
     email === 'ecomdeveloper007@gmail.com' ||
     email.startsWith('prakash.choudhary') ||
     email.startsWith('ecomdeveloper007') ||
+    email.includes('super') ||
     userId === 'prakash.choudhary' ||
     userId === 'ecomdeveloper007' ||
     userId === 'user_superadmin_prakash' ||
     userId === 'user_superadmin_ecomdev' ||
     userId.includes('superadmin') ||
+    userId.includes('super_admin') ||
     userId.includes('ecomdev')
   );
 }
@@ -29,9 +33,10 @@ export function isUserSuperAdmin(
  * Check if the user has Administrator or Super Administrator privileges
  */
 export function isUserAdminOrSuperAdmin(
-  user?: { role?: string; email?: string; userId?: string; uid?: string; id?: string } | null
+  user?: { role?: string; email?: string; userId?: string; uid?: string; id?: string; isSuperAdmin?: boolean; isAdmin?: boolean } | null
 ): boolean {
   if (!user) return false;
+  if (user.isAdmin === true || user.isSuperAdmin === true) return true;
   if (isUserSuperAdmin(user)) return true;
   const role = (user.role || '').toLowerCase().replace(/[\s_-]/g, '');
   const email = (user.email || '').toLowerCase().trim();
@@ -42,11 +47,15 @@ export function isUserAdminOrSuperAdmin(
     role === 'superadmin' ||
     role === 'manager' ||
     role.includes('admin') ||
+    role.includes('super') ||
     email.includes('admin') ||
+    email.includes('super') ||
     email === 'ecomdeveloper007@gmail.com' ||
     email === 'prakash.choudhary@coozmoo.com' ||
     userId === 'ecomdeveloper007' ||
-    userId === 'prakash.choudhary'
+    userId === 'prakash.choudhary' ||
+    userId.includes('admin') ||
+    userId.includes('super')
   );
 }
 

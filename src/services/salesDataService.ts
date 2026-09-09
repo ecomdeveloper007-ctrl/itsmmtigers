@@ -665,7 +665,7 @@ export class SalesDataService {
     const isRecordDeleted = (r: SalesPerformanceRecord) => {
       if (!r) return true;
       const recIdLower = (r.id || '').trim().toLowerCase();
-      if (deletedLower.includes(recIdLower)) return true;
+      if (!recIdLower || deletedLower.includes(recIdLower)) return true;
       const empId = (r.employeeId || '').toLowerCase();
       const empName = (r.employeeName || '').toLowerCase();
       return deletedEmp.includes(empId) || deletedEmp.includes(empName);
@@ -677,15 +677,27 @@ export class SalesDataService {
         const snap = await getDocs(collection(db, 'sales_records'));
         if (!snap.empty) {
           const firestoreItems = snap.docs
-            .map((d) => d.data() as SalesPerformanceRecord)
+            .map((d) => {
+              const data = d.data() as SalesPerformanceRecord;
+              return {
+                ...data,
+                id: data.id || d.id,
+              };
+            })
             .filter((r) => !isRecordDeleted(r));
 
-          // Merge Firestore items with local items so that freshly saved local records are never overwritten
+          // Merge Firestore items with local items, avoiding deleted records
           const recordMap = new Map<string, SalesPerformanceRecord>();
-          firestoreItems.forEach((r) => recordMap.set(r.id, r));
+          firestoreItems.forEach((r) => {
+            const key = (r.id || '').trim().toLowerCase();
+            if (key && !deletedLower.includes(key)) {
+              recordMap.set(key, r);
+            }
+          });
           local.forEach((r) => {
-            if (!isRecordDeleted(r) && !recordMap.has(r.id)) {
-              recordMap.set(r.id, r);
+            const key = (r.id || '').trim().toLowerCase();
+            if (key && !deletedLower.includes(key) && !recordMap.has(key)) {
+              recordMap.set(key, r);
             }
           });
           const merged = Array.from(recordMap.values());
@@ -810,8 +822,14 @@ export class SalesDataService {
     actor?: { id: string; name: string; role: string; userId?: string; email?: string }
   ): Promise<void> {
     const cleanId = (recordId || '').trim();
+    const cleanIdLower = cleanId.toLowerCase();
     const all = await this.getRecords();
-    const targetRec = all.find((r) => r.id === cleanId || r.id === recordId);
+    const targetRec = all.find(
+      (r) =>
+        (r.id || '').trim().toLowerCase() === cleanIdLower ||
+        (r.id || '').trim() === cleanId ||
+        r.id === recordId
+    );
     const employees = await this.getEmployees();
 
     if (actor && targetRec && !isUserAdminOrSuperAdmin(actor)) {
@@ -821,23 +839,39 @@ export class SalesDataService {
     }
 
     const deleted = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_RECORDS, []);
-    if (!deleted.includes(cleanId)) deleted.push(cleanId);
-    if (!deleted.includes(recordId)) deleted.push(recordId);
+    if (cleanId && !deleted.includes(cleanId)) deleted.push(cleanId);
+    if (cleanIdLower && !deleted.includes(cleanIdLower)) deleted.push(cleanIdLower);
+    if (recordId && !deleted.includes(recordId)) deleted.push(recordId);
+    if (targetRec?.id && !deleted.includes(targetRec.id)) deleted.push(targetRec.id);
+    if (targetRec?.id && !deleted.includes(targetRec.id.toLowerCase())) deleted.push(targetRec.id.toLowerCase());
     saveToStorage(SALES_LS_KEYS.DELETED_RECORDS, deleted);
 
-    const filtered = all.filter((r) => r.id !== cleanId && r.id !== recordId);
+    const currentLocal = getFromStorage<SalesPerformanceRecord[]>(SALES_LS_KEYS.RECORDS, []);
+    const filtered = currentLocal.filter((r) => {
+      const rIdLower = (r.id || '').trim().toLowerCase();
+      return rIdLower !== cleanIdLower && r.id !== cleanId && r.id !== recordId;
+    });
     saveToStorage(SALES_LS_KEYS.RECORDS, filtered);
 
     if (db) {
       try {
-        await deleteDoc(doc(db, 'sales_records', cleanId));
+        if (cleanId) {
+          await deleteDoc(doc(db, 'sales_records', cleanId)).catch(() => {});
+        }
+        if (recordId && recordId !== cleanId) {
+          await deleteDoc(doc(db, 'sales_records', recordId)).catch(() => {});
+        }
+        const snap = await getDocs(collection(db, 'sales_records'));
+        for (const docSnap of snap.docs) {
+          const d = docSnap.data() as Partial<SalesPerformanceRecord>;
+          const dIdLower = String(d.id || '').trim().toLowerCase();
+          const docIdLower = docSnap.id.trim().toLowerCase();
+          if (docIdLower === cleanIdLower || dIdLower === cleanIdLower) {
+            await deleteDoc(docSnap.ref).catch(() => {});
+          }
+        }
       } catch (e) {
         console.warn('Firestore delete record failed:', e);
-      }
-      if (cleanId !== recordId) {
-        try {
-          await deleteDoc(doc(db, 'sales_records', recordId));
-        } catch (_) {}
       }
     }
 
@@ -1222,22 +1256,33 @@ export class SalesDataService {
         const deletedLower = deleted.map((d) => (d || '').trim().toLowerCase());
         const deletedEmp = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_EMPLOYEES, []).map((d) => (d || '').toLowerCase());
         const items = snap.docs
-          .map((d) => d.data() as SalesPerformanceRecord)
+          .map((d) => {
+            const data = d.data() as SalesPerformanceRecord;
+            return {
+              ...data,
+              id: data.id || d.id,
+            };
+          })
           .filter((r) => {
             if (!r) return false;
             const recIdLower = (r.id || '').trim().toLowerCase();
-            if (deletedLower.includes(recIdLower)) return false;
+            if (!recIdLower || deletedLower.includes(recIdLower)) return false;
             const empId = (r.employeeId || '').toLowerCase();
             const empName = (r.employeeName || '').toLowerCase();
             return !deletedEmp.includes(empId) && !deletedEmp.includes(empName);
           });
         const local = getFromStorage<SalesPerformanceRecord[]>(SALES_LS_KEYS.RECORDS, []);
         const recordMap = new Map<string, SalesPerformanceRecord>();
-        items.forEach((r) => recordMap.set(r.id, r));
+        items.forEach((r) => {
+          const key = (r.id || '').trim().toLowerCase();
+          if (key && !deletedLower.includes(key)) {
+            recordMap.set(key, r);
+          }
+        });
         local.forEach((r) => {
           const recIdLower = (r.id || '').trim().toLowerCase();
-          if (!deletedLower.includes(recIdLower) && !recordMap.has(r.id)) {
-            recordMap.set(r.id, r);
+          if (recIdLower && !deletedLower.includes(recIdLower) && !recordMap.has(recIdLower)) {
+            recordMap.set(recIdLower, r);
           }
         });
         const merged = Array.from(recordMap.values());

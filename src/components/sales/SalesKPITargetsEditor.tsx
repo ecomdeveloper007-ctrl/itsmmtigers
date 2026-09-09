@@ -658,7 +658,7 @@ export const SalesKPITargetsEditor: React.FC<SalesKPITargetsEditorProps> = ({ on
               Target Month
             </label>
             <select
-              value={targetMonth}
+              value={targetMonth || 'August'}
               onChange={(e) => setTargetMonth(e.target.value)}
               className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:outline-none focus:ring-2 focus:ring-[#8cc540] cursor-pointer"
             >
@@ -675,7 +675,7 @@ export const SalesKPITargetsEditor: React.FC<SalesKPITargetsEditorProps> = ({ on
               Target Year
             </label>
             <select
-              value={targetYear}
+              value={targetYear || 2026}
               onChange={(e) => setTargetYear(Number(e.target.value))}
               className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:outline-none focus:ring-2 focus:ring-[#8cc540] cursor-pointer"
             >
@@ -693,7 +693,7 @@ export const SalesKPITargetsEditor: React.FC<SalesKPITargetsEditorProps> = ({ on
                 Target Week
               </label>
               <select
-                value={targetWeek}
+                value={targetWeek || 'Week 1'}
                 onChange={(e) => setTargetWeek(e.target.value)}
                 className="w-full bg-[#f8faf6] border border-[#8cc540]/60 rounded-xl px-3 py-2 text-xs font-black text-[#3d591d] focus:outline-none focus:ring-2 focus:ring-[#8cc540] cursor-pointer"
               >
@@ -816,7 +816,7 @@ export const SalesKPITargetsEditor: React.FC<SalesKPITargetsEditorProps> = ({ on
                   step="0.1"
                   min="0.1"
                   max="100"
-                  value={valConversion}
+                  value={valConversion ?? ''}
                   onChange={(e) => handleTargetChange('conversionTarget', Number(e.target.value))}
                   className="w-full bg-[#f8faf6] border border-emerald-300 rounded-2xl px-4 py-3 text-base font-black text-emerald-950 focus:ring-2 focus:ring-emerald-500 focus:outline-none pr-12 shadow-inner"
                 />
@@ -866,7 +866,7 @@ export const SalesKPITargetsEditor: React.FC<SalesKPITargetsEditorProps> = ({ on
                   type="number"
                   min="1"
                   step="1"
-                  value={valFollowup}
+                  value={valFollowup ?? ''}
                   onChange={(e) => handleTargetChange('followupTarget', Number(e.target.value))}
                   className="w-full bg-[#f8faf6] border border-blue-300 rounded-2xl px-4 py-3 text-base font-black text-blue-950 focus:ring-2 focus:ring-blue-500 focus:outline-none pr-28 shadow-inner"
                 />
@@ -920,7 +920,7 @@ export const SalesKPITargetsEditor: React.FC<SalesKPITargetsEditorProps> = ({ on
                   type="number"
                   min="1"
                   step="500"
-                  value={valOrderValue}
+                  value={valOrderValue ?? ''}
                   onChange={(e) => handleTargetChange('orderValueTarget', Number(e.target.value))}
                   className="w-full bg-[#f8faf6] border border-amber-300 rounded-2xl px-4 py-3 text-base font-black text-amber-950 focus:ring-2 focus:ring-amber-500 focus:outline-none pr-12 shadow-inner"
                 />
@@ -974,7 +974,7 @@ export const SalesKPITargetsEditor: React.FC<SalesKPITargetsEditorProps> = ({ on
                   type="number"
                   min="1"
                   step="5"
-                  value={valReachout}
+                  value={valReachout ?? ''}
                   onChange={(e) => handleTargetChange('reachoutBenchmark', Number(e.target.value))}
                   className="w-full bg-[#f8faf6] border border-slate-300 rounded-2xl px-4 py-3 text-base font-black text-slate-900 focus:ring-2 focus:ring-slate-400 focus:outline-none pr-28 shadow-inner"
                 />
