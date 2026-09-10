@@ -1212,36 +1212,44 @@ export class SalesDataService {
   static subscribeToEmployees(callback: (employees: SalesEmployee[]) => void): Unsubscribe {
     if (!db) return () => {};
     try {
-      return onSnapshot(collection(db, 'sales_employees'), (snap) => {
-        const deleted = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_EMPLOYEES, []).map((d) => (d || '').toLowerCase());
-        const items = snap.docs
-          .map((d) => {
-            const data = d.data() as SalesEmployee;
-            const assigned = data.assignedProfiles && data.assignedProfiles.length > 0
-              ? data.assignedProfiles
-              : [data.profileCode || 'PR'];
-            return {
-              ...data,
-              assignedProfiles: assigned,
-              profileCode: assigned[0],
-            };
-          })
-          .filter((e) => {
-            if (!e) return false;
-            const id = (e.id || '').toLowerCase();
-            const uid = (e.userId || '').toLowerCase();
-            const email = (e.email || '').toLowerCase();
-            const name = (e.name || '').toLowerCase();
-            return (
-              !deleted.includes(id) &&
-              (!uid || !deleted.includes(uid)) &&
-              (!email || !deleted.includes(email)) &&
-              (!name || !deleted.includes(name))
-            );
-          });
-        saveToStorage(SALES_LS_KEYS.EMPLOYEES, items);
-        callback(items);
-      });
+      return onSnapshot(
+        collection(db, 'sales_employees'),
+        (snap) => {
+          const deleted = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_EMPLOYEES, []).map((d) => (d || '').toLowerCase());
+          const items = snap.docs
+            .map((d) => {
+              const data = d.data() as SalesEmployee;
+              const assigned = data.assignedProfiles && data.assignedProfiles.length > 0
+                ? data.assignedProfiles
+                : [data.profileCode || 'PR'];
+              return {
+                ...data,
+                assignedProfiles: assigned,
+                profileCode: assigned[0],
+              };
+            })
+            .filter((e) => {
+              if (!e) return false;
+              const id = (e.id || '').toLowerCase();
+              const uid = (e.userId || '').toLowerCase();
+              const email = (e.email || '').toLowerCase();
+              const name = (e.name || '').toLowerCase();
+              return (
+                !deleted.includes(id) &&
+                (!uid || !deleted.includes(uid)) &&
+                (!email || !deleted.includes(email)) &&
+                (!name || !deleted.includes(name))
+              );
+            });
+          saveToStorage(SALES_LS_KEYS.EMPLOYEES, items);
+          callback(items);
+        },
+        (error) => {
+          console.warn('Real-time sales employees subscription warning:', error);
+          const cached = getFromStorage<SalesEmployee[]>(SALES_LS_KEYS.EMPLOYEES, INITIAL_SALES_EMPLOYEES);
+          callback(cached);
+        }
+      );
     } catch (e) {
       console.warn('Subscription error for sales employees:', e);
       return () => {};
@@ -1251,44 +1259,52 @@ export class SalesDataService {
   static subscribeToRecords(callback: (records: SalesPerformanceRecord[]) => void): Unsubscribe {
     if (!db) return () => {};
     try {
-      return onSnapshot(collection(db, 'sales_records'), (snap) => {
-        const deleted = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_RECORDS, []);
-        const deletedLower = deleted.map((d) => (d || '').trim().toLowerCase());
-        const deletedEmp = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_EMPLOYEES, []).map((d) => (d || '').toLowerCase());
-        const items = snap.docs
-          .map((d) => {
-            const data = d.data() as SalesPerformanceRecord;
-            return {
-              ...data,
-              id: data.id || d.id,
-            };
-          })
-          .filter((r) => {
-            if (!r) return false;
-            const recIdLower = (r.id || '').trim().toLowerCase();
-            if (!recIdLower || deletedLower.includes(recIdLower)) return false;
-            const empId = (r.employeeId || '').toLowerCase();
-            const empName = (r.employeeName || '').toLowerCase();
-            return !deletedEmp.includes(empId) && !deletedEmp.includes(empName);
+      return onSnapshot(
+        collection(db, 'sales_records'),
+        (snap) => {
+          const deleted = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_RECORDS, []);
+          const deletedLower = deleted.map((d) => (d || '').trim().toLowerCase());
+          const deletedEmp = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_EMPLOYEES, []).map((d) => (d || '').toLowerCase());
+          const items = snap.docs
+            .map((d) => {
+              const data = d.data() as SalesPerformanceRecord;
+              return {
+                ...data,
+                id: data.id || d.id,
+              };
+            })
+            .filter((r) => {
+              if (!r) return false;
+              const recIdLower = (r.id || '').trim().toLowerCase();
+              if (!recIdLower || deletedLower.includes(recIdLower)) return false;
+              const empId = (r.employeeId || '').toLowerCase();
+              const empName = (r.employeeName || '').toLowerCase();
+              return !deletedEmp.includes(empId) && !deletedEmp.includes(empName);
+            });
+          const local = getFromStorage<SalesPerformanceRecord[]>(SALES_LS_KEYS.RECORDS, []);
+          const recordMap = new Map<string, SalesPerformanceRecord>();
+          items.forEach((r) => {
+            const key = (r.id || '').trim().toLowerCase();
+            if (key && !deletedLower.includes(key)) {
+              recordMap.set(key, r);
+            }
           });
-        const local = getFromStorage<SalesPerformanceRecord[]>(SALES_LS_KEYS.RECORDS, []);
-        const recordMap = new Map<string, SalesPerformanceRecord>();
-        items.forEach((r) => {
-          const key = (r.id || '').trim().toLowerCase();
-          if (key && !deletedLower.includes(key)) {
-            recordMap.set(key, r);
-          }
-        });
-        local.forEach((r) => {
-          const recIdLower = (r.id || '').trim().toLowerCase();
-          if (recIdLower && !deletedLower.includes(recIdLower) && !recordMap.has(recIdLower)) {
-            recordMap.set(recIdLower, r);
-          }
-        });
-        const merged = Array.from(recordMap.values());
-        saveToStorage(SALES_LS_KEYS.RECORDS, merged);
-        callback(merged);
-      });
+          local.forEach((r) => {
+            const recIdLower = (r.id || '').trim().toLowerCase();
+            if (recIdLower && !deletedLower.includes(recIdLower) && !recordMap.has(recIdLower)) {
+              recordMap.set(recIdLower, r);
+            }
+          });
+          const merged = Array.from(recordMap.values());
+          saveToStorage(SALES_LS_KEYS.RECORDS, merged);
+          callback(merged);
+        },
+        (error) => {
+          console.warn('Real-time sales records subscription warning:', error);
+          const cached = getFromStorage<SalesPerformanceRecord[]>(SALES_LS_KEYS.RECORDS, []);
+          callback(cached);
+        }
+      );
     } catch (e) {
       console.warn('Subscription error for sales records:', e);
       return () => {};
@@ -1298,13 +1314,21 @@ export class SalesDataService {
   static subscribeToSettings(callback: (settings: SalesRewardSettings) => void): Unsubscribe {
     if (!db) return () => {};
     try {
-      return onSnapshot(doc(db, 'sales_settings', 'global_config'), (snap) => {
-        if (snap.exists()) {
-          const data = snap.data() as SalesRewardSettings;
-          saveToStorage(SALES_LS_KEYS.SETTINGS, data);
-          callback(data);
+      return onSnapshot(
+        doc(db, 'sales_settings', 'global_config'),
+        (snap) => {
+          if (snap.exists()) {
+            const data = snap.data() as SalesRewardSettings;
+            saveToStorage(SALES_LS_KEYS.SETTINGS, data);
+            callback(data);
+          }
+        },
+        (error) => {
+          console.warn('Real-time sales settings subscription warning:', error);
+          const cached = getFromStorage<SalesRewardSettings>(SALES_LS_KEYS.SETTINGS, DEFAULT_SALES_SETTINGS);
+          callback(cached);
         }
-      });
+      );
     } catch (e) {
       console.warn('Subscription error for sales settings:', e);
       return () => {};

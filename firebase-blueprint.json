@@ -110,6 +110,63 @@
         "timestamp": { "type": "string" }
       },
       "required": ["id", "userId", "userName", "action", "timestamp"]
+    },
+    "SalesEmployee": {
+      "title": "SalesEmployee",
+      "description": "Sales employee profile with assigned profiles and department",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "department": { "type": "string" },
+        "profileCode": { "type": "string" },
+        "assignedProfiles": { "type": "array" },
+        "joiningDate": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive"] }
+      },
+      "required": ["id", "name", "email", "department", "status"]
+    },
+    "SalesPerformanceRecord": {
+      "title": "SalesPerformanceRecord",
+      "description": "Weekly sales metrics and financial numbers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "department": { "type": "string" },
+        "profileCode": { "type": "string" },
+        "period": { "type": "string" },
+        "netSalesUsd": { "type": "number" },
+        "callsTaken": { "type": "number" },
+        "closures": { "type": "number" },
+        "targetUsd": { "type": "number" }
+      },
+      "required": ["id", "employeeId", "employeeName", "period", "netSalesUsd"]
+    },
+    "SalesRewardSettings": {
+      "title": "SalesRewardSettings",
+      "description": "Sales compensation tiers and commission rates",
+      "type": "object",
+      "properties": {
+        "currency": { "type": "string" },
+        "baseCommissionRate": { "type": "number" },
+        "topPerformerBonus": { "type": "number" }
+      }
+    },
+    "SalesAuditLog": {
+      "title": "SalesAuditLog",
+      "description": "Audit trail entries for sales operations",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "actor": { "type": "string" },
+        "action": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "actor", "action", "timestamp"]
     }
   },
   "firestore": {
@@ -136,6 +193,22 @@
     "/auditLogs/{logId}": {
       "schema": "AuditLog",
       "description": "Audit trail records"
+    },
+    "/sales_employees/{employeeId}": {
+      "schema": "SalesEmployee",
+      "description": "Sales employee directories"
+    },
+    "/sales_records/{recordId}": {
+      "schema": "SalesPerformanceRecord",
+      "description": "Sales performance entries"
+    },
+    "/sales_settings/{settingId}": {
+      "schema": "SalesRewardSettings",
+      "description": "Sales commission configs"
+    },
+    "/sales_audit_logs/{logId}": {
+      "schema": "SalesAuditLog",
+      "description": "Sales audit trails"
     }
   }
 }
