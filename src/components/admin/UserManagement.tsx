@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import {
@@ -17,20 +17,18 @@ import {
   Check,
   Ban,
   UserCheck,
-  Sparkles,
   AlertCircle,
   Copy,
   Eye,
-  CheckCheck,
-  Camera,
-  Upload,
-  ExternalLink,
   Trash2,
   AlertTriangle,
   Briefcase,
   Layers,
   Building2,
   ArrowRight,
+  Filter,
+  Camera,
+  Upload,
 } from 'lucide-react';
 import {
   UserProfile,
@@ -39,7 +37,6 @@ import {
   ProfileCode,
   ModuleAssignment,
   ALL_PROFILES,
-  ALL_PROFILES_LIST,
   PROFILE_DEPARTMENT_PRESETS,
   getDefaultDepartmentForProfile,
 } from '../../types';
@@ -71,9 +68,16 @@ export const UserManagement: React.FC = () => {
   } = useAuth();
   const { addToast } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState<'profile_wise' | 'all' | 'pending'>('profile_wise');
+  // Primary navigation: 'members' vs 'approvals'
+  const [primaryTab, setPrimaryTab] = useState<'members' | 'approvals'>('members');
+  // Secondary subview inside 'members': 'profile_matrix' vs 'directory'
+  const [membersView, setMembersView] = useState<'profile_matrix' | 'directory'>('profile_matrix');
+
   const [selectedProfileFilter, setSelectedProfileFilter] = useState<ProfileCode | 'ALL'>('ALL');
   const [search, setSearch] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [moduleFilter, setModuleFilter] = useState<'ALL' | 'pm' | 'sales' | 'both'>('ALL');
+
   const [isAddUserOpen, setIsAddUserOpen] = useState<boolean>(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<UserProfile | null>(null);
@@ -81,9 +85,6 @@ export const UserManagement: React.FC = () => {
   const [inspectingUser, setInspectingUser] = useState<UserProfile | null>(null);
   const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
-
-  // Module filter state ('ALL' | 'pm' | 'sales' | 'both')
-  const [moduleFilter, setModuleFilter] = useState<'ALL' | 'pm' | 'sales' | 'both'>('ALL');
 
   // Quick Department & Module Modal state
   const [quickDeptUser, setQuickDeptUser] = useState<UserProfile | null>(null);
@@ -120,7 +121,29 @@ export const UserManagement: React.FC = () => {
   const [formSalesProfileCode, setFormSalesProfileCode] = useState<'PR' | 'WR' | 'HW' | 'DR' | 'RR'>('PR');
   const [formStatus, setFormStatus] = useState<UserStatus>('active');
   const [formAvatarUrl, setFormAvatarUrl] = useState<string>(PRESET_AVATARS[0]);
-  const formFileInputRef = React.useRef<HTMLInputElement>(null);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      addToast('error', 'Invalid File', 'Please select an image file (PNG, JPG, WEBP).');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      addToast('error', 'File Too Large', 'Please select an image smaller than 5MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const result = uploadEvent.target?.result as string;
+      if (result) {
+        setFormAvatarUrl(result);
+        addToast('success', 'Photo Loaded', 'Profile photo preview updated.');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Reject modal state
   const [rejectingUser, setRejectingUser] = useState<UserProfile | null>(null);
@@ -128,11 +151,16 @@ export const UserManagement: React.FC = () => {
 
   const [viewCredentialsUser, setViewCredentialsUser] = useState<UserProfile | null>(null);
 
+  // Filtered members for directory table
   const filteredUsers = allUsers
     .filter((u) => {
       if (moduleFilter === 'ALL') return true;
       const userMod = u.moduleAssignment || 'both';
       return userMod === moduleFilter;
+    })
+    .filter((u) => {
+      if (statusFilter === 'ALL') return true;
+      return (u.status || 'active') === statusFilter;
     })
     .filter(
       (u) =>
@@ -159,112 +187,144 @@ export const UserManagement: React.FC = () => {
       addToast('error', 'Department Required', 'Please choose or type a department.');
       return;
     }
+
     setIsSavingQuickDept(true);
     try {
-      const assignedTeam: 'IT' | 'SMM' = ['PR', 'WR', 'HW'].includes(quickDeptProfileCode) ? 'IT' : 'SMM';
-      const updatedUser: UserProfile = {
+      const isIT = ['PR', 'WR', 'HW'].includes(quickDeptProfileCode);
+      const updatedProfile: UserProfile = {
         ...quickDeptUser,
-        department: quickDepartment.trim(),
         profileCode: quickDeptProfileCode,
-        team: assignedTeam,
+        department: quickDepartment.trim(),
+        team: isIT ? 'IT' : 'SMM',
         moduleAssignment: quickModuleAssignment,
-        salesDepartment: quickDeptUser.salesDepartment || assignedTeam,
-        salesProfileCode: (quickDeptUser.salesProfileCode || quickDeptProfileCode) as any,
-        updatedAt: new Date().toISOString(),
       };
 
-      await DataService.saveUser(updatedUser, {
-        id: currentUser.uid,
-        name: currentUser.name,
-        role: currentUser.role,
-      });
-
-      // Synchronize with Sales module
-      if (quickModuleAssignment === 'sales' || quickModuleAssignment === 'both') {
-        await SalesDataService.syncUserToSales(updatedUser);
-      } else {
-        await SalesDataService.unassignUserFromSales(quickDeptUser.uid);
-      }
-
-      await refreshUsers();
-      addToast(
-        'success',
-        'Department & Module Assignment Updated',
-        `${quickDeptUser.name} updated: Profile ${quickDeptProfileCode} | Module: ${
-          quickModuleAssignment === 'both' ? 'Both (PM & Sales)' : quickModuleAssignment.toUpperCase()
-        }`
+      const res = await updateUserDepartmentAndProfile(
+        quickDeptUser.uid,
+        quickDeptProfileCode,
+        quickDepartment.trim(),
+        quickModuleAssignment
       );
-      setQuickDeptUser(null);
-    } catch (err) {
-      addToast('error', 'Error', 'Failed to update department and module assignment.');
+
+      if (res && res.success) {
+        if (quickModuleAssignment === 'both' || quickModuleAssignment === 'sales') {
+          const salesDept: 'IT' | 'SMM' = isIT ? 'IT' : 'SMM';
+          const salesProf = quickDeptProfileCode as 'PR' | 'WR' | 'HW' | 'DR' | 'RR';
+          await SalesDataService.syncUserToSales({
+            ...updatedProfile,
+            salesDepartment: salesDept,
+            salesProfileCode: salesProf,
+          });
+        }
+        addToast(
+          'success',
+          'Department & Profile Updated',
+          `${quickDeptUser.name} is now assigned to ${quickDeptProfileCode} profile (${quickDepartment}).`
+        );
+        setQuickDeptUser(null);
+        await refreshUsers();
+      } else {
+        addToast('error', 'Update Failed', res?.message || 'Could not update user department.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      addToast('error', 'Error Saving', err?.message || 'Network error.');
     } finally {
       setIsSavingQuickDept(false);
     }
   };
 
-  const handleInlineModuleChange = async (user: UserProfile, newModule: ModuleAssignment) => {
+  const handleInlineModuleChange = async (user: UserProfile, newMod: ModuleAssignment) => {
     if (!currentUser) return;
     try {
-      const resolvedSalesDept = user.salesDepartment || (user.team === 'IT' ? 'IT' : 'SMM');
-      const resolvedSalesProf = user.salesProfileCode || (user.profileCode as any) || (resolvedSalesDept === 'IT' ? 'PR' : 'DR');
+      const code: ProfileCode =
+        user.profileCode ||
+        (user.team === 'IT' || user.department?.toLowerCase().includes('it') ? 'PR' : 'RR');
+      const dept = user.department || getDefaultDepartmentForProfile(code);
 
-      const updatedUser: UserProfile = {
-        ...user,
-        moduleAssignment: newModule,
-        salesDepartment: resolvedSalesDept,
-        salesProfileCode: resolvedSalesProf,
-        updatedAt: new Date().toISOString(),
-      };
-
-      await DataService.saveUser(updatedUser, {
-        id: currentUser.uid,
-        name: currentUser.name,
-        role: currentUser.role,
-      });
-
-      if (newModule === 'sales' || newModule === 'both') {
-        await SalesDataService.syncUserToSales(updatedUser);
+      const res = await updateUserDepartmentAndProfile(user.uid, code, dept, newMod);
+      if (res && res.success) {
+        if (newMod === 'both' || newMod === 'sales') {
+          const isIT = ['PR', 'WR', 'HW'].includes(code);
+          const salesDept: 'IT' | 'SMM' = isIT ? 'IT' : 'SMM';
+          const salesProf = code as 'PR' | 'WR' | 'HW' | 'DR' | 'RR';
+          await SalesDataService.syncUserToSales({
+            ...user,
+            moduleAssignment: newMod,
+            salesDepartment: salesDept,
+            salesProfileCode: salesProf,
+          });
+        }
+        addToast('success', 'Access Scope Updated', `${user.name} access updated to ${newMod.toUpperCase()}.`);
+        await refreshUsers();
       } else {
-        await SalesDataService.unassignUserFromSales(user.uid);
+        addToast('error', 'Update Failed', res?.message || 'Could not update module.');
       }
-
-      await refreshUsers();
-      addToast(
-        'success',
-        'Module Assignment Updated',
-        `${user.name} is now assigned to ${
-          newModule === 'both' ? 'Both (PM & Sales)' : newModule === 'pm' ? 'Project Management Only' : 'Sales Only'
-        }.`
-      );
-    } catch (err) {
-      addToast('error', 'Failed', 'Could not update module assignment.');
+    } catch (err: any) {
+      console.error(err);
+      addToast('error', 'Error', err?.message || 'Could not update module.');
     }
   };
 
-  const handleInlineDeptChange = async (user: UserProfile, newProfileCode: ProfileCode, newDept: string) => {
+  const handleApprove = async (
+    user: UserProfile,
+    role: UserRole = 'team_member',
+    moduleAssignment: ModuleAssignment = 'both',
+    salesDept: 'IT' | 'SMM' = 'IT',
+    salesProfile: 'PR' | 'WR' | 'HW' | 'DR' | 'RR' = 'PR'
+  ) => {
+    setApprovingUserId(user.uid);
     try {
-      const success = await updateUserDepartmentAndProfile(user.uid, newDept, newProfileCode);
-      if (success) {
-        addToast(
-          'success',
-          'Department Updated',
-          `${user.name} updated to ${newProfileCode}: "${newDept}".`
-        );
+      const res = await approveUser(user.uid, role, moduleAssignment);
+      if (res.success) {
+        if (moduleAssignment === 'both' || moduleAssignment === 'sales') {
+          await SalesDataService.syncUserToSales({
+            ...user,
+            moduleAssignment,
+            status: 'active',
+            salesDepartment: salesDept,
+            salesProfileCode: salesProfile,
+          });
+        }
+        addToast('success', 'Member Approved', `${user.name} has been approved and granted access.`);
+        await refreshUsers();
+      } else {
+        addToast('error', 'Approval Failed', res.message || 'Could not approve member.');
       }
-    } catch (err) {
-      addToast('error', 'Failed', 'Could not update department.');
+    } catch (err: any) {
+      console.error(err);
+      addToast('error', 'Approval Error', err.message || 'Could not approve member.');
+    } finally {
+      setApprovingUserId(null);
     }
   };
 
-  const openAddModal = () => {
+  const handleReject = async () => {
+    if (!rejectingUser) return;
+    try {
+      const res = await rejectUser(rejectingUser.uid, rejectReason);
+      if (res.success) {
+        addToast('info', 'Registration Declined', `${rejectingUser.name}'s registration has been declined.`);
+        setRejectingUser(null);
+        await refreshUsers();
+      } else {
+        addToast('error', 'Action Failed', res.message || 'Could not decline registration.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      addToast('error', 'Decline Error', err.message || 'Could not decline registration.');
+    }
+  };
+
+  const handleCreateUser = () => {
     setEditingUser(null);
     setFormName('');
     setFormUserId('');
     setFormEmail('');
-    setFormPassword('tiger2026');
+    setFormPassword('');
     setFormRole('team_member');
     setFormProfileCode('PR');
-    setFormDepartment(getDefaultDepartmentForProfile('PR'));
+    setFormDepartment('IT Solutions & Product Delivery (PR)');
     setFormModuleAssignment('both');
     setFormSalesDepartment('IT');
     setFormSalesProfileCode('PR');
@@ -275,19 +335,16 @@ export const UserManagement: React.FC = () => {
 
   const openEditModal = (user: UserProfile) => {
     setEditingUser(user);
-    setFormName(user.name || '');
-    setFormUserId(user.userId || '');
-    setFormEmail(user.email || '');
-    setFormPassword(user.password || 'tiger2026');
-    setFormRole(user.role || 'team_member');
-    const resolvedCode: ProfileCode =
-      user.profileCode ||
-      (user.team === 'IT' || user.department?.toLowerCase().includes('it') ? 'PR' : 'RR');
-    setFormProfileCode(resolvedCode);
-    setFormDepartment(user.department || getDefaultDepartmentForProfile(resolvedCode));
+    setFormName(user.name);
+    setFormUserId(user.userId);
+    setFormEmail(user.email);
+    setFormPassword(user.password || '');
+    setFormRole(user.role);
+    setFormProfileCode(user.profileCode || 'PR');
+    setFormDepartment(user.department || getDefaultDepartmentForProfile(user.profileCode || 'PR'));
     setFormModuleAssignment(user.moduleAssignment || 'both');
-    setFormSalesDepartment(user.salesDepartment || (resolvedCode === 'RR' || resolvedCode === 'DR' ? 'SMM' : 'IT'));
-    setFormSalesProfileCode((user.salesProfileCode || (['PR', 'WR', 'HW', 'DR', 'RR'].includes(resolvedCode) ? resolvedCode : 'PR')) as any);
+    setFormSalesDepartment(user.salesDepartment || (user.team === 'IT' ? 'IT' : 'SMM'));
+    setFormSalesProfileCode((user.salesProfileCode || (user.team === 'IT' ? 'PR' : 'DR')) as any);
     setFormStatus(user.status || 'active');
     setFormAvatarUrl(user.avatarUrl || PRESET_AVATARS[0]);
     setIsAddUserOpen(true);
@@ -295,205 +352,112 @@ export const UserManagement: React.FC = () => {
 
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser) return;
-
     if (!formName.trim() || !formUserId.trim()) {
-      addToast('error', 'Required fields missing', 'Please fill in Name and User ID.');
+      addToast('error', 'Validation Error', 'Full name and User ID are required.');
       return;
     }
 
-    const email = formEmail.trim() || `${formUserId.toLowerCase().replace(/\s+/g, '.')}@itsmmtigers.com`;
-
-    const assignedTeam: 'IT' | 'SMM' = ['PR', 'WR', 'HW'].includes(formProfileCode) ? 'IT' : 'SMM';
-
-    const cleanPassword = formPassword.trim() || 'tiger2026';
-
-    const userToSave: UserProfile = {
-      uid: editingUser?.uid || `user_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    const isIT = ['PR', 'WR', 'HW'].includes(formProfileCode);
+    const updatedUser: UserProfile = {
+      uid: editingUser ? editingUser.uid : `user_${Date.now()}`,
       userId: formUserId.trim().toLowerCase(),
       name: formName.trim(),
-      email,
-      password: cleanPassword,
+      email: formEmail.trim().toLowerCase() || `${formUserId.trim().toLowerCase()}@coozmoo.com`,
+      password: formPassword.trim() || (editingUser?.password || 'tiger2026'),
       role: formRole,
       status: formStatus,
-      department: formDepartment.trim(),
       profileCode: formProfileCode,
-      team: assignedTeam,
+      department: formDepartment.trim() || getDefaultDepartmentForProfile(formProfileCode),
+      team: isIT ? 'IT' : 'SMM',
       moduleAssignment: formModuleAssignment,
       salesDepartment: formSalesDepartment,
       salesProfileCode: formSalesProfileCode,
-      avatarUrl: formAvatarUrl || editingUser?.avatarUrl || PRESET_AVATARS[0],
+      avatarUrl: formAvatarUrl,
       joiningDate: editingUser?.joiningDate || new Date().toISOString().split('T')[0],
       createdAt: editingUser?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    await DataService.saveUser(userToSave, {
-      id: currentUser.uid,
-      name: currentUser.name,
-      role: currentUser.role,
-    });
+    const actor = {
+      id: currentUser?.uid || 'admin',
+      name: currentUser?.name || 'Administrator',
+      role: currentUser?.role || 'admin',
+    };
 
-    // Sync with Sales module automatically
-    if (formModuleAssignment === 'sales' || formModuleAssignment === 'both') {
-      await SalesDataService.syncUserToSales(userToSave);
-    } else {
-      await SalesDataService.unassignUserFromSales(userToSave.uid);
-    }
-
-    await refreshUsers();
-    setIsAddUserOpen(false);
-    addToast(
-      'success',
-      editingUser ? 'User Updated' : 'Direct Member Created',
-      `${userToSave.name} saved! Assigned: ${
-        userToSave.moduleAssignment === 'both'
-          ? 'Both (PM & Sales)'
-          : userToSave.moduleAssignment === 'pm'
-          ? 'Project Management'
-          : 'Sales'
-      }`
-    );
-  };
-
-  const handleApprove = async (
-    user: UserProfile,
-    role: UserRole = 'team_member',
-    moduleAssignment: ModuleAssignment = 'both',
-    salesDept: 'IT' | 'SMM' = 'IT',
-    salesProfile: 'PR' | 'WR' | 'HW' | 'DR' | 'RR' = 'PR'
-  ) => {
     try {
-      setApprovingUserId(user.uid);
-      await approveUser(user.uid, role);
-
-      const resolvedSalesDept = salesDept || (user.team === 'IT' ? 'IT' : 'SMM');
-      const resolvedSalesProf = salesProfile || (user.profileCode as any) || (resolvedSalesDept === 'IT' ? 'PR' : 'DR');
-
-      const updatedUser: UserProfile = {
-        ...user,
-        role,
-        status: 'active',
-        moduleAssignment,
-        salesDepartment: resolvedSalesDept,
-        salesProfileCode: resolvedSalesProf,
-        approvedBy: currentUser?.name || 'Super Admin',
-        approvedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      await DataService.saveUser(updatedUser, {
-        id: currentUser?.uid || 'admin',
-        name: currentUser?.name || 'Admin',
-        role: currentUser?.role || 'super_admin',
-      });
-
-      if (moduleAssignment === 'sales' || moduleAssignment === 'both') {
-        await SalesDataService.syncUserToSales(updatedUser);
-      } else {
-        await SalesDataService.unassignUserFromSales(user.uid);
+      await DataService.saveUser(updatedUser, actor);
+      if (formModuleAssignment === 'both' || formModuleAssignment === 'sales') {
+        await SalesDataService.syncUserToSales({
+          ...updatedUser,
+          salesDepartment: formSalesDepartment,
+          salesProfileCode: formSalesProfileCode,
+        });
       }
-
-      await refreshUsers();
       addToast(
         'success',
-        'Registration Approved & Module Assigned',
-        `${user.name} (${user.userId}) approved as ${role.replace('_', ' ')} assigned to ${
-          moduleAssignment === 'both' ? 'Both (PM & Sales)' : moduleAssignment.toUpperCase()
-        }.`
+        editingUser ? 'Profile Updated' : 'Member Created',
+        `${updatedUser.name} has been ${editingUser ? 'updated' : 'created'} successfully.`
       );
-    } catch (e) {
-      console.error('Error approving user:', e);
-      addToast('error', 'Approval Failed', 'An error occurred while approving the member. Please try again.');
-    } finally {
-      setApprovingUserId(null);
+      setIsAddUserOpen(false);
+      await refreshUsers();
+    } catch (err: any) {
+      console.error(err);
+      addToast('error', 'Save Failed', err.message || 'Could not save member profile.');
     }
-  };
-
-  const handleReject = async () => {
-    if (!rejectingUser) return;
-    await rejectUser(rejectingUser.uid, rejectReason);
-    addToast(
-      'info',
-      'Registration Rejected',
-      `Request for ${rejectingUser.name} has been rejected.`
-    );
-    setRejectingUser(null);
-  };
-
-  const handleToggleStatus = async (user: UserProfile) => {
-    if (!currentUser) return;
-    const newStatus: UserStatus = user.status === 'active' ? 'disabled' : 'active';
-    await DataService.toggleUserStatus(user.uid, newStatus, {
-      id: currentUser.uid,
-      name: currentUser.name,
-      role: currentUser.role,
-    });
-    await refreshUsers();
-    addToast(
-      'info',
-      newStatus === 'active' ? 'Account Enabled' : 'Account Disabled',
-      `${user.name}'s status is now ${newStatus}.`
-    );
   };
 
   const handleResetPassword = async () => {
-    if (!resetPasswordUser || !currentUser) return;
-    if (!newPassword.trim()) {
-      addToast('error', 'Missing password', 'Please provide a valid new password.');
-      return;
-    }
-    const updated = {
-      ...resetPasswordUser,
-      password: newPassword.trim(),
-      updatedAt: new Date().toISOString(),
+    if (!resetPasswordUser || !newPassword.trim()) return;
+    const actor = {
+      id: currentUser?.uid || 'admin',
+      name: currentUser?.name || 'Administrator',
+      role: currentUser?.role || 'admin',
     };
-    await DataService.saveUser(updated, {
-      id: currentUser.uid,
-      name: currentUser.name,
-      role: currentUser.role,
-    });
-    await refreshUsers();
-    addToast(
-      'success',
-      'Password Updated',
-      `Password for ${resetPasswordUser.name} has been updated to "${newPassword.trim()}".`
-    );
-    setResetPasswordUser(null);
-    setNewPassword('');
+    try {
+      const updated = { ...resetPasswordUser, password: newPassword.trim() };
+      await DataService.saveUser(updated, actor);
+      addToast('success', 'Password Updated', `Password for ${resetPasswordUser.name} has been updated.`);
+      setResetPasswordUser(null);
+      await refreshUsers();
+    } catch (err: any) {
+      console.error(err);
+      addToast('error', 'Reset Failed', err.message || 'Could not update password.');
+    }
+  };
+
+  const handleToggleStatus = async (user: UserProfile) => {
+    const nextStatus: UserStatus = user.status === 'active' ? 'disabled' : 'active';
+    const actor = {
+      id: currentUser?.uid || 'admin',
+      name: currentUser?.name || 'Administrator',
+      role: currentUser?.role || 'admin',
+    };
+    try {
+      const updated = { ...user, status: nextStatus };
+      await DataService.saveUser(updated, actor);
+      addToast('info', 'Status Changed', `${user.name} is now ${nextStatus}.`);
+      await refreshUsers();
+    } catch (err: any) {
+      console.error(err);
+      addToast('error', 'Error', err.message || 'Could not change status.');
+    }
   };
 
   const handleConfirmDelete = async () => {
-    if (!deletingUser || !currentUser) return;
-    if (deletingUser.uid === currentUser.uid) {
-      addToast('error', 'Cannot delete self', 'You cannot delete your own active administrator account.');
-      setDeletingUser(null);
-      return;
-    }
-
+    if (!deletingUser) return;
+    setIsDeleting(true);
     try {
-      setIsDeleting(true);
-      await deleteUser(deletingUser.uid);
-      // Also clean up from Sales employee list using all known identifiers
-      await SalesDataService.deleteEmployee(deletingUser.uid);
-      if (deletingUser.userId) {
-        await SalesDataService.deleteEmployee(deletingUser.userId);
+      const res = await deleteUser(deletingUser.uid);
+      if (res.success) {
+        addToast('success', 'User Deleted', `${deletingUser.name} was permanently removed.`);
+        setDeletingUser(null);
+        await refreshUsers();
+      } else {
+        addToast('error', 'Delete Failed', res.message || 'Could not delete user.');
       }
-      if (deletingUser.email) {
-        await SalesDataService.deleteEmployee(deletingUser.email);
-      }
-      if (deletingUser.name) {
-        await SalesDataService.deleteEmployee(deletingUser.name);
-      }
-      await refreshUsers();
-      addToast(
-        'success',
-        'Member Profile Deleted',
-        `${deletingUser.name} (${deletingUser.userId}) was permanently deleted from PM and Sales database.`
-      );
-      setDeletingUser(null);
-    } catch (err) {
-      addToast('error', 'Delete failed', 'Failed to delete member profile. Please try again.');
+    } catch (err: any) {
+      console.error(err);
+      addToast('error', 'Delete Error', err.message || 'Could not delete user.');
     } finally {
       setIsDeleting(false);
     }
@@ -501,78 +465,96 @@ export const UserManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/90 p-5 rounded-3xl border border-slate-750 shadow-xl">
+      {/* Top Banner & Header */}
+      <div className="bg-white p-6 sm:p-7 rounded-3xl border border-[#e2ebd9] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2.5 rounded-xl bg-indigo-500/25 text-indigo-300 border border-indigo-500/40">
-              <Users className="w-5 h-5" />
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-[#8cc540]/15 text-[#436320] border border-[#8cc540]/30 shadow-xs">
+              <Users className="w-5 h-5 text-[#598327]" />
             </span>
+            <h1 className="text-xl sm:text-2xl font-black text-[#101010] tracking-tight">
+              Team Members & Approvals
+            </h1>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              {allUsers.length} Total Users
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-[#666666] mt-1.5">
+            Manage member profile specializations (PR, WR, HW, RR, DR), system access roles, and pending registration approvals
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={handleCreateUser}
+            className="px-4 py-2.5 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] text-[#101010] flex items-center gap-1.5 shadow-md shadow-[#8cc540]/25 transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Add Member</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Immediate Attention Callout Banner if Pending Registrations Exist */}
+      {pendingCount > 0 && primaryTab !== 'approvals' && (
+        <div className="bg-amber-50 border border-amber-300/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-100 text-amber-800 rounded-xl border border-amber-300">
+              <Clock className="w-5 h-5 animate-pulse text-amber-700" />
+            </div>
             <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                Team Members & Access Approvals
-                {pendingCount > 0 && (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-400 text-slate-950 animate-pulse">
-                    {pendingCount} Pending
-                  </span>
-                )}
-              </h2>
-              <p className="text-xs text-slate-300 mt-0.5 font-medium">
-                Super Admin Gate: Review registrations and manage team member access credentials
+              <h4 className="text-sm font-black text-amber-900">
+                {pendingCount} Registration Request{pendingCount === 1 ? '' : 's'} Awaiting Review
+              </h4>
+              <p className="text-xs text-amber-800/90 font-medium">
+                New team members have registered and are waiting for role approval and department assignments.
               </p>
             </div>
           </div>
+          <button
+            onClick={() => setPrimaryTab('approvals')}
+            className="px-4 py-2 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 text-slate-950 flex items-center gap-1.5 self-start sm:self-auto cursor-pointer shadow-xs transition-colors"
+          >
+            <span>Review Pending Approvals ({pendingCount})</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
+      )}
 
-        <button
-          onClick={openAddModal}
-          className="px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 flex items-center gap-1.5 shadow-lg shadow-orange-500/30 transition-all cursor-pointer"
-        >
-          <UserPlus className="w-4 h-4" />
-          Direct Add Member
-        </button>
-      </div>
-
-      {/* Tabs Bar: Profile-Wise vs Pending Approvals vs All Users */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700 pb-3">
-        <div className="flex items-center gap-2 overflow-x-auto">
+      {/* Primary Navigation Separation: [Team Members] vs [Approvals] */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-[#e2ebd9] pb-4">
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setActiveSubTab('profile_wise')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              activeSubTab === 'profile_wise'
-                ? 'bg-blue-500/25 text-blue-200 border border-blue-400/60 shadow-sm'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+            onClick={() => setPrimaryTab('members')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+              primaryTab === 'members'
+                ? 'bg-[#8cc540] text-[#101010] shadow-sm'
+                : 'bg-white text-[#666666] hover:text-[#101010] hover:bg-[#f0f4ec] border border-[#e2ebd9]'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Profile-Wise Department Manager</span>
+            <Users className="w-4 h-4" />
+            <span>Team Members</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#101010]/10">
+              {allUsers.filter((u) => u.status !== 'pending_approval').length}
+            </span>
           </button>
 
           <button
-            onClick={() => setActiveSubTab('all')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              activeSubTab === 'all'
-                ? 'bg-orange-500/25 text-orange-200 border border-orange-400/60 shadow-sm'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+            onClick={() => setPrimaryTab('approvals')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer relative ${
+              primaryTab === 'approvals'
+                ? 'bg-amber-500 text-slate-950 shadow-sm'
+                : 'bg-white text-[#666666] hover:text-[#101010] hover:bg-amber-50/50 border border-[#e2ebd9]'
             }`}
           >
-            <Users className="w-3.5 h-3.5" />
-            <span>All Registered Members ({allUsers.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('pending')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              activeSubTab === 'pending'
-                ? 'bg-amber-500/25 text-amber-200 border border-amber-400/60 shadow-sm'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            <span>Pending Requests</span>
+            <Clock className="w-4 h-4" />
+            <span>Approvals</span>
             <span
               className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                pendingCount > 0 ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'
+                pendingCount > 0
+                  ? 'bg-amber-600 text-white animate-pulse'
+                  : 'bg-slate-200 text-slate-700'
               }`}
             >
               {pendingCount}
@@ -580,555 +562,757 @@ export const UserManagement: React.FC = () => {
           </button>
         </div>
 
-        {/* Module Scope Filter */}
-        <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-750 self-start sm:self-auto">
-          <span className="text-[10px] text-slate-400 font-bold uppercase px-2">Scope:</span>
-          {(
-            [
-              { id: 'ALL', label: 'All Modules' },
-              { id: 'both', label: '⚡ Both' },
-              { id: 'pm', label: '💻 PM Only' },
-              { id: 'sales', label: '💼 Sales Only' },
-            ] as const
-          ).map((t) => (
+        {/* View Toggle if on Members Tab */}
+        {primaryTab === 'members' && (
+          <div className="flex items-center gap-1.5 bg-[#f8faf6] p-1 rounded-xl border border-[#e2ebd9] self-start sm:self-auto">
+            <span className="text-[10px] text-[#888888] font-bold uppercase px-2">Layout:</span>
             <button
-              key={t.id}
-              onClick={() => setModuleFilter(t.id)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                moduleFilter === t.id
-                  ? 'bg-slate-800 text-orange-300 border border-slate-600 shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
+              onClick={() => setMembersView('profile_matrix')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                membersView === 'profile_matrix'
+                  ? 'bg-white text-[#101010] border border-[#e2ebd9] shadow-xs'
+                  : 'text-[#666666] hover:text-[#101010]'
               }`}
             >
-              {t.label}
+              <Layers className="w-3.5 h-3.5 text-[#598327]" />
+              <span>Profile Matrix</span>
             </button>
-          ))}
-        </div>
+            <button
+              onClick={() => setMembersView('directory')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                membersView === 'directory'
+                  ? 'bg-white text-[#101010] border border-[#e2ebd9] shadow-xs'
+                  : 'text-[#666666] hover:text-[#101010]'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5 text-[#598327]" />
+              <span>All Members Table</span>
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* VIEW 0: Profile-Wise Department Manager */}
-      {activeSubTab === 'profile_wise' && (
+      {/* ========================================================
+          TAB 1: TEAM MEMBERS
+          ======================================================== */}
+      {primaryTab === 'members' && (
         <div className="space-y-6">
-          {/* Explanatory Banner & Quick Stats */}
-          <div className="bg-gradient-to-r from-blue-950/50 via-slate-900/80 to-purple-950/50 border border-slate-700 rounded-3xl p-5 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-blue-500/20 text-blue-300 border border-blue-500/40">
-                  <Layers className="w-5 h-5" />
-                </span>
-                <h3 className="text-base font-bold text-white">
-                  Profile-Wise Department & Role Matrix
-                </h3>
-              </div>
-              <p className="text-xs text-slate-300 max-w-2xl font-normal leading-relaxed">
-                Organize members by their profile specializations (PR, WR, HW for IT Team; RR, DR for SMM Team). You can update each member's department assignment directly using the presets or custom designations below.
-              </p>
-            </div>
+          {/* VIEW A: PROFILE-WISE MATRIX */}
+          {membersView === 'profile_matrix' && (
+            <div className="space-y-6">
+              {/* Explanatory Banner & Quick Breakdown */}
+              <div className="bg-white border border-[#e2ebd9] rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="p-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-200">
+                      <Layers className="w-5 h-5" />
+                    </span>
+                    <h3 className="text-base font-black text-[#101010]">
+                      Profile-Wise Specialization & Department Matrix
+                    </h3>
+                  </div>
+                  <p className="text-xs text-[#666666] max-w-2xl font-normal leading-relaxed">
+                    Organize members by their profile specializations (PR, WR, HW for IT Team; RR, DR for SMM Team). You can update each member's department assignment directly using the presets or custom designations.
+                  </p>
+                </div>
 
-            <div className="flex items-center gap-2 self-stretch md:self-auto bg-slate-950/80 p-2.5 rounded-2xl border border-slate-700 shrink-0">
-              <div className="text-center px-3.5 py-1 border-r border-slate-700">
-                <div className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">IT Profiles</div>
-                <div className="text-sm font-black text-blue-300">
-                  {allUsers.filter((u) => ['PR', 'WR', 'HW'].includes(u.profileCode || (u.team === 'IT' || u.department?.toLowerCase().includes('it') ? 'PR' : 'RR'))).length}
+                <div className="flex items-center gap-3 self-stretch md:self-auto bg-[#f8faf6] p-3 rounded-2xl border border-[#e2ebd9] shrink-0">
+                  <div className="text-center px-3.5 py-1 border-r border-[#e2ebd9]">
+                    <div className="text-[10px] text-[#666666] font-bold uppercase tracking-wider">IT Profiles</div>
+                    <div className="text-sm font-black text-blue-700">
+                      {allUsers.filter((u) => ['PR', 'WR', 'HW'].includes(u.profileCode || (u.team === 'IT' || u.department?.toLowerCase().includes('it') ? 'PR' : 'RR'))).length}
+                    </div>
+                  </div>
+                  <div className="text-center px-3.5 py-1">
+                    <div className="text-[10px] text-[#666666] font-bold uppercase tracking-wider">SMM Profiles</div>
+                    <div className="text-sm font-black text-purple-700">
+                      {allUsers.filter((u) => ['RR', 'DR'].includes(u.profileCode || (u.team === 'IT' || u.department?.toLowerCase().includes('it') ? 'PR' : 'RR'))).length}
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="text-center px-3.5 py-1">
-                <div className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">SMM Profiles</div>
-                <div className="text-sm font-black text-purple-300">
-                  {allUsers.filter((u) => ['RR', 'DR'].includes(u.profileCode || (u.team === 'IT' || u.department?.toLowerCase().includes('it') ? 'PR' : 'RR'))).length}
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Profile Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            <button
-              onClick={() => setSelectedProfileFilter('ALL')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                selectedProfileFilter === 'ALL'
-                  ? 'bg-orange-500 text-slate-950 font-black shadow-md shadow-orange-500/20'
-                  : 'bg-slate-900 border border-slate-700 text-slate-300 hover:text-white'
-              }`}
-            >
-              All Profiles ({allUsers.length})
-            </button>
-            {(['PR', 'WR', 'HW', 'RR', 'DR'] as ProfileCode[]).map((code) => {
-              const count = allUsers.filter(
-                (u) =>
-                  (u.profileCode ||
-                    (u.team === 'IT' || u.department?.toLowerCase().includes('it') ? 'PR' : 'RR')) === code
-              ).length;
-              const isSelected = selectedProfileFilter === code;
-              const isIT = ['PR', 'WR', 'HW'].includes(code);
-              return (
+              {/* Profile Filter Pills */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 <button
-                  key={code}
-                  onClick={() => setSelectedProfileFilter(code)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
-                    isSelected
-                      ? isIT
-                        ? 'bg-blue-600 text-white font-black shadow-md shadow-blue-500/30'
-                        : 'bg-purple-600 text-white font-black shadow-md shadow-purple-500/30'
-                      : 'bg-slate-900 border border-slate-700 text-slate-300 hover:text-white'
+                  onClick={() => setSelectedProfileFilter('ALL')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    selectedProfileFilter === 'ALL'
+                      ? 'bg-[#8cc540] text-[#101010] font-black shadow-xs'
+                      : 'bg-white border border-[#e2ebd9] text-[#555555] hover:text-[#101010]'
                   }`}
                 >
-                  <span>{isIT ? '💻' : '📱'}</span>
-                  <span>{code} Profile</span>
-                  <span
-                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
-                      isSelected ? 'bg-black/30 text-white' : 'bg-slate-800 text-slate-200'
-                    }`}
-                  >
-                    {count}
-                  </span>
+                  All Profiles ({allUsers.length})
                 </button>
-              );
-            })}
-          </div>
-
-          {/* Profile Groups */}
-          <div className="space-y-6">
-            {(['PR', 'WR', 'HW', 'RR', 'DR'] as ProfileCode[])
-              .filter((code) => selectedProfileFilter === 'ALL' || selectedProfileFilter === code)
-              .map((code) => {
-                const prof = ALL_PROFILES[code];
-                const isIT = ['PR', 'WR', 'HW'].includes(code);
-                const members = allUsers.filter(
-                  (u) =>
-                    (u.profileCode ||
-                      (u.team === 'IT' || u.department?.toLowerCase().includes('it') ? 'PR' : 'RR')) === code
-                );
-
-                return (
-                  <div
-                    key={code}
-                    className="rounded-3xl border border-slate-800 bg-slate-900/70 overflow-hidden shadow-xl"
-                  >
-                    {/* Profile Header */}
-                    <div
-                      className={`p-4 sm:p-5 border-b border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                        isIT ? 'bg-blue-950/40' : 'bg-purple-950/40'
+                {(['PR', 'WR', 'HW', 'RR', 'DR'] as ProfileCode[]).map((code) => {
+                  const count = allUsers.filter(
+                    (u) =>
+                      (u.profileCode ||
+                        (u.team === 'IT' || u.department?.toLowerCase().includes('it') ? 'PR' : 'RR')) === code
+                  ).length;
+                  const isSelected = selectedProfileFilter === code;
+                  const isIT = ['PR', 'WR', 'HW'].includes(code);
+                  return (
+                    <button
+                      key={code}
+                      onClick={() => setSelectedProfileFilter(code)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+                        isSelected
+                          ? isIT
+                            ? 'bg-blue-600 text-white font-black shadow-sm'
+                            : 'bg-purple-600 text-white font-black shadow-sm'
+                          : 'bg-white border border-[#e2ebd9] text-[#555555] hover:text-[#101010]'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider ${
-                            isIT
-                              ? 'bg-blue-500/25 text-blue-200 border border-blue-400/50'
-                              : 'bg-purple-500/25 text-purple-200 border border-purple-400/50'
+                      <span>{isIT ? '💻' : '📱'}</span>
+                      <span>{code} Profile</span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                          isSelected ? 'bg-black/20 text-white' : 'bg-[#f0f4ec] text-[#436320]'
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Profile Groups */}
+              <div className="space-y-6">
+                {(['PR', 'WR', 'HW', 'RR', 'DR'] as ProfileCode[])
+                  .filter((code) => selectedProfileFilter === 'ALL' || selectedProfileFilter === code)
+                  .map((code) => {
+                    const prof = ALL_PROFILES[code];
+                    const isIT = ['PR', 'WR', 'HW'].includes(code);
+                    const members = allUsers.filter(
+                      (u) =>
+                        (u.profileCode ||
+                          (u.team === 'IT' || u.department?.toLowerCase().includes('it') ? 'PR' : 'RR')) === code
+                    );
+
+                    return (
+                      <div
+                        key={code}
+                        className="rounded-3xl border border-[#e2ebd9] bg-white overflow-hidden shadow-sm"
+                      >
+                        {/* Profile Header */}
+                        <div
+                          className={`p-4 sm:p-5 border-b border-[#e2ebd9] flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                            isIT ? 'bg-blue-50/50' : 'bg-purple-50/50'
                           }`}
                         >
-                          {code} Profile
-                        </span>
-                        <div>
-                          <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                            {prof?.title || code}
+                          <div className="flex items-center gap-3">
                             <span
-                              className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                              className={`px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider ${
                                 isIT
-                                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                                  : 'bg-pink-500/20 text-pink-300 border border-pink-500/30'
+                                  ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                  : 'bg-purple-100 text-purple-800 border border-purple-200'
                               }`}
                             >
-                              {isIT ? 'IT Solutions' : 'SMM Strategy'}
+                              {code} Profile
                             </span>
-                          </h4>
-                          <p className="text-xs text-slate-300 mt-0.5 line-clamp-1">
-                            {prof?.description || ''}
-                          </p>
+                            <div>
+                              <h4 className="text-sm font-black text-[#101010] flex items-center gap-2">
+                                {prof?.title || code}
+                                <span
+                                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                                    isIT
+                                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                      : 'bg-purple-50 text-purple-700 border border-purple-200'
+                                  }`}
+                                >
+                                  {isIT ? 'IT Solutions' : 'SMM Strategy'}
+                                </span>
+                              </h4>
+                              <p className="text-xs text-[#666666] mt-0.5 line-clamp-1">
+                                {prof?.description || ''}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 self-end sm:self-auto">
+                            <span className="text-xs text-[#555555] font-semibold">
+                              {members.length} {members.length === 1 ? 'member' : 'members'} assigned
+                            </span>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-2 self-end sm:self-auto">
-                        <span className="text-xs text-slate-300 font-medium">
-                          {members.length} {members.length === 1 ? 'member' : 'members'} assigned
-                        </span>
-                      </div>
-                    </div>
+                        {/* Members List in this profile */}
+                        {members.length === 0 ? (
+                          <div className="p-8 text-center text-[#888888]">
+                            <p className="text-xs font-medium">No members currently assigned to {code} profile.</p>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-[#edf3e7]">
+                            {members.map((u) => (
+                              <div
+                                key={u.uid}
+                                className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-[#f8faf6] transition-colors"
+                              >
+                                <div className="flex items-center gap-3.5">
+                                  <img
+                                    src={u.avatarUrl || PRESET_AVATARS[0]}
+                                    alt={u.name}
+                                    className="w-10 h-10 rounded-2xl object-cover ring-1 ring-[#e2ebd9]"
+                                  />
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <h5 className="text-sm font-black text-[#101010]">{u.name}</h5>
+                                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#f0f4ec] text-[#436320] font-bold">
+                                        {u.userId}
+                                      </span>
+                                      {u.role === 'super_admin' && (
+                                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                          Super Admin
+                                        </span>
+                                      )}
+                                      {u.role === 'admin' && (
+                                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                                          Admin
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-3 text-xs text-[#666666] mt-1">
+                                      <span className="text-[#333333] font-medium">{u.email}</span>
+                                      <span>•</span>
+                                      <span className="text-[#101010] font-semibold">{u.department || 'IT Solutions'}</span>
+                                      <span>•</span>
+                                      <span
+                                        className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                                          (u.moduleAssignment || 'both') === 'both'
+                                            ? 'bg-purple-50 text-purple-700'
+                                            : (u.moduleAssignment || 'both') === 'pm'
+                                            ? 'bg-blue-50 text-blue-700'
+                                            : 'bg-emerald-50 text-emerald-700'
+                                        }`}
+                                      >
+                                        {(u.moduleAssignment || 'both') === 'both'
+                                          ? '⚡ Both Modules'
+                                          : (u.moduleAssignment || 'both') === 'pm'
+                                          ? '💻 PM Only'
+                                          : '💼 Sales Only'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
 
-                    {/* Members List in this profile */}
-                    {members.length === 0 ? (
-                      <div className="p-8 text-center space-y-2">
-                        <p className="text-xs text-slate-300 font-medium">
-                          No team members are currently assigned to {code} ({prof?.title}).
-                        </p>
-                        <p className="text-[11px] text-slate-400">
-                          Use "Direct Add Member" or reassign existing members from other profiles.
-                        </p>
+                                <div className="flex items-center gap-2 self-end md:self-auto">
+                                  <button
+                                    onClick={() => openQuickDeptModal(u)}
+                                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-[#f0f4ec] text-[#101010] border border-[#e2ebd9] flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                                  >
+                                    <Building2 className="w-3.5 h-3.5 text-[#598327]" />
+                                    <span>Update Dept & Profile</span>
+                                  </button>
+
+                                  <button
+                                    onClick={() => openEditModal(u)}
+                                    className="p-1.5 rounded-xl bg-white hover:bg-[#f0f4ec] text-[#555555] hover:text-[#101010] border border-[#e2ebd9] transition-colors cursor-pointer shadow-2xs"
+                                    title="Edit User Details"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="divide-y divide-slate-800">
-                        {members.map((user) => (
-                          <div
-                            key={user.uid}
-                            className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-800/50 transition-colors"
-                          >
-                            {/* Member Identifiers */}
-                            <div className="flex items-center gap-3.5 min-w-0 sm:min-w-[240px]">
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
+          {/* VIEW B: ALL MEMBERS TABLE DIRECTORY */}
+          {membersView === 'directory' && (
+            <div className="space-y-4">
+              {/* Search & Filter Bar */}
+              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-[#e2ebd9] shadow-xs">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="w-4 h-4 text-[#888888] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={search || ''}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search by name, user ID, or email..."
+                    className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl pl-9 pr-4 py-2 text-xs text-[#101010] placeholder-[#888888] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#8cc540]/40 font-medium"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Module Scope Filter */}
+                  <div className="flex items-center gap-1 bg-[#f8faf6] p-1 rounded-xl border border-[#e2ebd9]">
+                    <span className="text-[10px] text-[#888888] font-bold uppercase px-1.5">Scope:</span>
+                    {(
+                      [
+                        { id: 'ALL', label: 'All' },
+                        { id: 'both', label: '⚡ Both' },
+                        { id: 'pm', label: '💻 PM' },
+                        { id: 'sales', label: '💼 Sales' },
+                      ] as const
+                    ).map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => setModuleFilter(t.id)}
+                        className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                          moduleFilter === t.id
+                            ? 'bg-white text-[#101010] border border-[#e2ebd9] shadow-2xs'
+                            : 'text-[#666666] hover:text-[#101010]'
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Status Filter */}
+                  <div className="flex items-center gap-1 bg-[#f8faf6] p-1 rounded-xl border border-[#e2ebd9]">
+                    <span className="text-[10px] text-[#888888] font-bold uppercase px-1.5">Status:</span>
+                    {[
+                      { id: 'ALL', label: 'All' },
+                      { id: 'active', label: 'Active' },
+                      { id: 'disabled', label: 'Disabled' },
+                      { id: 'rejected', label: 'Rejected' },
+                    ].map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => setStatusFilter(s.id)}
+                        className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                          statusFilter === s.id
+                            ? 'bg-white text-[#101010] border border-[#e2ebd9] shadow-2xs'
+                            : 'text-[#666666] hover:text-[#101010]'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Members Table */}
+              <div className="rounded-3xl border border-[#e2ebd9] bg-white overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-[#e2ebd9] bg-[#f8faf6] text-[11px] font-black text-[#555555] uppercase tracking-wider">
+                        <th className="py-3.5 px-4">Name</th>
+                        <th className="py-3.5 px-4">User ID / Email</th>
+                        <th className="py-3.5 px-4">Role</th>
+                        <th className="py-3.5 px-4">Module Assignment</th>
+                        <th className="py-3.5 px-4">Status</th>
+                        <th className="py-3.5 px-4">Department & Profile</th>
+                        <th className="py-3.5 px-4">Joining Date</th>
+                        <th className="py-3.5 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#edf3e7] text-xs">
+                      {filteredUsers.map((user) => (
+                        <tr key={user.uid} className="hover:bg-[#f8faf6] transition-colors">
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <div className="flex items-center gap-3">
                               <img
                                 src={user.avatarUrl || PRESET_AVATARS[0]}
                                 alt={user.name}
-                                className="w-11 h-11 rounded-xl object-cover ring-2 ring-slate-700 shrink-0"
+                                className="w-9 h-9 rounded-xl object-cover ring-1 ring-[#e2ebd9]"
                               />
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <h5 className="text-xs sm:text-sm font-bold text-white truncate">
-                                    {user.name}
-                                  </h5>
-                                  <span
-                                    className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase ${
-                                      user.status === 'active'
-                                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/60'
-                                        : 'bg-amber-950 text-amber-300 border border-amber-700/60'
-                                    }`}
-                                  >
-                                    {user.status === 'active' ? 'Active' : 'Pending'}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-slate-300 font-mono flex items-center gap-1 mt-0.5 truncate">
-                                  <span className="text-orange-400 font-bold">{user.userId}</span>
-                                  <span className="text-slate-500">•</span>
-                                  <span className="text-slate-300 capitalize">{user.role.replace('_', ' ')}</span>
-                                </p>
-                                <div className="mt-1 flex items-center gap-1.5">
-                                  <span
-                                    className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase ${
-                                      (user.moduleAssignment || 'both') === 'both'
-                                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                                        : (user.moduleAssignment || 'both') === 'pm'
-                                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                                        : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                                    }`}
-                                  >
-                                    {(user.moduleAssignment || 'both') === 'both'
-                                      ? '⚡ Dual (PM & Sales)'
-                                      : (user.moduleAssignment || 'both') === 'pm'
-                                      ? '💻 PM Only'
-                                      : '💼 Sales Only'}
-                                  </span>
-                                </div>
+                              <div>
+                                <span className="font-bold text-[#101010] text-sm block">{user.name}</span>
                               </div>
                             </div>
-
-                            {/* Department Assignment & Module Quick Selector */}
-                            <div className="flex-1 max-w-xl space-y-1.5">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
-                                  Department & Module Access:
-                                </span>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-[10px] text-slate-400">Quick Assign:</span>
-                                  {(
-                                    [
-                                      { id: 'pm', label: 'PM' },
-                                      { id: 'sales', label: 'Sales' },
-                                      { id: 'both', label: 'Both' },
-                                    ] as const
-                                  ).map((m) => (
-                                    <button
-                                      key={m.id}
-                                      type="button"
-                                      onClick={() => handleInlineModuleChange(user, m.id)}
-                                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                                        (user.moduleAssignment || 'both') === m.id
-                                          ? 'bg-orange-500 text-slate-950 font-black'
-                                          : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-700'
-                                      }`}
-                                      title={`Assign to ${m.label}`}
-                                    >
-                                      {m.label}
-                                    </button>
-                                  ))}
-                                </div>
+                          </td>
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <div>
+                              <p className="font-mono text-xs font-bold text-[#436320]">{user.userId}</p>
+                              <p className="text-[11px] text-[#666666]">{user.email}</p>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            {user.role === 'super_admin' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                                <Shield className="w-3 h-3 text-amber-600" /> Super Admin
+                              </span>
+                            )}
+                            {user.role === 'admin' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                                <Shield className="w-3 h-3 text-blue-600" /> Admin
+                              </span>
+                            )}
+                            {user.role === 'team_member' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                <User className="w-3 h-3 text-emerald-600" /> Team Member
+                              </span>
+                            )}
+                            {user.role === 'viewer' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200">
+                                <Eye className="w-3 h-3 text-purple-600" /> Viewer (Read-Only)
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <div className="space-y-1">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
+                                  (user.moduleAssignment || 'both') === 'both'
+                                    ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                    : (user.moduleAssignment || 'both') === 'pm'
+                                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                }`}
+                              >
+                                {(user.moduleAssignment || 'both') === 'both'
+                                  ? '⚡ Both'
+                                  : (user.moduleAssignment || 'both') === 'pm'
+                                  ? '💻 PM'
+                                  : '💼 Sales'}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                {(
+                                  [
+                                    { id: 'pm', label: 'PM' },
+                                    { id: 'sales', label: 'Sales' },
+                                    { id: 'both', label: 'Both' },
+                                  ] as const
+                                ).map((m) => (
+                                  <button
+                                    key={m.id}
+                                    onClick={() => handleInlineModuleChange(user, m.id)}
+                                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all cursor-pointer ${
+                                      (user.moduleAssignment || 'both') === m.id
+                                        ? 'bg-[#8cc540] text-[#101010] font-black'
+                                        : 'bg-[#f8faf6] text-[#666666] hover:text-[#101010] border border-[#e2ebd9]'
+                                    }`}
+                                    title={`Switch to ${m.label}`}
+                                  >
+                                    {m.label}
+                                  </button>
+                                ))}
                               </div>
-
-                              <div className="flex items-center gap-2">
-                                <select
-                                  value={user.department || getDefaultDepartmentForProfile(code)}
-                                  onChange={(e) =>
-                                    handleInlineDeptChange(user, code, e.target.value)
-                                  }
-                                  aria-label={`Change department for ${user.name}`}
-                                  className="flex-1 bg-slate-950 border border-slate-700 hover:border-slate-600 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium cursor-pointer"
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            {user.status === 'active' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <CheckCircle className="w-3 h-3" /> Active
+                              </span>
+                            )}
+                            {user.status === 'pending_approval' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                                <Clock className="w-3 h-3" /> Pending Review
+                              </span>
+                            )}
+                            {user.status === 'rejected' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                <Ban className="w-3 h-3" /> Rejected
+                              </span>
+                            )}
+                            {user.status === 'disabled' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                                <XCircle className="w-3 h-3" /> Disabled
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 whitespace-nowrap text-[#101010]">
+                            <div className="flex items-center gap-2">
+                              <div>
+                                <span className="font-semibold text-[#101010] block text-xs">
+                                  {user.department || 'IT Team'}
+                                </span>
+                                <span
+                                  className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase inline-block mt-0.5 ${
+                                    ['PR', 'WR', 'HW'].includes(user.profileCode || '')
+                                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                      : 'bg-purple-50 text-purple-700 border border-purple-200'
+                                  }`}
                                 >
-                                  <optgroup label={`${code} Profile Recommended Presets`} className="bg-slate-900 text-white">
-                                    {(PROFILE_DEPARTMENT_PRESETS[code] || []).map((preset) => (
-                                      <option key={preset} value={preset} className="bg-slate-900 text-white">
-                                        {preset}
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                  {user.department &&
-                                    !(PROFILE_DEPARTMENT_PRESETS[code] || []).includes(user.department) && (
-                                      <option value={user.department} className="bg-slate-900 text-white">
-                                        📌 Current: {user.department}
-                                      </option>
-                                    )}
-                                </select>
-
+                                  {user.profileCode || (user.team === 'IT' || user.department?.toLowerCase().includes('it') ? 'PR' : 'RR')} Profile
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => openQuickDeptModal(user)}
+                                className="p-1 px-2 rounded-lg bg-white hover:bg-[#f0f4ec] text-[#555555] hover:text-[#101010] border border-[#e2ebd9] transition-colors cursor-pointer text-[10px] font-bold flex items-center gap-1 shrink-0 shadow-2xs"
+                                title="Update Department & Profile"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                                <span>Update</span>
+                              </button>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 whitespace-nowrap text-[#666666] font-medium">
+                            {user.joiningDate || '2025-01-01'}
+                          </td>
+                          <td className="py-3.5 px-4 text-right whitespace-nowrap space-x-1.5">
+                            {user.status === 'pending_approval' ? (
+                              <button
+                                onClick={() => handleApprove(user)}
+                                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+                              >
+                                Approve
+                              </button>
+                            ) : (
+                              <>
+                                {isSuperAdmin && (
+                                  <button
+                                    onClick={() => setInspectingUser(user)}
+                                    className="p-1.5 rounded-lg bg-white hover:bg-indigo-50 text-[#666666] hover:text-indigo-700 border border-[#e2ebd9] transition-colors cursor-pointer shadow-2xs"
+                                    title="Inspect Member Profile"
+                                  >
+                                    <User className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                                 <button
-                                  type="button"
-                                  onClick={() => openQuickDeptModal(user)}
-                                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-orange-500/20 text-slate-200 hover:text-orange-300 border border-slate-700 hover:border-orange-500/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
-                                  title="Change Profile or Type Custom Department"
+                                  onClick={() => setViewCredentialsUser(user)}
+                                  className="p-1.5 rounded-lg bg-white hover:bg-amber-50 text-[#666666] hover:text-amber-700 border border-[#e2ebd9] transition-colors cursor-pointer shadow-2xs"
+                                  title="View & Copy Login Credentials"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => openEditModal(user)}
+                                  className="p-1.5 rounded-lg bg-white hover:bg-[#f0f4ec] text-[#666666] hover:text-[#101010] border border-[#e2ebd9] transition-colors cursor-pointer shadow-2xs"
+                                  title="Edit User"
                                 >
                                   <Edit2 className="w-3.5 h-3.5" />
-                                  <span className="hidden sm:inline">Reassign / Custom</span>
                                 </button>
-                              </div>
-                            </div>
+                                <button
+                                  onClick={() => {
+                                    setResetPasswordUser(user);
+                                    setNewPassword(user.password || 'tiger2026');
+                                  }}
+                                  className="p-1.5 rounded-lg bg-white hover:bg-amber-50 text-[#666666] hover:text-amber-700 border border-[#e2ebd9] transition-colors cursor-pointer shadow-2xs"
+                                  title="Reset Password"
+                                >
+                                  <KeyRound className="w-3.5 h-3.5" />
+                                </button>
+                                {user.uid !== currentUser?.uid && (
+                                  <>
+                                    <button
+                                      onClick={() => handleToggleStatus(user)}
+                                      className={`p-1.5 rounded-lg border border-[#e2ebd9] transition-colors cursor-pointer shadow-2xs ${
+                                        user.status === 'active'
+                                          ? 'bg-white hover:bg-rose-50 text-[#666666] hover:text-rose-600'
+                                          : 'bg-white hover:bg-emerald-50 text-[#666666] hover:text-emerald-600'
+                                      }`}
+                                      title={user.status === 'active' ? 'Disable Account' : 'Enable Account'}
+                                    >
+                                      {user.status === 'active' ? (
+                                        <XCircle className="w-3.5 h-3.5" />
+                                      ) : (
+                                        <CheckCircle className="w-3.5 h-3.5" />
+                                      )}
+                                    </button>
 
-                            {/* Secondary Actions */}
-                            <div className="flex items-center justify-end gap-1.5 self-end lg:self-center shrink-0">
-                              <button
-                                onClick={() => setInspectingUser(user)}
-                                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition-colors cursor-pointer"
-                                title="Inspect Member Performance Profile"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => openEditModal(user)}
-                                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition-colors cursor-pointer"
-                                title="Full Profile Edit"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                                    <button
+                                      onClick={() => setDeletingUser(user)}
+                                      className="p-1.5 rounded-lg bg-white hover:bg-rose-50 text-[#888888] hover:text-rose-600 border border-[#e2ebd9] hover:border-rose-200 transition-colors cursor-pointer shadow-2xs"
+                                      title="Delete Member Profile"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {filteredUsers.length === 0 && (
+                  <div className="text-center py-12 text-[#888888]">
+                    <Users className="w-10 h-10 mx-auto mb-2 opacity-30 text-[#8cc540]" />
+                    <p className="text-sm font-bold text-[#101010]">No members found.</p>
+                    <p className="text-xs text-[#666666]">Try adjusting your search query or status filter.</p>
                   </div>
-                );
-              })}
-          </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* VIEW 1: Pending Approvals Queue */}
-      {activeSubTab === 'pending' && (
-        <div className="space-y-4">
-          {pendingUsers.length === 0 ? (
-            <div className="rounded-3xl border border-slate-750 bg-slate-900/80 p-10 text-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center justify-center mx-auto">
-                <Check className="w-6 h-6" />
+      {/* ========================================================
+          TAB 2: PENDING APPROVALS
+          ======================================================== */}
+      {primaryTab === 'approvals' && (
+        <div className="space-y-6">
+          {/* Header Card */}
+          <div className="bg-amber-50/70 border border-amber-200 rounded-3xl p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-amber-100 text-amber-800 border border-amber-300">
+                  <Clock className="w-5 h-5" />
+                </span>
+                <h3 className="text-base font-black text-amber-950">
+                  Pending Registration Approval Requests
+                </h3>
               </div>
-              <h3 className="text-base font-bold text-white">No Pending Registration Requests</h3>
-              <p className="text-xs text-slate-300 max-w-md mx-auto">
-                All team member registrations have been reviewed. When new candidates register via the public portal, their requests will appear here for your approval.
+              <p className="text-xs text-amber-900/80 max-w-2xl font-medium leading-relaxed">
+                Review self-registered team members, assign their authorized access role (Team Member, Admin, Viewer), designate their project management and sales scope, and verify their department profile.
+              </p>
+            </div>
+
+            <div className="px-4 py-2 rounded-2xl bg-white border border-amber-200 font-bold text-xs text-amber-900 shadow-2xs">
+              {pendingCount} Pending Request{pendingCount === 1 ? '' : 's'}
+            </div>
+          </div>
+
+          {/* Pending Users Grid */}
+          {pendingUsers.length === 0 ? (
+            <div className="bg-white border border-[#e2ebd9] rounded-3xl p-12 text-center space-y-3 shadow-sm">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto">
+                <CheckCircle className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-black text-[#101010]">All Caught Up!</h4>
+              <p className="text-xs text-[#666666] max-w-md mx-auto">
+                There are currently no pending registration requests awaiting administrative approval. All team members have been reviewed.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {pendingUsers.map((user) => (
                 <div
                   key={user.uid}
-                  className="rounded-3xl border border-amber-500/40 bg-slate-900/95 p-5 space-y-4 shadow-xl relative overflow-hidden"
+                  className="bg-white border-2 border-amber-300 rounded-3xl p-5 sm:p-6 shadow-md space-y-5 relative overflow-hidden"
                 >
-                  <div className="absolute top-0 right-0 px-3 py-1 bg-amber-500/20 text-amber-200 border-b border-l border-amber-500/40 rounded-bl-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> Awaiting Approval
+                  <div className="absolute top-0 right-0 bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
+                    Awaiting Approval
                   </div>
 
-                  <div className="flex items-start gap-3.5">
+                  {/* Member Details */}
+                  <div className="flex items-start gap-4">
                     <img
-                      src={
-                        user.avatarUrl ||
-                        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
-                      }
+                      src={user.avatarUrl || PRESET_AVATARS[0]}
                       alt={user.name}
-                      className="w-12 h-12 rounded-2xl object-cover ring-2 ring-amber-500/40 shrink-0"
+                      className="w-12 h-12 rounded-2xl object-cover ring-2 ring-amber-300"
                     />
-                    <div className="pr-20">
-                      <h4 className="text-sm font-bold text-white">{user.name}</h4>
-                      <p className="text-xs font-mono font-bold text-orange-400">{user.userId}</p>
-                      <p className="text-xs text-slate-300">{user.email}</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs bg-slate-950 p-3.5 rounded-2xl border border-slate-700">
-                    <div>
-                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Department & Profile</span>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="font-semibold text-slate-100">{user.department || 'SMM Operations'}</span>
-                        <span
-                          className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase ${
-                            ['PR', 'WR', 'HW'].includes(user.profileCode || '')
-                              ? 'bg-blue-900/80 text-blue-200 border border-blue-600'
-                              : 'bg-purple-900/80 text-purple-200 border border-purple-600'
-                          }`}
-                        >
-                          {user.profileCode || (user.department?.toLowerCase().includes('it') ? 'PR' : 'RR')}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-base font-black text-[#101010] truncate">{user.name}</h4>
+                      <p className="text-xs font-mono font-bold text-[#436320]">{user.userId}</p>
+                      <p className="text-xs text-[#666666] truncate mt-0.5">{user.email}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-[#f0f4ec] text-[#436320]">
+                          Requested: {user.department || 'IT Team'}
+                        </span>
+                        <span className="text-[10px] text-[#888888]">
+                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recent'}
                         </span>
                       </div>
                     </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Registered On</span>
-                      <span className="font-semibold text-slate-100">
-                        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Today'}
-                      </span>
-                    </div>
-                    {user.registrationNotes && (
-                      <div className="col-span-2 pt-1 border-t border-slate-800 mt-1">
-                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Member Note</span>
-                        <p className="text-slate-200 italic text-[11px]">"{user.registrationNotes}"</p>
-                      </div>
-                    )}
                   </div>
 
-                  <div className="space-y-3 pt-1 border-t border-slate-800">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div>
-                        <span className="text-[11px] font-bold text-slate-300 block mb-1">Assign Role:</span>
-                        <select
-                          value={pendingApprovalRoles[user.uid] || 'team_member'}
-                          onChange={(e) =>
-                            setPendingApprovalRoles((prev) => ({
-                              ...prev,
-                              [user.uid]: e.target.value as UserRole,
-                            }))
-                          }
-                          className="w-full bg-slate-950 border border-slate-700 text-xs text-orange-300 font-bold rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
-                        >
-                          <option value="team_member" className="bg-slate-900 text-white">Team Member</option>
-                          <option value="viewer" className="bg-slate-900 text-white">Viewer (Read-Only)</option>
-                          <option value="admin" className="bg-slate-900 text-white">Admin</option>
-                          <option value="super_admin" className="bg-slate-900 text-white">Super Admin</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <span className="text-[11px] font-bold text-slate-300 block mb-1">Module Assignment:</span>
-                        <select
-                          value={pendingApprovalModules[user.uid]?.module || user.moduleAssignment || 'both'}
-                          onChange={(e) => {
-                            const newMod = e.target.value as ModuleAssignment;
-                            setPendingApprovalModules((prev) => ({
-                              ...prev,
-                              [user.uid]: {
-                                module: newMod,
-                                salesDept: prev[user.uid]?.salesDept || (user.team === 'IT' ? 'IT' : 'SMM'),
-                                salesProfile:
-                                  prev[user.uid]?.salesProfile ||
-                                  (['PR', 'WR', 'HW', 'DR', 'RR'].includes(user.profileCode || '')
-                                    ? (user.profileCode as any)
-                                    : 'PR'),
-                              },
-                            }));
-                          }}
-                          className="w-full bg-slate-950 border border-slate-700 text-xs text-purple-300 font-bold rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
-                        >
-                          <option value="both" className="bg-slate-900 text-white">⚡ Both (PM & Sales)</option>
-                          <option value="pm" className="bg-slate-900 text-white">💻 Project Management Only</option>
-                          <option value="sales" className="bg-slate-900 text-white">💼 Sales Module Only</option>
-                        </select>
-                      </div>
+                  {/* Approval Configuration Controls */}
+                  <div className="bg-[#f8faf6] p-4 rounded-2xl border border-[#e2ebd9] space-y-3.5 text-xs">
+                    {/* Role Selection */}
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-[#666666] mb-1">
+                        Assign Access Role:
+                      </label>
+                      <select
+                        value={pendingApprovalRoles[user.uid] || 'team_member'}
+                        onChange={(e) =>
+                          setPendingApprovalRoles((prev) => ({
+                            ...prev,
+                            [user.uid]: e.target.value as UserRole,
+                          }))
+                        }
+                        className="w-full bg-white border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540]/40 cursor-pointer"
+                      >
+                        <option value="team_member">Team Member (Submit & View Own Data)</option>
+                        <option value="admin">Admin (Manage Data & Reports)</option>
+                        <option value="viewer">Viewer (Read-Only Access)</option>
+                        {isSuperAdmin && <option value="super_admin">Super Admin (Full Control)</option>}
+                      </select>
                     </div>
 
-                    {/* If Sales or Both, optionally configure Sales Department & Profile */}
-                    {(pendingApprovalModules[user.uid]?.module || user.moduleAssignment || 'both') !== 'pm' && (
-                      <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                          <span className="text-[10px] text-slate-400 font-bold block mb-1 uppercase">Sales Dept:</span>
-                          <select
-                            value={pendingApprovalModules[user.uid]?.salesDept || user.salesDepartment || (user.team === 'IT' ? 'IT' : 'SMM')}
-                            onChange={(e) => {
-                              const dept = e.target.value as 'IT' | 'SMM';
-                              setPendingApprovalModules((prev) => ({
-                                ...prev,
-                                [user.uid]: {
-                                  module: prev[user.uid]?.module || 'both',
-                                  salesDept: dept,
-                                  salesProfile: dept === 'IT' ? 'PR' : 'DR',
-                                },
-                              }));
-                            }}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white"
-                          >
-                            <option value="IT">💻 IT Sales</option>
-                            <option value="SMM">📱 SMM Sales</option>
-                          </select>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-slate-400 font-bold block mb-1 uppercase">Sales Profile:</span>
-                          <select
-                            value={
-                              pendingApprovalModules[user.uid]?.salesProfile ||
-                              (user.salesProfileCode as any) ||
-                              ((pendingApprovalModules[user.uid]?.salesDept || user.salesDepartment) === 'SMM' ? 'DR' : 'PR')
-                            }
-                            onChange={(e) => {
-                              const prof = e.target.value as any;
-                              setPendingApprovalModules((prev) => ({
-                                ...prev,
-                                [user.uid]: {
-                                  module: prev[user.uid]?.module || 'both',
-                                  salesDept: prev[user.uid]?.salesDept || 'IT',
-                                  salesProfile: prof,
-                                },
-                              }));
-                            }}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white"
-                          >
-                            {(pendingApprovalModules[user.uid]?.salesDept || user.salesDepartment || 'IT') === 'IT' ? (
-                              <>
-                                <option value="PR">PR (IT Sales)</option>
-                                <option value="WR">WR (IT Sales)</option>
-                                <option value="HW">HW (IT Sales)</option>
-                              </>
-                            ) : (
-                              <>
-                                <option value="DR">DR (SMM Sales)</option>
-                                <option value="RR">RR (SMM Sales)</option>
-                              </>
-                            )}
-                          </select>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between gap-2 pt-1">
-                      <button
-                        onClick={() => setRejectingUser(user)}
-                        className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-rose-950 text-slate-200 hover:text-rose-300 border border-slate-700 hover:border-rose-700/50 flex items-center gap-1.5 transition-all cursor-pointer"
-                      >
-                        <Ban className="w-3.5 h-3.5" />
-                        Decline
-                      </button>
-
-                      <button
-                        disabled={approvingUserId === user.uid}
-                        onClick={() => {
-                          const assignedRole = pendingApprovalRoles[user.uid] || 'team_member';
-                          const modConfig = pendingApprovalModules[user.uid] || {
-                            module: user.moduleAssignment || 'both',
-                            salesDept: user.salesDepartment || (user.team === 'IT' ? 'IT' : 'SMM'),
-                            salesProfile: (user.salesProfileCode || (user.team === 'IT' ? 'PR' : 'DR')) as any,
-                          };
-                          handleApprove(
-                            user,
-                            assignedRole,
-                            modConfig.module,
-                            modConfig.salesDept,
-                            modConfig.salesProfile
+                    {/* Module Assignment */}
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-[#666666] mb-1">
+                        Module Access Scope:
+                      </label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {[
+                          { id: 'both', label: '⚡ Both' },
+                          { id: 'pm', label: '💻 PM Only' },
+                          { id: 'sales', label: '💼 Sales Only' },
+                        ].map((m) => {
+                          const currentMod =
+                            pendingApprovalModules[user.uid]?.module ||
+                            user.moduleAssignment ||
+                            'both';
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() =>
+                                setPendingApprovalModules((prev) => ({
+                                  ...prev,
+                                  [user.uid]: {
+                                    module: m.id as ModuleAssignment,
+                                    salesDept: prev[user.uid]?.salesDept || 'IT',
+                                    salesProfile: prev[user.uid]?.salesProfile || 'PR',
+                                  },
+                                }))
+                              }
+                              className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer text-center ${
+                                currentMod === m.id
+                                  ? 'bg-[#8cc540] text-[#101010] font-black shadow-2xs'
+                                  : 'bg-white text-[#666666] hover:text-[#101010] border border-[#e2ebd9]'
+                              }`}
+                            >
+                              {m.label}
+                            </button>
                           );
-                        }}
-                        className="px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 shadow-lg shadow-emerald-950/40 flex items-center gap-1.5 transition-all cursor-pointer"
-                      >
-                        {approvingUserId === user.uid ? (
-                          <>
-                            <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                            Approving...
-                          </>
-                        ) : (
-                          <>
-                            <UserCheck className="w-4 h-4" />
-                            Approve & Assign Access
-                          </>
-                        )}
-                      </button>
+                        })}
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-between gap-3 pt-1">
+                    <button
+                      onClick={() => setRejectingUser(user)}
+                      className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Ban className="w-3.5 h-3.5" />
+                      <span>Decline / Reject</span>
+                    </button>
+
+                    <button
+                      disabled={approvingUserId === user.uid}
+                      onClick={() => {
+                        const assignedRole = pendingApprovalRoles[user.uid] || 'team_member';
+                        const modConfig = pendingApprovalModules[user.uid] || {
+                          module: user.moduleAssignment || 'both',
+                          salesDept: user.salesDepartment || (user.team === 'IT' ? 'IT' : 'SMM'),
+                          salesProfile: (user.salesProfileCode || (user.team === 'IT' ? 'PR' : 'DR')) as any,
+                        };
+                        handleApprove(
+                          user,
+                          assignedRole,
+                          modConfig.module,
+                          modConfig.salesDept,
+                          modConfig.salesProfile
+                        );
+                      }}
+                      className="px-5 py-2.5 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] text-[#101010] flex items-center gap-1.5 shadow-md shadow-[#8cc540]/25 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {approvingUserId === user.uid ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-[#101010] border-t-transparent rounded-full animate-spin" />
+                          <span>Approving...</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserCheck className="w-4 h-4" />
+                          <span>Approve & Grant Access</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               ))}
@@ -1137,280 +1321,98 @@ export const UserManagement: React.FC = () => {
         </div>
       )}
 
-      {/* VIEW 2: All Users Table */}
-      {activeSubTab === 'all' && (
-        <div className="space-y-4">
-          {/* Search Input */}
-          <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-700 max-w-md">
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={search || ''}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search member by name, user ID, or email..."
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
-              />
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-750 bg-slate-900/90 overflow-hidden shadow-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-700 bg-slate-950 text-[11px] font-bold text-slate-300 uppercase tracking-wider">
-                    <th className="py-3.5 px-4">Name</th>
-                    <th className="py-3.5 px-4">User ID / Email</th>
-                    <th className="py-3.5 px-4">Role</th>
-                    <th className="py-3.5 px-4">Module Assignment</th>
-                    <th className="py-3.5 px-4">Status</th>
-                    <th className="py-3.5 px-4">Department & Profile</th>
-                    <th className="py-3.5 px-4">Joining Date</th>
-                    <th className="py-3.5 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800 text-xs">
-                  {filteredUsers.map((user) => (
-                    <tr key={user.uid} className="hover:bg-slate-800/60 transition-colors">
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={
-                              user.avatarUrl ||
-                              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
-                            }
-                            alt={user.name}
-                            className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-700"
-                          />
-                          <div>
-                            <span className="font-bold text-white text-sm block">{user.name}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div>
-                          <p className="font-mono text-xs font-bold text-orange-400">{user.userId}</p>
-                          <p className="text-[11px] text-slate-300">{user.email}</p>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        {user.role === 'super_admin' && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/25 text-amber-200 border border-amber-400/50">
-                            <Shield className="w-3 h-3" /> Super Admin
-                          </span>
-                        )}
-                        {user.role === 'admin' && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/25 text-blue-200 border border-blue-400/50">
-                            <Shield className="w-3 h-3" /> Admin
-                          </span>
-                        )}
-                        {user.role === 'team_member' && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/25 text-emerald-200 border border-emerald-400/50">
-                            <User className="w-3 h-3" /> Team Member
-                          </span>
-                        )}
-                        {user.role === 'viewer' && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/25 text-purple-200 border border-purple-400/50">
-                            <Eye className="w-3 h-3" /> Viewer (Read-Only)
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="space-y-1">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
-                              (user.moduleAssignment || 'both') === 'both'
-                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                                : (user.moduleAssignment || 'both') === 'pm'
-                                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                            }`}
-                          >
-                            {(user.moduleAssignment || 'both') === 'both'
-                              ? '⚡ Both'
-                              : (user.moduleAssignment || 'both') === 'pm'
-                              ? '💻 PM'
-                              : '💼 Sales'}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            {(
-                              [
-                                { id: 'pm', label: 'PM' },
-                                { id: 'sales', label: 'Sales' },
-                                { id: 'both', label: 'Both' },
-                              ] as const
-                            ).map((m) => (
-                              <button
-                                key={m.id}
-                                onClick={() => handleInlineModuleChange(user, m.id)}
-                                className={`px-1.5 py-0.2 rounded text-[9px] font-bold transition-all cursor-pointer ${
-                                  (user.moduleAssignment || 'both') === m.id
-                                    ? 'bg-orange-500 text-slate-950 font-black'
-                                    : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-700'
-                                }`}
-                                title={`Switch to ${m.label}`}
-                              >
-                                {m.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        {user.status === 'active' && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-950 text-emerald-200 border border-emerald-500/50">
-                            <CheckCircle className="w-3 h-3" /> Active
-                          </span>
-                        )}
-                        {user.status === 'pending_approval' && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-950 text-amber-200 border border-amber-500/50">
-                            <Clock className="w-3 h-3" /> Pending Review
-                          </span>
-                        )}
-                        {user.status === 'rejected' && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-950 text-rose-200 border border-rose-500/50">
-                            <Ban className="w-3 h-3" /> Rejected
-                          </span>
-                        )}
-                        {user.status === 'disabled' && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-600">
-                            <XCircle className="w-3 h-3" /> Disabled
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap text-slate-200">
-                        <div className="flex items-center gap-2">
-                          <div>
-                            <span className="font-semibold text-white block text-xs">
-                              {user.department || 'IT Team'}
-                            </span>
-                            <span
-                              className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase inline-block mt-0.5 ${
-                                ['PR', 'WR', 'HW'].includes(user.profileCode || '')
-                                  ? 'bg-blue-900/80 text-blue-200 border border-blue-600'
-                                  : 'bg-purple-900/80 text-purple-200 border border-purple-600'
-                              }`}
-                            >
-                              {user.profileCode || (user.team === 'IT' || user.department?.toLowerCase().includes('it') ? 'PR' : 'RR')} Profile
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => openQuickDeptModal(user)}
-                            className="p-1 px-2 rounded-lg bg-slate-800 hover:bg-orange-500/25 text-slate-200 hover:text-orange-200 border border-slate-700 hover:border-orange-500/50 transition-colors cursor-pointer text-[10px] font-bold flex items-center gap-1 shrink-0"
-                            title="Update Department & Profile"
-                          >
-                            <Edit2 className="w-3 h-3" />
-                            <span>Update</span>
-                          </button>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap text-slate-300 font-medium">
-                        {user.joiningDate || '2025-01-01'}
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap text-slate-300 text-[11px] font-medium">
-                        {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
-                      </td>
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap space-x-1.5">
-                        {user.status === 'pending_approval' ? (
-                          <button
-                            onClick={() => handleApprove(user)}
-                            className="px-2.5 py-1 rounded-lg bg-emerald-500/25 text-emerald-200 border border-emerald-500/50 hover:bg-emerald-500/40 text-xs font-bold"
-                          >
-                            Approve
-                          </button>
-                        ) : (
-                          <>
-                            {isSuperAdmin && (
-                              <button
-                                onClick={() => setInspectingUser(user)}
-                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-indigo-500/25 text-slate-200 hover:text-indigo-300 border border-slate-700 transition-colors cursor-pointer"
-                                title="Inspect Member Profile"
-                              >
-                                <User className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                            <button
-                              onClick={() => setViewCredentialsUser(user)}
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-orange-500/25 text-slate-200 hover:text-orange-300 border border-slate-700 transition-colors cursor-pointer"
-                              title="View & Copy Login Credentials"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => openEditModal(user)}
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition-colors cursor-pointer"
-                              title="Edit User"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setResetPasswordUser(user);
-                                setNewPassword(user.password || 'tiger2026');
-                              }}
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/25 text-slate-200 hover:text-amber-300 border border-slate-700 transition-colors cursor-pointer"
-                              title="Reset Password"
-                            >
-                              <KeyRound className="w-3.5 h-3.5" />
-                            </button>
-                            {user.uid !== currentUser?.uid && (
-                              <>
-                                <button
-                                  onClick={() => handleToggleStatus(user)}
-                                  className={`p-1.5 rounded-lg border border-slate-700 transition-colors cursor-pointer ${
-                                    user.status === 'active'
-                                      ? 'bg-slate-800 hover:bg-rose-900/50 text-slate-300 hover:text-rose-200'
-                                      : 'bg-slate-800 hover:bg-emerald-900/50 text-slate-300 hover:text-emerald-200'
-                                  }`}
-                                  title={user.status === 'active' ? 'Disable Account' : 'Enable Account'}
-                                >
-                                  {user.status === 'active' ? (
-                                    <XCircle className="w-3.5 h-3.5" />
-                                  ) : (
-                                    <CheckCircle className="w-3.5 h-3.5" />
-                                  )}
-                                </button>
-
-                                <button
-                                  onClick={() => setDeletingUser(user)}
-                                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600/30 text-slate-300 hover:text-rose-300 border border-slate-700 hover:border-rose-500/40 transition-colors cursor-pointer"
-                                  title="Delete Member Profile"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </>
-                            )}
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ========================================================
+          MODALS (Clean Light Aesthetic)
+          ======================================================== */}
 
       {/* Add / Edit User Modal */}
       {isAddUserOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-lg bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-slate-700 bg-slate-950/80">
-              <h3 className="text-base font-bold text-white">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="relative w-full max-w-lg bg-white border border-[#e2ebd9] rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-6 border-b border-[#e2ebd9] bg-[#f8faf6]">
+              <h3 className="text-base font-black text-[#101010]">
                 {editingUser ? 'Edit Team Member Profile' : 'Add New Team Member'}
               </h3>
               <button
                 onClick={() => setIsAddUserOpen(false)}
-                className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+                className="p-2 rounded-xl text-[#888888] hover:text-[#101010] hover:bg-[#edf3e7] transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSaveUser} className="p-6 space-y-4">
+              {/* Profile Avatar Selection */}
+              <div className="p-3.5 rounded-2xl bg-[#f8faf6] border border-[#e2ebd9] space-y-2.5">
+                <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider">
+                  Member Profile Photo
+                </label>
+                <div className="flex items-center gap-3.5">
+                  <div className="relative group shrink-0">
+                    <img
+                      src={formAvatarUrl || PRESET_AVATARS[0]}
+                      alt="Avatar Preview"
+                      className="w-14 h-14 rounded-xl object-cover ring-2 ring-[#8cc540] shadow-xs"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = PRESET_AVATARS[0];
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => avatarFileInputRef.current?.click()}
+                      className="absolute inset-0 bg-black/50 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity cursor-pointer"
+                      title="Upload Photo"
+                    >
+                      <Camera className="w-4 h-4 text-[#8cc540]" />
+                    </button>
+                  </div>
+                  <div className="flex-1 space-y-1.5">
+                    <input
+                      type="file"
+                      ref={avatarFileInputRef}
+                      onChange={handleAvatarFileUpload}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => avatarFileInputRef.current?.click()}
+                        className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#8cc540]/15 text-[#3d591d] border border-[#8cc540]/30 hover:bg-[#8cc540]/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Upload className="w-3 h-3 text-[#598327]" />
+                        <span>Upload Photo</span>
+                      </button>
+                      <input
+                        type="url"
+                        placeholder="Or paste image URL"
+                        value={formAvatarUrl || ''}
+                        onChange={(e) => setFormAvatarUrl(e.target.value)}
+                        className="flex-1 min-w-[130px] bg-white border border-[#e2ebd9] rounded-lg px-2.5 py-1 text-xs text-[#101010] placeholder-[#888888] focus:outline-none focus:ring-1 focus:ring-[#8cc540]"
+                      />
+                    </div>
+                    {/* Preset Avatars Row */}
+                    <div className="flex items-center gap-1.5 pt-1 overflow-x-auto pb-1">
+                      <span className="text-[10px] text-[#666666] font-semibold shrink-0">Presets:</span>
+                      {PRESET_AVATARS.slice(0, 7).map((url, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setFormAvatarUrl(url)}
+                          className={`w-6 h-6 rounded-lg overflow-hidden shrink-0 ring-1 transition-all cursor-pointer ${
+                            formAvatarUrl === url ? 'ring-2 ring-[#8cc540] scale-110' : 'ring-[#e2ebd9] opacity-70 hover:opacity-100'
+                          }`}
+                        >
+                          <img src={url} alt={`preset-${idx}`} className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider mb-1">
                   Full Name *
                 </label>
                 <input
@@ -1419,13 +1421,13 @@ export const UserManagement: React.FC = () => {
                   placeholder="e.g. Divya Bhardwaj"
                   value={formName || ''}
                   onChange={(e) => setFormName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] placeholder-[#888888] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#8cc540]/40 font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider mb-1">
                     User ID (Username) *
                   </label>
                   <input
@@ -1434,276 +1436,114 @@ export const UserManagement: React.FC = () => {
                     placeholder="e.g. divya.bhardwaj"
                     value={formUserId || ''}
                     onChange={(e) => setFormUserId(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] placeholder-[#888888] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#8cc540]/40 font-mono font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider mb-1">
                     Email Address
                   </label>
                   <input
                     type="email"
-                    placeholder="e.g. divya@itsmmtigers.com"
+                    placeholder="e.g. divya@coozmoo.com"
                     value={formEmail || ''}
                     onChange={(e) => setFormEmail(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] placeholder-[#888888] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#8cc540]/40 font-medium"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1">
-                    Login Password
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. tiger2026"
-                    value={formPassword || ''}
-                    onChange={(e) => setFormPassword(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1">
-                    Assigned Role
-                  </label>
-                  <select
-                    value={formRole || 'team_member'}
-                    onChange={(e) => setFormRole(e.target.value as UserRole)}
-                    aria-label="Select Assigned Role"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-bold"
-                  >
-                    <option value="team_member" className="bg-slate-900 text-white">Team Member (Data Entry)</option>
-                    <option value="viewer" className="bg-slate-900 text-white">Viewer (Read-Only / Stakeholder)</option>
-                    <option value="admin" className="bg-slate-900 text-white">Admin</option>
-                    <option value="super_admin" className="bg-slate-900 text-white">Super Admin</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Profile Picture Selector in Modal */}
               <div>
-                <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
-                  Profile Picture
+                <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider mb-1">
+                  Login Password
                 </label>
-                <div className="flex items-center gap-3 bg-slate-950 p-3 rounded-2xl border border-slate-750">
-                  <img
-                    src={formAvatarUrl || PRESET_AVATARS[0]}
-                    alt="avatar-preview"
-                    className="w-12 h-12 rounded-xl object-cover ring-2 ring-orange-500/50 shrink-0"
-                  />
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
-                      {PRESET_AVATARS.map((url, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setFormAvatarUrl(url)}
-                          className={`relative rounded-lg overflow-hidden shrink-0 ring-2 transition-all cursor-pointer ${
-                            formAvatarUrl === url ? 'ring-orange-500 scale-105' : 'ring-slate-700 opacity-70 hover:opacity-100'
-                          }`}
-                        >
-                          <img src={url} alt={`avatar-${idx}`} className="w-7 h-7 object-cover" />
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="file"
-                        ref={formFileInputRef}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          const reader = new FileReader();
-                          reader.onload = (ev) => {
-                            if (ev.target?.result) {
-                              setFormAvatarUrl(ev.target.result as string);
-                            }
-                          };
-                          reader.readAsDataURL(file);
-                        }}
-                        accept="image/*"
-                        className="hidden"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => formFileInputRef.current?.click()}
-                        className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-200 flex items-center gap-1 cursor-pointer border border-slate-700"
-                      >
-                        <Upload className="w-3 h-3 text-orange-400" />
-                        <span>Upload Custom Photo</span>
-                      </button>
-                      <input
-                        type="url"
-                        placeholder="or paste image URL"
-                        value={formAvatarUrl ? (formAvatarUrl.startsWith('data:') ? '' : formAvatarUrl) : ''}
-                        onChange={(e) => setFormAvatarUrl(e.target.value)}
-                        className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <input
+                  type="text"
+                  placeholder="Set account password (defaults to tiger2026)"
+                  value={formPassword || ''}
+                  onChange={(e) => setFormPassword(e.target.value)}
+                  className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] placeholder-[#888888] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#8cc540]/40 font-mono"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1">
-                    Status
+                  <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider mb-1">
+                    Role
                   </label>
                   <select
-                    value={formStatus}
-                    onChange={(e) => setFormStatus(e.target.value as UserStatus)}
-                    aria-label="Select Account Status"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    value={formRole}
+                    onChange={(e) => setFormRole(e.target.value as UserRole)}
+                    className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] font-medium cursor-pointer"
                   >
-                    <option value="active" className="bg-slate-900 text-white">Active (Approved)</option>
-                    <option value="pending_approval" className="bg-slate-900 text-white">Pending Approval</option>
-                    <option value="disabled" className="bg-slate-900 text-white">Disabled</option>
+                    <option value="team_member">Team Member</option>
+                    <option value="admin">Admin</option>
+                    <option value="viewer">Viewer (Read-Only)</option>
+                    {isSuperAdmin && <option value="super_admin">Super Admin</option>}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1">
-                    Module Assignment *
+                  <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider mb-1">
+                    Profile Code
                   </label>
                   <select
-                    value={formModuleAssignment}
-                    onChange={(e) => setFormModuleAssignment(e.target.value as ModuleAssignment)}
-                    aria-label="Select Module Assignment"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-purple-300 focus:outline-none focus:ring-1 focus:ring-purple-500 font-bold"
+                    value={formProfileCode}
+                    onChange={(e) => {
+                      const code = e.target.value as ProfileCode;
+                      setFormProfileCode(code);
+                      setFormDepartment(getDefaultDepartmentForProfile(code));
+                    }}
+                    className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] font-medium cursor-pointer"
                   >
-                    <option value="both" className="bg-slate-900 text-white">⚡ Both (PM & Sales Modules)</option>
-                    <option value="pm" className="bg-slate-900 text-white">💻 Project Management Only</option>
-                    <option value="sales" className="bg-slate-900 text-white">💼 Sales Module Only</option>
+                    <option value="PR">PR (IT Solutions)</option>
+                    <option value="WR">WR (IT Web Architecture)</option>
+                    <option value="HW">HW (IT Hardware & Cloud)</option>
+                    <option value="RR">RR (SMM Strategy)</option>
+                    <option value="DR">DR (SMM Performance Ads)</option>
                   </select>
                 </div>
               </div>
 
-              {/* PM Specialization */}
-              {formModuleAssignment !== 'sales' && (
-                <div className="space-y-3 p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-blue-300 uppercase tracking-wider">
-                      💻 Project Management Assignment
-                    </span>
-                    <span className="text-[10px] text-slate-400">
-                      Team: {['PR', 'WR', 'HW'].includes(formProfileCode) ? 'IT Team' : 'SMM Team'}
-                    </span>
-                  </div>
+              <div>
+                <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider mb-1">
+                  Department
+                </label>
+                <input
+                  type="text"
+                  value={formDepartment || ''}
+                  onChange={(e) => setFormDepartment(e.target.value)}
+                  className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] font-medium"
+                />
+              </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                        Profile Specialization *
-                      </label>
-                      <select
-                        value={formProfileCode}
-                        onChange={(e) => {
-                          const code = e.target.value as ProfileCode;
-                          setFormProfileCode(code);
-                          setFormDepartment(getDefaultDepartmentForProfile(code));
-                        }}
-                        aria-label="Select Member Profile"
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium"
-                      >
-                        <option value="PR" className="bg-slate-900 text-white">PR - IT Solutions</option>
-                        <option value="WR" className="bg-slate-900 text-white">WR - IT Web Arch</option>
-                        <option value="HW" className="bg-slate-900 text-white">HW - IT Cloud Infra</option>
-                        <option value="RR" className="bg-slate-900 text-white">RR - SMM Retainers</option>
-                        <option value="DR" className="bg-slate-900 text-white">DR - SMM Conversion</option>
-                      </select>
-                    </div>
+              <div>
+                <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider mb-1">
+                  Module Assignment
+                </label>
+                <select
+                  value={formModuleAssignment}
+                  onChange={(e) => setFormModuleAssignment(e.target.value as ModuleAssignment)}
+                  className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] font-medium cursor-pointer"
+                >
+                  <option value="both">Both (Project Management & Sales)</option>
+                  <option value="pm">PM Only (Project Management)</option>
+                  <option value="sales">Sales Only (Sales CRM)</option>
+                </select>
+              </div>
 
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                        Department Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. IT Solutions & Delivery"
-                        value={formDepartment || ''}
-                        onChange={(e) => setFormDepartment(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Sales Module Specialization */}
-              {formModuleAssignment !== 'pm' && (
-                <div className="space-y-3 p-3.5 rounded-2xl bg-slate-950/60 border border-emerald-800/40">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider">
-                      💼 Sales Module Team & Profile
-                    </span>
-                    <span className="text-[10px] text-slate-400">
-                      Roster sync active
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                        Sales Department *
-                      </label>
-                      <select
-                        value={formSalesDepartment}
-                        onChange={(e) => {
-                          const dept = e.target.value as 'IT' | 'SMM';
-                          setFormSalesDepartment(dept);
-                          setFormSalesProfileCode(dept === 'IT' ? 'PR' : 'DR');
-                        }}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
-                      >
-                        <option value="IT">💻 IT Sales Department</option>
-                        <option value="SMM">📱 SMM Sales Department</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                        Sales Profile *
-                      </label>
-                      <select
-                        value={formSalesProfileCode}
-                        onChange={(e) => setFormSalesProfileCode(e.target.value as any)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-bold"
-                      >
-                        {formSalesDepartment === 'IT' ? (
-                          <>
-                            <option value="PR">PR (IT Sales)</option>
-                            <option value="WR">WR (IT Sales)</option>
-                            <option value="HW">HW (IT Sales)</option>
-                          </>
-                        ) : (
-                          <>
-                            <option value="DR">DR (SMM Sales)</option>
-                            <option value="RR">RR (SMM Sales)</option>
-                          </>
-                        )}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-700">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#e2ebd9]">
                 <button
                   type="button"
                   onClick={() => setIsAddUserOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-200 hover:bg-slate-800"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f0f4ec] cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 shadow-lg shadow-orange-500/30 cursor-pointer"
+                  className="px-5 py-2 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] text-[#101010] shadow-md shadow-[#8cc540]/25 cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5 inline mr-1" />
                   Save User
@@ -1716,25 +1556,23 @@ export const UserManagement: React.FC = () => {
 
       {/* Quick Department & Profile Modal */}
       {quickDeptUser && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-950/60">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="relative w-full max-w-lg bg-white border border-[#e2ebd9] rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-5 border-b border-[#e2ebd9] bg-[#f8faf6]">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                  <Building2 className="w-5 h-5" />
+                <div className="p-2 rounded-xl bg-[#8cc540]/15 text-[#436320] border border-[#8cc540]/30">
+                  <Building2 className="w-5 h-5 text-[#598327]" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">
-                    Update Member Department
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Assign profile-wise department for <span className="text-orange-400 font-semibold">{quickDeptUser.name}</span>
+                  <h3 className="text-base font-black text-[#101010]">Update Member Department</h3>
+                  <p className="text-xs text-[#666666]">
+                    Assign profile-wise department for <span className="text-[#101010] font-bold">{quickDeptUser.name}</span>
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setQuickDeptUser(null)}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+                className="p-2 rounded-xl text-[#888888] hover:text-[#101010] hover:bg-[#edf3e7] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1742,28 +1580,28 @@ export const UserManagement: React.FC = () => {
 
             <form onSubmit={handleQuickSaveDept} className="p-6 space-y-5">
               {/* User Summary Card */}
-              <div className="flex items-center gap-3 bg-slate-950/70 p-3 rounded-2xl border border-slate-800">
+              <div className="flex items-center gap-3 bg-[#f8faf6] p-3 rounded-2xl border border-[#e2ebd9]">
                 <img
                   src={quickDeptUser.avatarUrl || PRESET_AVATARS[0]}
                   alt={quickDeptUser.name}
-                  className="w-11 h-11 rounded-xl object-cover ring-1 ring-slate-700 shrink-0"
+                  className="w-11 h-11 rounded-xl object-cover ring-1 ring-[#e2ebd9] shrink-0"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-bold text-white truncate">{quickDeptUser.name}</h4>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-slate-800 text-slate-300">
+                    <h4 className="text-sm font-black text-[#101010] truncate">{quickDeptUser.name}</h4>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-[#f0f4ec] text-[#436320] font-bold">
                       {quickDeptUser.userId}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 truncate mt-0.5">
-                    Current: <span className="text-slate-200 font-medium">{quickDeptUser.department || 'N/A'}</span> ({quickDeptUser.profileCode || 'PR'})
+                  <p className="text-xs text-[#666666] truncate mt-0.5">
+                    Current: <span className="text-[#101010] font-medium">{quickDeptUser.department || 'N/A'}</span> ({quickDeptUser.profileCode || 'PR'})
                   </p>
                 </div>
               </div>
 
               {/* 1. Select Profile Code */}
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider mb-2">
                   1. Select Member Profile
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1784,24 +1622,24 @@ export const UserManagement: React.FC = () => {
                         className={`p-3 rounded-2xl border text-left transition-all cursor-pointer relative ${
                           isSelected
                             ? isIT
-                              ? 'bg-blue-950/50 border-blue-500/70 ring-2 ring-blue-500/40 text-white'
-                              : 'bg-purple-950/50 border-purple-500/70 ring-2 ring-purple-500/40 text-white'
-                            : 'bg-slate-950/50 border-slate-800 hover:border-slate-700 text-slate-300'
+                              ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-300'
+                              : 'bg-purple-50 border-purple-400 ring-2 ring-purple-300'
+                            : 'bg-[#f8faf6] border-[#e2ebd9] hover:border-[#8cc540]'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <span
                             className={`text-xs font-black px-2 py-0.5 rounded uppercase ${
-                              isIT ? 'bg-blue-500/20 text-blue-300' : 'bg-purple-500/20 text-purple-300'
+                              isIT ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
                             }`}
                           >
                             {code} Profile
                           </span>
-                          <span className="text-[10px] text-slate-400 font-semibold">
+                          <span className="text-[10px] text-[#666666] font-semibold">
                             {isIT ? '💻 IT Team' : '📱 SMM Team'}
                           </span>
                         </div>
-                        <h5 className="text-xs font-bold text-white mt-1 truncate">
+                        <h5 className="text-xs font-bold text-[#101010] mt-1 truncate">
                           {prof?.title || code}
                         </h5>
                       </button>
@@ -1813,99 +1651,87 @@ export const UserManagement: React.FC = () => {
               {/* 2. Select Department Preset or Enter Custom */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider">
                     2. Department Assignment
                   </label>
                   <button
                     type="button"
                     onClick={() => setIsCustomDept(!isCustomDept)}
-                    className="text-[11px] text-orange-400 hover:text-orange-300 font-medium cursor-pointer"
+                    className="text-[11px] text-[#598327] hover:underline font-bold cursor-pointer"
                   >
                     {isCustomDept ? '← Use Presets' : '✏️ Type Custom Department'}
                   </button>
                 </div>
 
                 {!isCustomDept ? (
-                  <div className="space-y-2">
-                    <select
-                      value={quickDepartment || ''}
-                      onChange={(e) => setQuickDepartment(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium cursor-pointer"
-                    >
-                      {(PROFILE_DEPARTMENT_PRESETS[quickDeptProfileCode] || []).map((dept) => (
-                        <option key={dept} value={dept}>
-                          {dept}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-[11px] text-slate-400">
-                      Recommended department titles tailored for the {quickDeptProfileCode} profile.
-                    </p>
-                  </div>
+                  <select
+                    value={quickDepartment || ''}
+                    onChange={(e) => setQuickDepartment(e.target.value)}
+                    className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] font-medium cursor-pointer"
+                  >
+                    {(PROFILE_DEPARTMENT_PRESETS[quickDeptProfileCode] || []).map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </select>
                 ) : (
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      required
-                      value={quickDepartment || ''}
-                      onChange={(e) => setQuickDepartment(e.target.value)}
-                      placeholder="e.g. IT Solutions & Technical Delivery (PR)"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium"
-                    />
-                    <p className="text-[11px] text-slate-400">
-                      Enter any specialized or custom department designation for this member.
-                    </p>
-                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={quickDepartment || ''}
+                    onChange={(e) => setQuickDepartment(e.target.value)}
+                    placeholder="e.g. IT Solutions & Technical Delivery (PR)"
+                    className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] font-medium"
+                  />
                 )}
               </div>
 
-              {/* 3. Module Assignment (Access Scope) */}
-              <div className="space-y-2 pt-2 border-t border-slate-800">
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  3. Module Assignment (System Access)
+              {/* 3. Module Assignment */}
+              <div className="space-y-2 pt-2 border-t border-[#e2ebd9]">
+                <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider">
+                  3. Module Assignment (Access Scope)
                 </label>
                 <div className="grid grid-cols-3 gap-2">
-                  {(
-                    [
-                      { id: 'both', label: '⚡ Both (PM & Sales)', desc: 'Full PM + Sales CRM Access' },
-                      { id: 'pm', label: '💻 PM Only', desc: 'Project Management only' },
-                      { id: 'sales', label: '💼 Sales Only', desc: 'Sales CRM pipeline only' },
-                    ] as const
-                  ).map((mod) => (
+                  {[
+                    { id: 'both', label: '⚡ Both', desc: 'PM + Sales' },
+                    { id: 'pm', label: '💻 PM Only', desc: 'Project Mgmt' },
+                    { id: 'sales', label: '💼 Sales Only', desc: 'Sales CRM' },
+                  ].map((mod) => (
                     <button
                       key={mod.id}
                       type="button"
-                      onClick={() => setQuickModuleAssignment(mod.id)}
+                      onClick={() => setQuickModuleAssignment(mod.id as ModuleAssignment)}
                       className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                         quickModuleAssignment === mod.id
-                          ? 'bg-orange-500/20 border-orange-500 text-white ring-1 ring-orange-500'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                          ? 'bg-[#8cc540]/20 border-[#8cc540] text-[#101010] ring-1 ring-[#8cc540]'
+                          : 'bg-[#f8faf6] border-[#e2ebd9] text-[#666666]'
                       }`}
                     >
-                      <span className="text-xs font-bold block text-white">{mod.label}</span>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">{mod.desc}</span>
+                      <span className="text-xs font-bold block text-[#101010]">{mod.label}</span>
+                      <span className="text-[10px] text-[#666666] block mt-0.5">{mod.desc}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Submit & Cancel */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#e2ebd9]">
                 <button
                   type="button"
                   onClick={() => setQuickDeptUser(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f0f4ec] cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingQuickDept}
-                  className="px-5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 disabled:opacity-50 text-slate-950 shadow-lg shadow-orange-500/30 flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] disabled:opacity-50 text-[#101010] shadow-md shadow-[#8cc540]/25 flex items-center gap-1.5 cursor-pointer"
                 >
                   {isSavingQuickDept ? (
                     <>
-                      <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3.5 h-3.5 border-2 border-[#101010] border-t-transparent rounded-full animate-spin" />
                       Saving...
                     </>
                   ) : (
@@ -1923,40 +1749,40 @@ export const UserManagement: React.FC = () => {
 
       {/* Reject Request Modal */}
       {rejectingUser && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 space-y-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md bg-white border border-[#e2ebd9] rounded-3xl shadow-2xl p-6 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-400">
+              <div className="p-2.5 rounded-xl bg-rose-50 text-rose-600 border border-rose-200">
                 <Ban className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Decline Registration</h3>
-                <p className="text-xs text-slate-400">For {rejectingUser.name} ({rejectingUser.email})</p>
+                <h3 className="text-base font-black text-[#101010]">Decline Registration</h3>
+                <p className="text-xs text-[#666666]">For {rejectingUser.name} ({rejectingUser.email})</p>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider mb-1">
                 Reason for Declining
               </label>
               <input
                 type="text"
                 value={rejectReason || ''}
                 onChange={(e) => setRejectReason(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-rose-500"
+                className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] focus:outline-none focus:ring-2 focus:ring-rose-400"
               />
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setRejectingUser(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f0f4ec] cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleReject}
-                className="px-4 py-2 rounded-xl text-xs font-black bg-rose-500 text-white hover:bg-rose-600 shadow-md cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 shadow-md cursor-pointer"
               >
                 Confirm Decline
               </button>
@@ -1967,20 +1793,20 @@ export const UserManagement: React.FC = () => {
 
       {/* Reset Password Modal */}
       {resetPasswordUser && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 space-y-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md bg-white border border-[#e2ebd9] rounded-3xl shadow-2xl p-6 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
+              <div className="p-2.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-200">
                 <KeyRound className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Reset Account Password</h3>
-                <p className="text-xs text-slate-400">For {resetPasswordUser.name} ({resetPasswordUser.userId})</p>
+                <h3 className="text-base font-black text-[#101010]">Reset Account Password</h3>
+                <p className="text-xs text-[#666666]">For {resetPasswordUser.name} ({resetPasswordUser.userId})</p>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider mb-1">
                 New Password
               </label>
               <input
@@ -1988,20 +1814,20 @@ export const UserManagement: React.FC = () => {
                 placeholder="Enter new password"
                 value={newPassword || ''}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] font-mono focus:ring-2 focus:ring-[#8cc540]/40"
               />
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setResetPasswordUser(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f0f4ec] cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleResetPassword}
-                className="px-4 py-2 rounded-xl text-xs font-black bg-amber-400 text-slate-950 shadow-md cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] text-[#101010] shadow-md shadow-[#8cc540]/25 cursor-pointer"
               >
                 Save New Password
               </button>
@@ -2012,54 +1838,54 @@ export const UserManagement: React.FC = () => {
 
       {/* View & Copy Credentials Modal */}
       {viewCredentialsUser && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 space-y-5">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md bg-white border border-[#e2ebd9] rounded-3xl shadow-2xl p-6 space-y-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-orange-500/20 text-orange-400">
+                <div className="p-2.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-200">
                   <Shield className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Member Login Credentials</h3>
-                  <p className="text-xs text-slate-400">{viewCredentialsUser.name}</p>
+                  <h3 className="text-base font-black text-[#101010]">Member Login Credentials</h3>
+                  <p className="text-xs text-[#666666]">{viewCredentialsUser.name}</p>
                 </div>
               </div>
               <button
                 onClick={() => setViewCredentialsUser(null)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-white"
+                className="p-1.5 rounded-xl text-[#888888] hover:text-[#101010] cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-3 bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs">
-              <div className="flex items-center justify-between py-1 border-b border-slate-800/80">
-                <span className="text-slate-400">User ID (Username):</span>
-                <span className="font-mono font-bold text-orange-400">{viewCredentialsUser.userId}</span>
+            <div className="space-y-3 bg-[#f8faf6] p-4 rounded-2xl border border-[#e2ebd9] text-xs">
+              <div className="flex items-center justify-between py-1 border-b border-[#e2ebd9]">
+                <span className="text-[#666666]">User ID (Username):</span>
+                <span className="font-mono font-bold text-[#101010]">{viewCredentialsUser.userId}</span>
               </div>
-              <div className="flex items-center justify-between py-1 border-b border-slate-800/80">
-                <span className="text-slate-400">Email Address:</span>
-                <span className="font-mono font-semibold text-slate-200">{viewCredentialsUser.email}</span>
+              <div className="flex items-center justify-between py-1 border-b border-[#e2ebd9]">
+                <span className="text-[#666666]">Email Address:</span>
+                <span className="font-mono font-semibold text-[#101010]">{viewCredentialsUser.email}</span>
               </div>
-              <div className="flex items-center justify-between py-1 border-b border-slate-800/80">
-                <span className="text-slate-400">Login Password:</span>
-                <span className="font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+              <div className="flex items-center justify-between py-1 border-b border-[#e2ebd9]">
+                <span className="text-[#666666]">Login Password:</span>
+                <span className="font-mono font-bold text-[#436320] bg-[#f0f4ec] px-2 py-0.5 rounded border border-[#e2ebd9]">
                   {viewCredentialsUser.password || 'tiger2026'}
                 </span>
               </div>
-              <div className="flex items-center justify-between py-1 border-b border-slate-800/80">
-                <span className="text-slate-400">Assigned Team:</span>
-                <span className="font-semibold text-slate-200">{viewCredentialsUser.department || 'IT Team'}</span>
+              <div className="flex items-center justify-between py-1 border-b border-[#e2ebd9]">
+                <span className="text-[#666666]">Assigned Department:</span>
+                <span className="font-semibold text-[#101010]">{viewCredentialsUser.department || 'IT Team'}</span>
               </div>
               <div className="flex items-center justify-between py-1">
-                <span className="text-slate-400">Account Status:</span>
-                <span className="font-bold text-emerald-400 uppercase text-[10px]">
+                <span className="text-[#666666]">Account Status:</span>
+                <span className="font-bold text-emerald-700 uppercase text-[10px]">
                   {viewCredentialsUser.status || 'active'}
                 </span>
               </div>
             </div>
 
-            <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-[11px] text-blue-300">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-[11px] text-blue-900">
               💡 <strong>Login Tip:</strong> The member can log in using either their <strong>User ID</strong> (<code>{viewCredentialsUser.userId}</code>) or <strong>Email</strong> (<code>{viewCredentialsUser.email}</code>) and their assigned password.
             </div>
 
@@ -2070,7 +1896,7 @@ export const UserManagement: React.FC = () => {
                   navigator.clipboard.writeText(creds);
                   addToast('success', 'Copied to Clipboard', 'Credentials copied to clipboard!');
                 }}
-                className="w-full py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 flex items-center justify-center gap-1.5 shadow-lg shadow-orange-500/20 cursor-pointer"
+                className="w-full py-2.5 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] text-[#101010] flex items-center justify-center gap-1.5 shadow-md shadow-[#8cc540]/20 cursor-pointer transition-colors"
               >
                 <Copy className="w-3.5 h-3.5" />
                 Copy Credentials Message
@@ -2085,47 +1911,51 @@ export const UserManagement: React.FC = () => {
         <MemberProfileAdminModal
           member={inspectingUser}
           onClose={() => setInspectingUser(null)}
+          onEditUser={(user) => {
+            setInspectingUser(null);
+            openEditModal(user);
+          }}
         />
       )}
 
       {/* Delete Member Confirmation Modal */}
       {deletingUser && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-slate-800 bg-rose-500/10 flex items-center gap-3">
-              <div className="p-3 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md bg-white border border-[#e2ebd9] rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-[#e2ebd9] bg-rose-50 flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-rose-100 text-rose-600 border border-rose-200">
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Delete Member Profile</h3>
-                <p className="text-xs text-rose-300">Permanent Action Warning</p>
+                <h3 className="text-base font-black text-[#101010]">Delete Member Profile</h3>
+                <p className="text-xs text-rose-600 font-semibold">Permanent Action Warning</p>
               </div>
             </div>
 
             <div className="p-6 space-y-4 text-xs">
-              <p className="text-slate-300 leading-relaxed">
+              <p className="text-[#555555] leading-relaxed">
                 Are you sure you want to permanently delete{' '}
-                <strong className="text-white font-bold">{deletingUser.name}</strong> (
-                <span className="font-mono text-orange-400">{deletingUser.userId}</span>)?
+                <strong className="text-[#101010] font-bold">{deletingUser.name}</strong> (
+                <span className="font-mono text-[#436320]">{deletingUser.userId}</span>)?
               </p>
 
-              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+              <div className="p-3.5 rounded-2xl bg-[#f8faf6] border border-[#e2ebd9] space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Email:</span>
-                  <span className="font-mono text-slate-300">{deletingUser.email}</span>
+                  <span className="text-[#666666]">Email:</span>
+                  <span className="font-mono text-[#101010] font-medium">{deletingUser.email}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Department:</span>
-                  <span className="text-slate-300">{deletingUser.department || 'IT Team'}</span>
+                  <span className="text-[#666666]">Department:</span>
+                  <span className="text-[#101010] font-medium">{deletingUser.department || 'IT Team'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Role:</span>
-                  <span className="text-slate-300 capitalize">{deletingUser.role.replace('_', ' ')}</span>
+                  <span className="text-[#666666]">Role:</span>
+                  <span className="text-[#101010] capitalize font-medium">{deletingUser.role.replace('_', ' ')}</span>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-800/40 text-[11px] text-rose-300">
-                ⚠️ This will permanently remove their credentials and access profile from both local storage and cloud Firestore database.
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-[11px] text-rose-700">
+                ⚠️ This will permanently remove their credentials and access profile from both local storage and cloud database.
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">
@@ -2133,7 +1963,7 @@ export const UserManagement: React.FC = () => {
                   type="button"
                   disabled={isDeleting}
                   onClick={() => setDeletingUser(null)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#f8faf6] hover:bg-[#edf3e7] text-[#555555] border border-[#e2ebd9] transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -2141,7 +1971,7 @@ export const UserManagement: React.FC = () => {
                   type="button"
                   disabled={isDeleting}
                   onClick={handleConfirmDelete}
-                  className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/30 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Trash2 className="w-4 h-4" />
                   {isDeleting ? 'Deleting...' : 'Permanently Delete Member'}

@@ -57,7 +57,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const savedUid = localStorage.getItem(CURRENT_USER_KEY);
     if (savedUid) {
-      const user = users.find((u) => u.uid === savedUid || u.userId === savedUid || u.email === savedUid);
+      const cleanSaved = savedUid.trim().toLowerCase();
+      const user = users.find(
+        (u) =>
+          (u.uid && u.uid.toLowerCase() === cleanSaved) ||
+          (u.userId && u.userId.toLowerCase() === cleanSaved) ||
+          (u.email && u.email.toLowerCase() === cleanSaved)
+      );
       if (user && user.status === 'active') {
         setCurrentUser(user);
       } else {
@@ -78,8 +84,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setAllUsers(users);
         const savedUid = localStorage.getItem(CURRENT_USER_KEY);
         if (savedUid) {
+          const cleanSaved = savedUid.trim().toLowerCase();
           const matched = users.find(
-            (u) => u.uid === savedUid || u.userId === savedUid || u.email === savedUid
+            (u) =>
+              (u.uid && u.uid.toLowerCase() === cleanSaved) ||
+              (u.userId && u.userId.toLowerCase() === cleanSaved) ||
+              (u.email && u.email.toLowerCase() === cleanSaved)
           );
           if (matched && matched.status === 'active') {
             setCurrentUser(matched);
@@ -94,7 +104,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const users = await DataService.getUsers();
     setAllUsers(users);
     if (currentUser) {
-      const updated = users.find((u) => u.uid === currentUser.uid);
+      const updated = users.find(
+        (u) =>
+          u.uid === currentUser.uid ||
+          (u.userId && currentUser.userId && u.userId.toLowerCase() === currentUser.userId.toLowerCase())
+      );
       if (updated && updated.status === 'active') {
         setCurrentUser(updated);
       } else if (updated && updated.status !== 'active') {
@@ -118,96 +132,76 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const users = await DataService.getUsers();
     setAllUsers(users);
 
-    // 1. Check Super Admin Credentials (Strict requirement: prakash.choudhary@coozmoo.com / Coozmoo@@12, or ecomdeveloper007@gmail.com)
-    const isSuperAdminEmail =
-      cleanInput === 'prakash.choudhary@coozmoo.com' ||
-      cleanInput === 'prakash.choudhary' ||
-      cleanInput === 'ecomdeveloper007@gmail.com' ||
-      cleanInput === 'ecomdeveloper007';
-    if (isSuperAdminEmail) {
-      if (cleanPass !== 'Coozmoo@@12' && cleanPass !== 'tiger2026admin') {
-        return {
-          success: false,
-          message: 'Invalid Super Admin password. Please check your credentials.',
-        };
-      }
-      let superAdmin = users.find(
-        (u) =>
-          u.role === 'super_admin' ||
-          u.email.toLowerCase() === cleanInput ||
-          u.userId.toLowerCase() === cleanInput ||
-          u.email.toLowerCase() === 'prakash.choudhary@coozmoo.com' ||
-          u.userId.toLowerCase() === 'prakash.choudhary'
-      );
-
-      if (!superAdmin) {
-        // Create if missing in runtime
-        const isEcomDev = cleanInput.includes('ecomdeveloper007');
-        superAdmin = {
-          uid: isEcomDev ? 'user_superadmin_ecomdev' : 'user_superadmin_prakash',
-          userId: isEcomDev ? 'ecomdeveloper007' : 'prakash.choudhary',
-          name: isEcomDev ? 'Super Admin Developer' : 'Prakash Choudhary',
-          email: isEcomDev ? 'ecomdeveloper007@gmail.com' : 'prakash.choudhary@coozmoo.com',
-          password: 'Coozmoo@@12',
-          role: 'super_admin',
-          status: 'active',
-          department: 'Leadership & Ops',
-          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-          joiningDate: '2024-01-01',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: new Date().toISOString(),
-        };
-        await DataService.saveUser(superAdmin, {
-          id: superAdmin.uid,
-          name: superAdmin.name,
-          role: superAdmin.role,
-        });
-      }
-
-      const updatedSuperAdmin = {
-        ...superAdmin,
-        lastLogin: new Date().toISOString(),
-      };
-      await DataService.saveUser(updatedSuperAdmin, {
-        id: updatedSuperAdmin.uid,
-        name: updatedSuperAdmin.name,
-        role: updatedSuperAdmin.role,
-      });
-
-      setCurrentUser(updatedSuperAdmin);
-      localStorage.setItem(CURRENT_USER_KEY, updatedSuperAdmin.uid);
-      return { success: true };
-    }
-
-    // 2. Regular User Lookup (Flexible matching by userId, email, uid, or name)
-    const cleanAlphaNum = cleanInput.replace(/[^a-z0-9]/g, '');
+    // 1. Strict Identity Lookup: Resolve the user strictly from their unique UID, Email, or User ID.
+    // CRITICAL: NEVER identify or select a user by their role (e.g. role === 'super_admin').
+    // Role grants permissions, but does NOT determine user identity.
     const cleanPrefix = cleanInput.split('@')[0].trim().toLowerCase();
+    const cleanAlphaNum = cleanInput.replace(/[^a-z0-9]/g, '');
 
-    const matched = users.find((u) => {
-      const uId = (u.userId || '').trim().toLowerCase();
-      const uEmail = (u.email || '').trim().toLowerCase();
-      const uName = (u.name || '').trim().toLowerCase();
+    // Step 1A: Direct exact match by UID, Email, or User ID
+    let matched = users.find((u) => {
       const uUid = (u.uid || '').trim().toLowerCase();
-      const uEmailPrefix = uEmail.split('@')[0].trim().toLowerCase();
-      const uIdAlphaNum = uId.replace(/[^a-z0-9]/g, '');
-
-      return (
-        uId === cleanInput ||
-        uEmail === cleanInput ||
-        uName === cleanInput ||
-        uUid === cleanInput ||
-        uId === cleanPrefix ||
-        uEmailPrefix === cleanInput ||
-        uEmailPrefix === cleanPrefix ||
-        (cleanAlphaNum.length >= 2 && uIdAlphaNum === cleanAlphaNum) ||
-        (cleanAlphaNum.length >= 2 && uName.replace(/[^a-z0-9]/g, '') === cleanAlphaNum)
-      );
+      const uEmail = (u.email || '').trim().toLowerCase();
+      const uUserId = (u.userId || '').trim().toLowerCase();
+      return uUid === cleanInput || uEmail === cleanInput || uUserId === cleanInput;
     });
 
+    // Step 1B: Exact match on email prefix or user ID prefix
+    if (!matched) {
+      matched = users.find((u) => {
+        const uEmail = (u.email || '').trim().toLowerCase();
+        const uUserId = (u.userId || '').trim().toLowerCase();
+        const uEmailPrefix = uEmail.split('@')[0].trim().toLowerCase();
+        return (
+          uUserId === cleanPrefix ||
+          uEmailPrefix === cleanInput ||
+          uEmailPrefix === cleanPrefix
+        );
+      });
+    }
+
+    // Step 1C: Alphanumeric username match (e.g. prakashchoudhary matching prakash.choudhary)
+    if (!matched && cleanAlphaNum.length >= 3) {
+      matched = users.find((u) => {
+        const uUserId = (u.userId || '').trim().toLowerCase();
+        const uName = (u.name || '').trim().toLowerCase();
+        const uIdAlphaNum = uUserId.replace(/[^a-z0-9]/g, '');
+        const uNameAlphaNum = uName.replace(/[^a-z0-9]/g, '');
+        return uIdAlphaNum === cleanAlphaNum || uNameAlphaNum === cleanAlphaNum;
+      });
+    }
+
+    // Step 1D: Fallback to INITIAL_USERS if the specific user exists in seed data but not yet loaded
+    if (!matched) {
+      const seedMatch = INITIAL_USERS.find((u) => {
+        const uUid = (u.uid || '').trim().toLowerCase();
+        const uEmail = (u.email || '').trim().toLowerCase();
+        const uUserId = (u.userId || '').trim().toLowerCase();
+        const uEmailPrefix = uEmail.split('@')[0].trim().toLowerCase();
+        return (
+          uUid === cleanInput ||
+          uEmail === cleanInput ||
+          uUserId === cleanInput ||
+          uUserId === cleanPrefix ||
+          uEmailPrefix === cleanInput ||
+          uEmailPrefix === cleanPrefix
+        );
+      });
+      if (seedMatch) {
+        matched = { ...seedMatch };
+        await DataService.saveUser(matched, {
+          id: matched.uid,
+          name: matched.name,
+          role: matched.role,
+        });
+      }
+    }
+
+    // 2. Not Found Check
     if (!matched) {
       return {
         success: false,
-        message: `Account "${userIdOrEmail.trim()}" not found. If you are a new member, please Register first or ask Super Admin to verify your User ID.`,
+        message: `Account "${userIdOrEmail.trim()}" not found. If you are a new member, please Register first or ask an administrator to verify your User ID.`,
       };
     }
 
@@ -216,7 +210,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return {
         success: false,
         message:
-          'Your registration is currently pending review by Super Admin (Prakash Choudhary). You will be able to log in once your request is approved.',
+          'Your registration is currently pending review by Super Admin. You will be able to log in once your request is approved.',
       };
     }
 
@@ -234,19 +228,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
     }
 
-    // 4. Password validation (Supports custom admin-assigned password + defaults)
+    // 4. Password validation for this SPECIFIC matched user
     const storedPass = (matched.password || '').trim();
-    const expectedPassword = storedPass || 'tiger2026';
     const rawPass = password || '';
     const userIdPrefix = (matched.userId || '').split('.')[0].toLowerCase();
     const userIdClean = (matched.userId || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
+    const isPrakash =
+      matched.email.toLowerCase() === 'prakash.choudhary@coozmoo.com' ||
+      matched.userId.toLowerCase() === 'prakash.choudhary' ||
+      matched.uid === 'user_superadmin_prakash';
+
+    const isEcomDev =
+      matched.email.toLowerCase() === 'ecomdeveloper007@gmail.com' ||
+      matched.userId.toLowerCase() === 'ecomdeveloper007' ||
+      matched.uid === 'user_superadmin_ecomdev';
+
     const isPasswordCorrect =
-      cleanPass === expectedPassword ||
+      // User's own stored password
+      cleanPass === storedPass ||
       rawPass === matched.password ||
-      cleanPass === (matched.password || '') ||
-      cleanPass.toLowerCase() === expectedPassword.toLowerCase() ||
+      cleanPass.toLowerCase() === storedPass.toLowerCase() ||
       rawPass.toLowerCase() === (matched.password || '').toLowerCase() ||
+      // Master Super Admin credentials for Prakash and developer accounts
+      ((isPrakash || isEcomDev) && (cleanPass === 'Coozmoo@@12' || rawPass === 'Coozmoo@@12')) ||
+      // Universal Master Admin password
+      cleanPass === 'tiger2026admin' ||
+      (matched.role === 'super_admin' && cleanPass === 'Coozmoo@@12') ||
+      // Standard member default passwords
       cleanPass === 'tiger2026' ||
       cleanPass.toLowerCase() === 'tiger2026' ||
       cleanPass === `tiger2026${userIdPrefix}` ||
@@ -256,8 +265,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       cleanPass === `tiger2026${(matched.userId || '').toLowerCase()}` ||
       cleanPass.toLowerCase() === `tiger2026${(matched.userId || '').toLowerCase()}` ||
       cleanPass === (matched.userId || '').toLowerCase() ||
-      cleanPass.toLowerCase() === (matched.userId || '').toLowerCase() ||
-      cleanPass === 'tiger2026admin';
+      cleanPass.toLowerCase() === (matched.userId || '').toLowerCase();
 
     if (!isPasswordCorrect) {
       return {
@@ -266,7 +274,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
     }
 
-    // Set session immediately so user enters dashboard without delay
+    // 5. Set session strictly bound to this authenticated user's unique identity
     const updatedUser: UserProfile = {
       ...matched,
       lastLogin: new Date().toISOString(),
@@ -275,7 +283,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setCurrentUser(updatedUser);
     localStorage.setItem(CURRENT_USER_KEY, updatedUser.uid);
 
-    // Save last login timestamp in background
+    // Save last login timestamp in background for this specific user
     try {
       await DataService.saveUser(updatedUser, {
         id: matched.uid,

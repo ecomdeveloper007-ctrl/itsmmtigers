@@ -86,6 +86,22 @@ export const INITIAL_USERS: UserProfile[] = [
     createdAt: '2025-03-15T00:00:00.000Z',
     updatedAt: '2026-08-25T00:00:00.000Z',
   },
+  {
+    uid: 'user_member_kuldeep',
+    userId: 'kuldeep.chouhan',
+    name: 'Kuldeep Singh',
+    email: 'Kuldeep.chouhan@coozmoo.com',
+    password: 'tiger2026',
+    role: 'team_member',
+    status: 'active',
+    department: 'IT Development',
+    team: 'IT',
+    profileCode: 'PR',
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    joiningDate: '2025-01-10',
+    createdAt: '2025-01-10T00:00:00.000Z',
+    updatedAt: '2026-08-25T00:00:00.000Z',
+  },
 ];
 
 // Initial Performance Periods (August 2026 Week 1-4)

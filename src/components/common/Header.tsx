@@ -907,6 +907,36 @@ export const Header: React.FC = () => {
         {/* Mobile Navigation Menu */}
         {isMobileMenuOpen && (
           <div className="lg:hidden border-t border-[#e2ebd9] py-3 space-y-3 bg-white">
+            {/* Mobile User Profile Bar with Edit Photo Button */}
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-[#f8faf6] border border-[#e2ebd9]">
+              <div className="flex items-center gap-2.5">
+                <img
+                  src={
+                    currentUser?.avatarUrl ||
+                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+                  }
+                  alt={currentUser?.name || 'User'}
+                  className="w-10 h-10 rounded-xl object-cover ring-2 ring-[#8cc540]"
+                />
+                <div>
+                  <p className="text-xs font-black text-[#101010]">{currentUser?.name}</p>
+                  <p className="text-[10px] text-[#666666]">{currentUser?.email}</p>
+                  <div className="mt-0.5">{getRoleBadge(currentUser?.role)}</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditProfileOpen(true);
+                  setIsMobileMenuOpen(false);
+                }}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#8cc540]/15 text-[#3d591d] border border-[#8cc540]/30 hover:bg-[#8cc540]/30 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Camera className="w-3.5 h-3.5 text-[#598327]" />
+                <span>Update Photo</span>
+              </button>
+            </div>
+
             {/* Mobile Module Switcher */}
             <div className="flex items-center bg-[#f0f4ec] p-1 rounded-xl border border-[#e2ebd9]">
               <button
@@ -1210,7 +1240,7 @@ export const Header: React.FC = () => {
         )}
         {/* Edit Profile Modal */}
         {isEditProfileOpen && (
-          <EditProfileModal onClose={() => setIsEditProfileOpen(false)} />
+          <EditProfileModal isOpen={isEditProfileOpen} onClose={() => setIsEditProfileOpen(false)} />
         )}
       </div>
     </header>

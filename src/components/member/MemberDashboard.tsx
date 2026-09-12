@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import {
@@ -17,11 +17,14 @@ import {
   Clock,
   Sparkles,
   ShieldAlert,
+  Camera,
 } from 'lucide-react';
 import { PerformanceRecord } from '../../types';
+import { EditProfileModal } from '../common/EditProfileModal';
 
 export const MemberDashboard: React.FC = () => {
   const { currentUser, isSuperAdmin } = useAuth();
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState<boolean>(false);
   const {
     records,
     periods,
@@ -62,14 +65,33 @@ export const MemberDashboard: React.FC = () => {
 
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <img
-              src={
-                currentUser.avatarUrl ||
-                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-              }
-              alt={currentUser.name}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-[#8cc540] shadow-sm"
-            />
+            <div className="relative group shrink-0">
+              <img
+                src={
+                  currentUser.avatarUrl ||
+                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+                }
+                alt={currentUser.name}
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-[#8cc540] shadow-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setIsEditProfileOpen(true)}
+                className="absolute inset-0 bg-black/50 rounded-2xl opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity cursor-pointer p-1"
+                title="Update Profile Photo"
+              >
+                <Camera className="w-5 h-5 text-[#8cc540]" />
+                <span className="text-[9px] font-bold mt-0.5">Edit Photo</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsEditProfileOpen(true)}
+                className="absolute -bottom-1 -right-1 p-1 rounded-full bg-[#8cc540] text-[#101010] shadow-xs hover:scale-110 transition-transform cursor-pointer"
+                title="Change Photo"
+              >
+                <Camera className="w-3 h-3" />
+              </button>
+            </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-black text-[#101010]">{currentUser.name}</h1>
@@ -79,6 +101,14 @@ export const MemberDashboard: React.FC = () => {
                 <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#101010] text-white font-bold uppercase">
                   {currentUser.profileCode || 'PR'} Profile
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setIsEditProfileOpen(true)}
+                  className="text-xs font-bold text-[#436320] hover:text-[#101010] bg-[#f0f4ec] hover:bg-[#e2ebd9] px-2.5 py-1 rounded-lg border border-[#8cc540]/30 flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Camera className="w-3 h-3 text-[#598327]" />
+                  <span>Update Photo</span>
+                </button>
               </div>
               <p className="text-xs text-[#666666] mt-1 font-medium">
                 Individual Performance Dashboard for <strong className="text-[#101010]">{selectedMonth} {selectedYear}</strong>
@@ -461,6 +491,14 @@ export const MemberDashboard: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Edit Profile & Photo Modal */}
+      {isEditProfileOpen && (
+        <EditProfileModal
+          isOpen={isEditProfileOpen}
+          onClose={() => setIsEditProfileOpen(false)}
+        />
+      )}
     </div>
   );
 };
