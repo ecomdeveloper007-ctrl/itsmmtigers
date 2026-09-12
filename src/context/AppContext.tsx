@@ -277,7 +277,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const savePerformanceRecord = async (record: PerformanceRecord): Promise<boolean> => {
     if (!currentUser) return false;
     try {
-      await DataService.saveRecord(record, {
+      const result = await DataService.saveRecord(record, {
         id: currentUser.uid,
         name: currentUser.name,
         role: currentUser.role,
@@ -291,8 +291,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       addToast(
         'success',
-        'Performance Saved Successfully',
-        `Recorded for ${record.userName} (${record.weekName})`
+        result?.isUpdate ? 'Performance Updated Successfully' : 'Performance Saved Successfully',
+        `${result?.isUpdate ? 'Updated record' : 'Recorded'} for ${record.userName} (${record.weekName})`
       );
       return true;
     } catch (e) {

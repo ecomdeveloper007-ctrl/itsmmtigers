@@ -1222,17 +1222,151 @@ export class DataService {
     return finalRecords;
   }
 
+  /**
+   * Checks the database and resilient cache for an existing weekly performance record
+   * for the same Authenticated User/Employee and Performance Week.
+   */
+  public static async findExistingRecord(
+    userIds: string | string[],
+    periodId: string,
+    periodContext?: { month?: string; year?: number; weekName?: string; startDate?: string; endDate?: string },
+    userName?: string,
+    profileCode?: string
+  ): Promise<PerformanceRecord | null> {
+    const ids = (Array.isArray(userIds) ? userIds : [userIds])
+      .map((id) => String(id || '').trim().toLowerCase())
+      .filter(Boolean);
+    const cleanPeriodId = String(periodId || '').trim().toLowerCase();
+    const cleanUserName = String(userName || '').trim().toLowerCase();
+    const cleanProfileCode = String(profileCode || '').trim().toUpperCase();
+
+    if (ids.length === 0 && !cleanUserName) return null;
+    if (!cleanPeriodId && !periodContext) return null;
+
+    const deletedSet = this.getDeletedRecordIds();
+
+    const isMatch = (r: Partial<PerformanceRecord>): boolean => {
+      if (!r || !r.id) return false;
+      const recIdLower = String(r.id).trim().toLowerCase();
+      if (deletedSet.has(recIdLower)) return false;
+
+      // User match: match user ID, or match userName if provided
+      const rUserId = String(r.userId || '').trim().toLowerCase();
+      const rUserName = String(r.userName || '').trim().toLowerCase();
+      const userMatches = ids.includes(rUserId) || (Boolean(cleanUserName && rUserName) && rUserName === cleanUserName);
+      if (!userMatches) return false;
+
+      // Period match: match by periodId or by (month, year, weekName)
+      const rPeriodId = String(r.periodId || '').trim().toLowerCase();
+      const periodIdMatches = Boolean(cleanPeriodId && rPeriodId && rPeriodId === cleanPeriodId);
+      const periodContextMatches = Boolean(
+        periodContext?.month &&
+        periodContext?.year &&
+        periodContext?.weekName &&
+        r.month &&
+        r.year &&
+        r.weekName &&
+        r.month.toLowerCase() === periodContext.month.toLowerCase() &&
+        Number(r.year) === Number(periodContext.year) &&
+        r.weekName.toLowerCase() === periodContext.weekName.toLowerCase()
+      );
+
+      if (!periodIdMatches && !periodContextMatches) return false;
+
+      // Profile code check (if specified and present on both)
+      if (cleanProfileCode && r.profileCode) {
+        if (r.profileCode.trim().toUpperCase() !== cleanProfileCode) return false;
+      }
+
+      return true;
+    };
+
+    // 1. Check local storage cache first for instantaneous response
+    const currentRecords = getFromStorage<PerformanceRecord[]>(LS_KEYS.RECORDS, []);
+    const localMatch = currentRecords.find(isMatch);
+    if (localMatch) {
+      return localMatch;
+    }
+
+    // 2. Direct backend/database query to Cloud Firestore
+    try {
+      if (db) {
+        const snap = await getDocs(collection(db, 'performanceRecords'));
+        for (const docSnap of snap.docs) {
+          const cloudRecord = docSnap.data() as Partial<PerformanceRecord>;
+          const recId = cloudRecord.id || docSnap.id;
+          if (isMatch({ ...cloudRecord, id: recId })) {
+            const resolvedRecord: PerformanceRecord = {
+              id: recId,
+              userId: cloudRecord.userId || ids[0] || '',
+              userName: cloudRecord.userName || userName || 'Team Member',
+              profileCode: cloudRecord.profileCode,
+              periodId: cloudRecord.periodId || periodId,
+              month: cloudRecord.month || periodContext?.month || 'August',
+              year: cloudRecord.year || periodContext?.year || 2026,
+              weekName: cloudRecord.weekName || periodContext?.weekName || 'Week 1',
+              projectClosed: sanitizeNumber(cloudRecord.projectClosed),
+              revenueGenerated: sanitizeNumber(cloudRecord.revenueGenerated),
+              upsells: sanitizeNumber(cloudRecord.upsells),
+              clientRating: sanitizeNumber(cloudRecord.clientRating, true),
+              followupsCompleted: sanitizeNumber(cloudRecord.followupsCompleted),
+              repeatClients: sanitizeNumber(cloudRecord.repeatClients),
+              notes: cloudRecord.notes || '',
+              submittedBy: cloudRecord.submittedBy || 'system',
+              createdAt: cloudRecord.createdAt || new Date().toISOString(),
+              updatedAt: cloudRecord.updatedAt || new Date().toISOString(),
+            };
+            return resolvedRecord;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Firestore findExistingRecord lookup error:', e);
+    }
+
+    return null;
+  }
+
   public static async saveRecord(
     record: PerformanceRecord,
     actor: { id: string; name: string; role: UserRole }
-  ): Promise<void> {
-    const cleanId = String(record.id).trim();
-    this.unmarkDeletedRecordId(cleanId);
+  ): Promise<{ record: PerformanceRecord; isUpdate: boolean }> {
+    // 1. Backend Duplicate Prevention Check:
+    // First check the database for an existing weekly performance record for the same:
+    // Authenticated User / Employee + Performance Week (and profile if present).
+    const candidateUserIds = [record.userId, actor.id].filter(Boolean);
+    const existingMatch = await this.findExistingRecord(
+      candidateUserIds,
+      record.periodId,
+      { month: record.month, year: record.year, weekName: record.weekName },
+      record.userName,
+      record.profileCode
+    );
+
+    let targetId: string;
+    let isUpdate = false;
+    let originalCreatedAt: string;
+
+    if (existingMatch) {
+      // Existing record found!
+      // Do NOT create a new record.
+      // Update existing database record and KEEP THE SAME RECORD ID.
+      targetId = existingMatch.id;
+      isUpdate = true;
+      originalCreatedAt = existingMatch.createdAt || record.createdAt || new Date().toISOString();
+    } else {
+      // No existing record found: CREATE new record
+      targetId = String(record.id).trim();
+      isUpdate = false;
+      originalCreatedAt = record.createdAt || new Date().toISOString();
+    }
+
+    this.unmarkDeletedRecordId(targetId);
 
     // Sanitize all numeric fields automatically to guarantee 0 for empty/NaN
     const cleanRecord: PerformanceRecord = {
       ...record,
-      id: cleanId,
+      id: targetId,
       projectClosed: sanitizeNumber(record.projectClosed),
       revenueGenerated: sanitizeNumber(record.revenueGenerated),
       upsells: sanitizeNumber(record.upsells),
@@ -1240,42 +1374,56 @@ export class DataService {
       followupsCompleted: sanitizeNumber(record.followupsCompleted),
       repeatClients: sanitizeNumber(record.repeatClients),
       updatedAt: new Date().toISOString(),
-      createdAt: record.createdAt || new Date().toISOString(),
+      createdAt: originalCreatedAt,
     };
 
-    // 1. Immediately update local storage
+    // 2. Immediately update local storage
     const currentRecords = getFromStorage<PerformanceRecord[]>(LS_KEYS.RECORDS, []);
-    const cleanIdLower = cleanId.toLowerCase();
-    const rawList = [...currentRecords.filter((r) => String(r.id).trim().toLowerCase() !== cleanIdLower), cleanRecord];
+    const targetIdLower = targetId.toLowerCase();
+    const passedIdLower = String(record.id || '').trim().toLowerCase();
+
+    // Filter out existing record by targetId and also by the passed id if it was a temporary new ID
+    const rawList = [
+      ...currentRecords.filter((r) => {
+        const idLower = String(r.id).trim().toLowerCase();
+        return idLower !== targetIdLower && idLower !== passedIdLower;
+      }),
+      cleanRecord,
+    ];
     const consolidated = this.consolidateRecords(rawList);
     saveToStorage(LS_KEYS.RECORDS, consolidated);
 
-    // 2. Persist to Firestore
+    // 3. Persist to Firestore
     try {
       await setDoc(doc(db, 'performanceRecords', cleanRecord.id), cleanRecord);
+      // If a different temporary id was created in Firestore previously, remove it
+      if (passedIdLower && passedIdLower !== targetIdLower) {
+        await deleteDoc(doc(db, 'performanceRecords', record.id)).catch(() => {});
+      }
     } catch (e) {
       console.warn('Firestore saveRecord error:', e);
     }
 
-    // 3. Log Audit
-    const isNew = !currentRecords.some((r) => String(r.id).trim().toLowerCase() === cleanIdLower);
-    const oldVal = currentRecords.find((r) => String(r.id).trim().toLowerCase() === cleanIdLower);
+    // 4. Log Audit
+    const oldVal = existingMatch || currentRecords.find((r) => String(r.id).trim().toLowerCase() === targetIdLower);
 
     try {
       await this.logAudit({
         userId: actor.id,
         userName: actor.name,
         userRole: actor.role,
-        action: isNew ? 'Performance Record Created' : 'Performance Record Updated',
+        action: isUpdate ? 'Performance Record Updated' : 'Performance Record Created',
         entityType: 'performance',
         entityId: cleanRecord.id,
-        details: `${isNew ? 'Added' : 'Updated'} data for ${cleanRecord.userName} (${cleanRecord.weekName}): Projects: ${cleanRecord.projectClosed}, Rev: $${cleanRecord.revenueGenerated}, Upsells: ${cleanRecord.upsells}, Rating: ${cleanRecord.clientRating}, Follow-ups: ${cleanRecord.followupsCompleted}, Repeat: ${cleanRecord.repeatClients}`,
+        details: `${isUpdate ? 'Updated existing record' : 'Added new record'} [ID: ${cleanRecord.id}] for ${cleanRecord.userName} (${cleanRecord.weekName}): Projects: ${cleanRecord.projectClosed}, Rev: $${cleanRecord.revenueGenerated}, Upsells: ${cleanRecord.upsells}, Rating: ${cleanRecord.clientRating}, Follow-ups: ${cleanRecord.followupsCompleted}, Repeat: ${cleanRecord.repeatClients}`,
         oldValue: oldVal,
         newValue: cleanRecord,
       });
     } catch (err) {
       console.warn('Audit log error on saveRecord:', err);
     }
+
+    return { record: cleanRecord, isUpdate };
   }
 
   public static async deleteRecord(
