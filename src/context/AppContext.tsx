@@ -56,7 +56,7 @@ interface AppContextType {
   // Modals & Navigation
   activeModule: 'pm' | 'sales';
   setActiveModule: (module: 'pm' | 'sales') => void;
-  activeTab: 'dashboard' | 'leaderboard' | 'my-performance' | 'admin-data' | 'user-management' | 'period-management' | 'kpi-settings' | 'audit-logs' | 'reports';
+  activeTab: 'dashboard' | 'leaderboard' | 'my-performance' | 'admin-data' | 'user-management' | 'period-management' | 'kpi-settings' | 'audit-logs' | 'reports' | 'roles-permissions';
   setActiveTab: (tab: any) => void;
   isDataEntryModalOpen: boolean;
   openDataEntryModal: (record?: PerformanceRecord, periodId?: string) => void;

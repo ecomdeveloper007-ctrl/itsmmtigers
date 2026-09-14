@@ -107,10 +107,16 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({ isOpen, on
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6">
-      <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-750 rounded-3xl shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-750 bg-slate-950">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-3xl max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] bg-slate-900 border border-slate-750 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden my-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header (Pinned) */}
+        <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-slate-750 bg-slate-950 z-10">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-orange-500/20 text-orange-300 border border-orange-500/40">
               <Upload className="w-5 h-5" />
@@ -125,13 +131,14 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({ isOpen, on
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-6">
           {/* Action Row */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-slate-950 border border-slate-750">
             <div className="flex items-center gap-3">
@@ -241,30 +248,30 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({ isOpen, on
               )}
             </div>
           )}
+        </div>
 
-          {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-750">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleCommitImport}
-              disabled={
-                !parsedResult || parsedResult.validRecords.length === 0 || isProcessing
-              }
-              className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all shadow-lg cursor-pointer ${
-                parsedResult && parsedResult.validRecords.length > 0 && !isProcessing
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 shadow-orange-500/30'
-                  : 'bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-700'
-              }`}
-            >
-              <Save className="w-4 h-4" />
-              {isProcessing ? 'Importing Data...' : `Commit Import (${parsedResult?.validRecords.length || 0} Records)`}
-            </button>
-          </div>
+        {/* Footer Actions (Pinned) */}
+        <div className="flex-shrink-0 flex items-center justify-end gap-3 p-4 sm:p-5 border-t border-slate-750 bg-slate-950 z-10">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleCommitImport}
+            disabled={
+              !parsedResult || parsedResult.validRecords.length === 0 || isProcessing
+            }
+            className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all shadow-lg cursor-pointer ${
+              parsedResult && parsedResult.validRecords.length > 0 && !isProcessing
+                ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 shadow-orange-500/30'
+                : 'bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-700'
+            }`}
+          >
+            <Save className="w-4 h-4" />
+            {isProcessing ? 'Importing Data...' : `Commit Import (${parsedResult?.validRecords.length || 0} Records)`}
+          </button>
         </div>
       </div>
     </div>

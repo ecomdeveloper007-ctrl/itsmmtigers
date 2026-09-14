@@ -337,10 +337,16 @@ export const WeeklyDataEntryModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6">
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-750 rounded-3xl shadow-2xl overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+      onClick={closeDataEntryModal}
+    >
+      <div
+        className="relative w-full max-w-2xl max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] bg-slate-900 border border-slate-750 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden my-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-750 bg-slate-950">
+        <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-slate-750 bg-slate-950 z-10">
           <div className="flex items-center gap-3">
             <div className={`p-2.5 rounded-xl border ${
               activeExistingRecord
@@ -367,21 +373,22 @@ export const WeeklyDataEntryModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {validationError && (
-            <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-200 text-xs font-semibold">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-300" />
-              <span>{validationError}</span>
-            </div>
-          )}
+        {/* Form Container with scrollable body and pinned footer */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-6">
+            {validationError && (
+              <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-200 text-xs font-semibold">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-300" />
+                <span>{validationError}</span>
+              </div>
+            )}
 
-          {isLocked && (
-            <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-semibold">
-              <Lock className="w-4 h-4 shrink-0 text-amber-300" />
-              <span>This period has been locked by Super Admin. Read-only mode.</span>
-            </div>
-          )}
+            {isLocked && (
+              <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-semibold">
+                <Lock className="w-4 h-4 shrink-0 text-amber-300" />
+                <span>This period has been locked by Super Admin. Read-only mode.</span>
+              </div>
+            )}
 
           {/* Period & Member Selectors */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -669,13 +676,14 @@ export const WeeklyDataEntryModal: React.FC = () => {
               <span className="text-xs font-bold text-slate-400"> / 100 PTS</span>
             </div>
           </div>
+          </div>
 
-          {/* Modal Footer Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-750">
+          {/* Modal Footer Buttons (Pinned) */}
+          <div className="flex-shrink-0 flex items-center justify-end gap-3 p-4 sm:p-5 border-t border-slate-750 bg-slate-950 z-10">
             <button
               type="button"
               onClick={closeDataEntryModal}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
             >
               Cancel
             </button>

@@ -43,6 +43,7 @@ import {
 import { DataService } from '../../services/dataService';
 import { SalesDataService } from '../../services/salesDataService';
 import { MemberProfileAdminModal } from './MemberProfileAdminModal';
+import { usePermissions } from '../../context/PermissionContext';
 
 const PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
@@ -67,6 +68,7 @@ export const UserManagement: React.FC = () => {
     updateUserDepartmentAndProfile,
   } = useAuth();
   const { addToast } = useApp();
+  const { roles } = usePermissions();
 
   // Primary navigation: 'members' vs 'approvals'
   const [primaryTab, setPrimaryTab] = useState<'members' | 'approvals'>('members');
@@ -1222,10 +1224,22 @@ export const UserManagement: React.FC = () => {
                         }
                         className="w-full bg-white border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540]/40 cursor-pointer"
                       >
-                        <option value="team_member">Team Member (Submit & View Own Data)</option>
-                        <option value="admin">Admin (Manage Data & Reports)</option>
-                        <option value="viewer">Viewer (Read-Only Access)</option>
-                        {isSuperAdmin && <option value="super_admin">Super Admin (Full Control)</option>}
+                        {roles.length > 0 ? (
+                          roles
+                            .filter((r) => r.status === 'active' && (isSuperAdmin || r.id !== 'super_admin'))
+                            .map((r) => (
+                              <option key={r.id} value={r.id}>
+                                {r.name} {r.isSystem ? '(System)' : ''}
+                              </option>
+                            ))
+                        ) : (
+                          <>
+                            <option value="team_member">Team Member (Submit & View Own Data)</option>
+                            <option value="admin">Admin (Manage Data & Reports)</option>
+                            <option value="viewer">Viewer (Read-Only Access)</option>
+                            {isSuperAdmin && <option value="super_admin">Super Admin (Full Control)</option>}
+                          </>
+                        )}
                       </select>
                     </div>
 
@@ -1327,9 +1341,15 @@ export const UserManagement: React.FC = () => {
 
       {/* Add / Edit User Modal */}
       {isAddUserOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="relative w-full max-w-lg bg-white border border-[#e2ebd9] rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between p-6 border-b border-[#e2ebd9] bg-[#f8faf6]">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setIsAddUserOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-lg max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] bg-white border border-[#e2ebd9] rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-[#e2ebd9] bg-[#f8faf6] z-10">
               <h3 className="text-base font-black text-[#101010]">
                 {editingUser ? 'Edit Team Member Profile' : 'Add New Team Member'}
               </h3>
@@ -1341,8 +1361,9 @@ export const UserManagement: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveUser} className="p-6 space-y-4">
-              {/* Profile Avatar Selection */}
+            <form onSubmit={handleSaveUser} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
+                {/* Profile Avatar Selection */}
               <div className="p-3.5 rounded-2xl bg-[#f8faf6] border border-[#e2ebd9] space-y-2.5">
                 <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider">
                   Member Profile Photo
@@ -1477,10 +1498,22 @@ export const UserManagement: React.FC = () => {
                     onChange={(e) => setFormRole(e.target.value as UserRole)}
                     className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] font-medium cursor-pointer"
                   >
-                    <option value="team_member">Team Member</option>
-                    <option value="admin">Admin</option>
-                    <option value="viewer">Viewer (Read-Only)</option>
-                    {isSuperAdmin && <option value="super_admin">Super Admin</option>}
+                    {roles.length > 0 ? (
+                      roles
+                        .filter((r) => r.status === 'active' && (isSuperAdmin || r.id !== 'super_admin'))
+                        .map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.name} {r.isSystem ? '(System)' : ''}
+                          </option>
+                        ))
+                    ) : (
+                      <>
+                        <option value="team_member">Team Member</option>
+                        <option value="admin">Admin</option>
+                        <option value="viewer">Viewer (Read-Only)</option>
+                        {isSuperAdmin && <option value="super_admin">Super Admin</option>}
+                      </>
+                    )}
                   </select>
                 </div>
 
@@ -1532,33 +1565,41 @@ export const UserManagement: React.FC = () => {
                   <option value="sales">Sales Only (Sales CRM)</option>
                 </select>
               </div>
+            </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#e2ebd9]">
-                <button
-                  type="button"
-                  onClick={() => setIsAddUserOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f0f4ec] cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] text-[#101010] shadow-md shadow-[#8cc540]/25 cursor-pointer"
-                >
-                  <Save className="w-3.5 h-3.5 inline mr-1" />
-                  Save User
-                </button>
-              </div>
-            </form>
-          </div>
+            {/* Pinned Footer */}
+            <div className="flex-shrink-0 flex items-center justify-end gap-3 p-4 sm:p-5 border-t border-[#e2ebd9] bg-[#f8faf6] z-10">
+              <button
+                type="button"
+                onClick={() => setIsAddUserOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f0f4ec] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] text-[#101010] shadow-md shadow-[#8cc540]/25 cursor-pointer"
+              >
+                <Save className="w-3.5 h-3.5 inline mr-1" />
+                Save User
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
+    )}
 
       {/* Quick Department & Profile Modal */}
       {quickDeptUser && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="relative w-full max-w-lg bg-white border border-[#e2ebd9] rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between p-5 border-b border-[#e2ebd9] bg-[#f8faf6]">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setQuickDeptUser(null)}
+        >
+          <div
+            className="relative w-full max-w-lg max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] bg-white border border-[#e2ebd9] rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-[#e2ebd9] bg-[#f8faf6] z-10">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-[#8cc540]/15 text-[#436320] border border-[#8cc540]/30">
                   <Building2 className="w-5 h-5 text-[#598327]" />
@@ -1578,8 +1619,9 @@ export const UserManagement: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleQuickSaveDept} className="p-6 space-y-5">
-              {/* User Summary Card */}
+            <form onSubmit={handleQuickSaveDept} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5">
+                {/* User Summary Card */}
               <div className="flex items-center gap-3 bg-[#f8faf6] p-3 rounded-2xl border border-[#e2ebd9]">
                 <img
                   src={quickDeptUser.avatarUrl || PRESET_AVATARS[0]}
@@ -1714,43 +1756,50 @@ export const UserManagement: React.FC = () => {
                   ))}
                 </div>
               </div>
+            </div>
 
-              {/* Submit & Cancel */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#e2ebd9]">
-                <button
-                  type="button"
-                  onClick={() => setQuickDeptUser(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f0f4ec] cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingQuickDept}
-                  className="px-5 py-2 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] disabled:opacity-50 text-[#101010] shadow-md shadow-[#8cc540]/25 flex items-center gap-1.5 cursor-pointer"
-                >
-                  {isSavingQuickDept ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-[#101010] border-t-transparent rounded-full animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-3.5 h-3.5" />
-                      Update Department & Profile
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
+            {/* Submit & Cancel (Pinned) */}
+            <div className="flex-shrink-0 flex items-center justify-end gap-3 p-4 sm:p-5 border-t border-[#e2ebd9] bg-[#f8faf6] z-10">
+              <button
+                type="button"
+                onClick={() => setQuickDeptUser(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f0f4ec] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSavingQuickDept}
+                className="px-5 py-2 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] disabled:opacity-50 text-[#101010] shadow-md shadow-[#8cc540]/25 flex items-center gap-1.5 cursor-pointer"
+              >
+                {isSavingQuickDept ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-[#101010] border-t-transparent rounded-full animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-3.5 h-3.5" />
+                    Update Department & Profile
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
+    )}
 
       {/* Reject Request Modal */}
       {rejectingUser && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md bg-white border border-[#e2ebd9] rounded-3xl shadow-2xl p-6 space-y-4">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setRejectingUser(null)}
+        >
+          <div
+            className="relative w-full max-w-md max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] bg-white border border-[#e2ebd9] rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 space-y-4 overflow-y-auto my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-rose-50 text-rose-600 border border-rose-200">
                 <Ban className="w-5 h-5" />
@@ -1793,8 +1842,14 @@ export const UserManagement: React.FC = () => {
 
       {/* Reset Password Modal */}
       {resetPasswordUser && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md bg-white border border-[#e2ebd9] rounded-3xl shadow-2xl p-6 space-y-4">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setResetPasswordUser(null)}
+        >
+          <div
+            className="relative w-full max-w-md max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] bg-white border border-[#e2ebd9] rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 space-y-4 overflow-y-auto my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-200">
                 <KeyRound className="w-5 h-5" />
@@ -1838,8 +1893,14 @@ export const UserManagement: React.FC = () => {
 
       {/* View & Copy Credentials Modal */}
       {viewCredentialsUser && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md bg-white border border-[#e2ebd9] rounded-3xl shadow-2xl p-6 space-y-5">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setViewCredentialsUser(null)}
+        >
+          <div
+            className="relative w-full max-w-md max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] bg-white border border-[#e2ebd9] rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 space-y-5 overflow-y-auto my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-200">
@@ -1920,9 +1981,15 @@ export const UserManagement: React.FC = () => {
 
       {/* Delete Member Confirmation Modal */}
       {deletingUser && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md bg-white border border-[#e2ebd9] rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-[#e2ebd9] bg-rose-50 flex items-center gap-3">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setDeletingUser(null)}
+        >
+          <div
+            className="relative w-full max-w-md max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] bg-white border border-[#e2ebd9] rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-auto flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 sm:p-6 border-b border-[#e2ebd9] bg-rose-50 flex items-center gap-3 flex-shrink-0">
               <div className="p-3 rounded-2xl bg-rose-100 text-rose-600 border border-rose-200">
                 <AlertTriangle className="w-6 h-6" />
               </div>
@@ -1932,7 +1999,7 @@ export const UserManagement: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-6 space-y-4 text-xs">
+            <div className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto overscroll-contain flex-1">
               <p className="text-[#555555] leading-relaxed">
                 Are you sure you want to permanently delete{' '}
                 <strong className="text-[#101010] font-bold">{deletingUser.name}</strong> (

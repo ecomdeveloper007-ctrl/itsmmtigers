@@ -78,11 +78,17 @@ export const WinnerModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 print:p-0 print:bg-white">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 print:p-0 print:bg-white animate-in fade-in duration-150"
+      onClick={closeWinnerModal}
+    >
       {/* Modal Container */}
-      <div className="relative w-full max-w-4xl bg-white border border-[#e2ebd9] rounded-3xl shadow-2xl overflow-hidden print:border-none print:shadow-none print:bg-white text-[#101010]">
+      <div
+        className="relative w-full max-w-4xl max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] bg-white border border-[#e2ebd9] rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden print:border-none print:shadow-none print:bg-white print:max-h-none text-[#101010] my-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Header */}
-        <div className="relative flex items-center justify-between p-6 pb-4 border-b border-[#e2ebd9] bg-[#f8faf6] print:hidden">
+        <div className="flex-shrink-0 relative flex items-center justify-between p-4 sm:p-6 border-b border-[#e2ebd9] bg-[#f8faf6] z-10 print:hidden">
           <div className="flex items-center gap-2">
             <span className="p-2 rounded-xl bg-[#8cc540]/20 text-[#436320] border border-[#8cc540]/40">
               <Trophy className="w-5 h-5 animate-bounce" />
@@ -114,7 +120,7 @@ export const WinnerModal: React.FC = () => {
         </div>
 
         {/* Modal Body Content */}
-        <div className="p-6 sm:p-8 space-y-8 print:p-6 print:text-black">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-8 space-y-6 sm:space-y-8 print:p-6 print:text-black print:overflow-visible">
           {/* Headline Banner */}
           <div className="text-center space-y-2">
             <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-[#f3f8ef] border border-[#8cc540]/50 text-[#436320] text-xs font-black tracking-widest uppercase">

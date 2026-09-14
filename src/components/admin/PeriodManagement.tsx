@@ -354,8 +354,14 @@ export const PeriodManagement: React.FC = () => {
 
       {/* Confirmation Prompt Modal */}
       {confirmModal.isOpen && confirmModal.period && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md bg-white border border-[#e2ebd9] rounded-3xl shadow-xl overflow-hidden p-6 space-y-4">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setConfirmModal({ isOpen: false, period: null, targetStatus: 'locked' })}
+        >
+          <div
+            className="relative w-full max-w-md max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] bg-white border border-[#e2ebd9] rounded-2xl sm:rounded-3xl shadow-xl overflow-y-auto p-4 sm:p-6 space-y-4 my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center gap-3">
               <div
                 className={`p-3 rounded-2xl border ${
@@ -390,7 +396,7 @@ export const PeriodManagement: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setConfirmModal({ isOpen: false, period: null, targetStatus: 'locked' })}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f8faf6] hover:text-[#101010] transition-colors"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f8faf6] hover:text-[#101010] transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -412,9 +418,15 @@ export const PeriodManagement: React.FC = () => {
 
       {/* Add Period Modal */}
       {isAddOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="relative w-full max-w-lg bg-white border border-[#e2ebd9] rounded-3xl shadow-xl overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-[#e2ebd9] bg-[#f8faf6]">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setIsAddOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-lg max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] bg-white border border-[#e2ebd9] rounded-2xl sm:rounded-3xl shadow-xl flex flex-col overflow-hidden my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-[#e2ebd9] bg-[#f8faf6] z-10">
               <div className="flex items-center gap-2.5">
                 <span className="p-2 rounded-xl bg-[#8cc540]/20 text-[#436320]">
                   <Calendar className="w-5 h-5 text-[#598327]" />
@@ -432,7 +444,7 @@ export const PeriodManagement: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreatePeriod} className="p-6 space-y-4">
+            <form onSubmit={handleCreatePeriod} className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-[#555555] uppercase tracking-wider mb-1.5">

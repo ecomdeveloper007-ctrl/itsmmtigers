@@ -21,21 +21,44 @@ import { MonthlyReportView } from './components/reports/MonthlyReportView';
 import { ImportExportModal } from './components/admin/ImportExportModal';
 import { ProfileRevenueAnalysisCard } from './components/dashboard/ProfileRevenueAnalysisCard';
 import { SalesProvider } from './context/SalesContext';
+import { PermissionProvider, usePermissions } from './context/PermissionContext';
 import { SalesModuleRoot } from './components/sales/SalesModuleRoot';
+import { RolesPermissionsManagement } from './components/admin/RolesPermissionsManagement';
 import { Trophy, Crown, Sparkles, ArrowRight, Flame } from 'lucide-react';
+
+const TAB_SECTION_MAP: Record<string, string> = {
+  'dashboard': 'pm.dashboard',
+  'leaderboard': 'pm.leaderboard',
+  'my-performance': 'pm.my_performance',
+  'admin-data': 'pm.submissions',
+  'user-management': 'admin.users',
+  'roles-permissions': 'admin.roles_permissions',
+  'kpi-settings': 'pm.kpis',
+  'period-management': 'pm.week_lock',
+  'audit-logs': 'pm.audit_logs',
+  'reports': 'pm.reports',
+};
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading, currentUser, isAdmin, isSuperAdmin } = useAuth();
   const { activeModule, activeTab, setActiveTab, openWinnerModal, leaderboardData, selectedTeam, settings } = useApp();
+  const { canAccessSection } = usePermissions();
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
 
-  // Security Guard: Prevent non-super-admin users from accessing protected admin tabs
+  // Security Guard: Prevent users from accessing tabs their role is not authorized to view
   React.useEffect(() => {
-    const adminOnlyTabs = ['admin-data', 'user-management', 'kpi-settings', 'period-management', 'audit-logs'];
-    if (!isSuperAdmin && adminOnlyTabs.includes(activeTab)) {
-      setActiveTab('my-performance');
+    if (activeModule === 'pm') {
+      const requiredSection = TAB_SECTION_MAP[activeTab];
+      if (requiredSection && !canAccessSection(requiredSection)) {
+        // Fallback to my-performance or dashboard if accessible
+        if (canAccessSection('pm.my_performance')) {
+          setActiveTab('my-performance');
+        } else if (canAccessSection('pm.dashboard')) {
+          setActiveTab('dashboard');
+        }
+      }
     }
-  }, [activeTab, isSuperAdmin, setActiveTab]);
+  }, [activeTab, activeModule, canAccessSection, setActiveTab]);
 
   if (isLoading) {
     return (
@@ -318,6 +341,9 @@ const AppContent: React.FC = () => {
             {/* AUDIT LOGS TAB (Super Admin) */}
             {activeTab === 'audit-logs' && isSuperAdmin && <AuditLogsView />}
 
+            {/* ROLES & PERMISSIONS TAB (Super Admin) */}
+            {activeTab === 'roles-permissions' && isSuperAdmin && <RolesPermissionsManagement />}
+
             {/* MONTHLY REPORT TAB */}
             {activeTab === 'reports' && <MonthlyReportView />}
           </>
@@ -342,9 +368,11 @@ export default function App() {
   return (
     <AuthProvider>
       <AppProvider>
-        <SalesProvider>
-          <AppContent />
-        </SalesProvider>
+        <PermissionProvider>
+          <SalesProvider>
+            <AppContent />
+          </SalesProvider>
+        </PermissionProvider>
       </AppProvider>
     </AuthProvider>
   );

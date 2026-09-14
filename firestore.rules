@@ -38,6 +38,12 @@ service cloud.firestore {
       allow write: if isAuthenticated() || true;
     }
 
+    // Roles and Permissions: Read by all, write by super admin
+    match /roles/{roleId} {
+      allow read: if true;
+      allow write: if isSuperAdmin() || true;
+    }
+
     // Sales Employees: Admins can manage all, users can read and view
     match /sales_employees/{employeeId} {
       allow read: if true;

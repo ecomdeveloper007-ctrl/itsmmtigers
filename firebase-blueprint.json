@@ -167,12 +167,33 @@
         "timestamp": { "type": "string" }
       },
       "required": ["id", "actor", "action", "timestamp"]
+    },
+    "RoleDefinition": {
+      "title": "RoleDefinition",
+      "description": "Dynamic role definition and granular permission matrices",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "isSystem": { "type": "boolean" },
+        "isActive": { "type": "boolean" },
+        "permissions": { "type": "object" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id", "name", "isActive", "permissions"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "UserProfile",
       "description": "User profiles and credentials"
+    },
+    "/roles/{roleId}": {
+      "schema": "RoleDefinition",
+      "description": "Configurable roles and permissions matrices"
     },
     "/kpiSettings/{kpiId}": {
       "schema": "KPIConfig",

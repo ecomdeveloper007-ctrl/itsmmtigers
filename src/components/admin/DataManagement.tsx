@@ -407,8 +407,14 @@ export const DataManagement: React.FC<DataManagementProps> = ({ onOpenImportModa
 
       {/* Purge All Records Confirmation Modal */}
       {showPurgeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white border border-rose-200 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setShowPurgeModal(false)}
+        >
+          <div
+            className="bg-white border border-rose-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-md w-full max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] my-auto overflow-y-auto shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center gap-3 text-rose-600">
               <div className="p-3 bg-rose-50 rounded-2xl border border-rose-200">
                 <AlertTriangle className="w-6 h-6" />

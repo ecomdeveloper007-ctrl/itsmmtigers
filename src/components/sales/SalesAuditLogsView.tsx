@@ -459,10 +459,16 @@ export const SalesAuditLogsView: React.FC = () => {
 
       {/* Diff / Value Inspector Modal */}
       {activeLogDiff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl border border-[#e2ebd9] shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setActiveLogDiff(null)}
+        >
+          <div
+            className="bg-white rounded-2xl sm:rounded-3xl border border-[#e2ebd9] shadow-2xl max-w-3xl w-full max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] my-auto flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
-            <div className="p-6 border-b border-[#e2ebd9] flex items-center justify-between bg-[#fbfdfa]">
+            <div className="flex-shrink-0 p-4 sm:p-6 border-b border-[#e2ebd9] flex items-center justify-between bg-[#fbfdfa] z-10">
               <div>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#598327]/10 text-[#598327] border border-[#598327]/20">
                   Audit Inspection
@@ -484,7 +490,7 @@ export const SalesAuditLogsView: React.FC = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
               <div className="bg-[#f8faf6] rounded-xl p-3 border border-[#e2ebd9] text-xs">
                 <div className="font-bold text-[#101010] mb-0.5">Summary Details:</div>
                 <div className="text-[#444444]">{activeLogDiff.details}</div>
@@ -526,7 +532,7 @@ export const SalesAuditLogsView: React.FC = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-[#e2ebd9] bg-[#fbfdfa] flex justify-end">
+            <div className="flex-shrink-0 p-4 border-t border-[#e2ebd9] bg-[#fbfdfa] flex justify-end z-10">
               <button
                 onClick={() => setActiveLogDiff(null)}
                 className="px-5 py-2 bg-[#101010] text-white rounded-xl text-xs font-bold hover:bg-black transition-colors cursor-pointer"

@@ -816,8 +816,14 @@ export const LoginPage: React.FC = () => {
 
       {/* Forgot Password Modal */}
       {isForgotModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#101010]/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="relative w-full max-w-sm bg-white border border-[#e2ebd9] rounded-3xl shadow-2xl p-6 space-y-4">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-[#101010]/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setIsForgotModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-sm max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] my-auto overflow-y-auto bg-white border border-[#e2ebd9] rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between border-b border-[#e2ebd9] pb-3">
               <h3 className="text-sm font-black text-[#101010] flex items-center gap-1.5">
                 <HelpCircle className="w-4 h-4 text-[#598327]" />
@@ -825,7 +831,7 @@ export const LoginPage: React.FC = () => {
               </h3>
               <button
                 onClick={() => setIsForgotModalOpen(false)}
-                className="text-[#888888] hover:text-[#101010]"
+                className="p-1 rounded-lg text-[#888888] hover:text-[#101010] cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>

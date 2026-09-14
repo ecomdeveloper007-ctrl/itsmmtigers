@@ -84,10 +84,16 @@ export const SalesEmployeeDetailModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="relative bg-white rounded-3xl border border-[#e2ebd9] shadow-2xl max-w-3xl w-full p-6 sm:p-8 space-y-6 overflow-hidden max-h-[90vh] overflow-y-auto">
-        {/* Header / Profile Hero */}
-        <div className="flex items-start justify-between border-b border-[#e2ebd9] pb-6 gap-4">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+      onClick={() => setSelectedEmployeeForDetail(null)}
+    >
+      <div
+        className="relative bg-white rounded-2xl sm:rounded-3xl border border-[#e2ebd9] shadow-2xl max-w-3xl w-full max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden my-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header / Profile Hero (Pinned) */}
+        <div className="flex-shrink-0 flex items-start justify-between border-b border-[#e2ebd9] p-4 sm:p-6 bg-[#f8faf6] z-10 gap-4">
           <div className="flex items-center gap-4">
             <img
               src={
@@ -162,15 +168,15 @@ export const SalesEmployeeDetailModal: React.FC = () => {
             )}
             <button
               onClick={() => setSelectedEmployeeForDetail(null)}
-              className="p-2 rounded-xl text-[#666666] hover:text-[#101010] hover:bg-[#f5f5f5] cursor-pointer ml-1"
+              className="p-2 rounded-xl text-[#666666] hover:text-[#101010] hover:bg-[#eaeaea] cursor-pointer ml-1"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Current Month Active Scorecard */}
-        <div className="space-y-4">
+        {/* Scrollable Content Body */}
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-black text-[#101010] flex items-center gap-2">
               <Calendar className="w-4 h-4 text-[#598327]" />
@@ -295,6 +301,17 @@ export const SalesEmployeeDetailModal: React.FC = () => {
               No performance records recorded for {emp.name} in {selectedMonth} {selectedYear}.
             </div>
           )}
+        </div>
+
+        {/* Footer (Pinned) */}
+        <div className="flex-shrink-0 flex items-center justify-end p-4 sm:p-5 border-t border-[#e2ebd9] bg-[#f8faf6] z-10">
+          <button
+            type="button"
+            onClick={() => setSelectedEmployeeForDetail(null)}
+            className="px-5 py-2 rounded-xl text-xs font-bold text-[#101010] bg-[#8cc540] hover:bg-[#7cb334] cursor-pointer transition-all shadow-sm"
+          >
+            Close Details
+          </button>
         </div>
       </div>
     </div>

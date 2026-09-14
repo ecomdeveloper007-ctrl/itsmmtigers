@@ -468,9 +468,16 @@ export const AuditLogsView: React.FC = () => {
 
       {/* Log Details Modal */}
       {selectedLog && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="relative w-full max-w-lg bg-white border border-[#e2ebd9] rounded-3xl shadow-xl overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-[#e2ebd9] bg-[#f8faf6]">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setSelectedLog(null)}
+        >
+          <div
+            className="relative w-full max-w-lg max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] bg-white border border-[#e2ebd9] rounded-2xl sm:rounded-3xl shadow-xl flex flex-col overflow-hidden my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Pinned Header */}
+            <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-[#e2ebd9] bg-[#f8faf6] z-10">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-[#8cc540]/20 text-[#436320]">
                   {getEntityIcon(selectedLog.entityType)}
@@ -493,7 +500,8 @@ export const AuditLogsView: React.FC = () => {
               </button>
             </div>
 
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="p-3 rounded-2xl bg-[#f8faf6] border border-[#e2ebd9]">
                   <span className="text-[10px] font-bold text-[#666666] uppercase block">
@@ -578,7 +586,7 @@ export const AuditLogsView: React.FC = () => {
               )}
             </div>
 
-            <div className="p-4 border-t border-[#e2ebd9] bg-[#f8faf6] flex justify-end">
+            <div className="flex-shrink-0 p-4 border-t border-[#e2ebd9] bg-[#f8faf6] flex justify-end z-10">
               <button
                 type="button"
                 onClick={() => setSelectedLog(null)}

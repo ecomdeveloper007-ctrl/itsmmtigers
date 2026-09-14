@@ -33,7 +33,9 @@ import {
   Award,
   UploadCloud,
   Layers,
+  KeyRound,
 } from 'lucide-react';
+import { usePermissions } from '../../context/PermissionContext';
 import { EditProfileModal } from './EditProfileModal';
 
 export const Header: React.FC = () => {
@@ -57,6 +59,7 @@ export const Header: React.FC = () => {
   } = useApp();
 
   const { openSalesEntryModal, setSalesActiveTab, salesActiveTab, setIsSalesImportModalOpen } = useSales();
+  const { hasPermission, canAccessSection, canAccessModule } = usePermissions();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isDemoSwitchOpen, setIsDemoSwitchOpen] = useState(false);
@@ -107,6 +110,12 @@ export const Header: React.FC = () => {
             <Shield className="w-3 h-3" /> Admin
           </span>
         );
+      case 'sales_member':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+            <User className="w-3 h-3" /> Sales Member
+          </span>
+        );
       case 'viewer':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
@@ -114,10 +123,15 @@ export const Header: React.FC = () => {
           </span>
         );
       case 'team_member':
-      default:
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#8cc540]/15 text-[#3d591d] border border-[#8cc540]/30">
             <User className="w-3 h-3" /> Team Member
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#f0f4ec] text-[#436320] border border-[#e2ebd9] capitalize">
+            <User className="w-3 h-3" /> {role?.replace(/_/g, ' ') || 'Member'}
           </span>
         );
     }
@@ -505,6 +519,18 @@ export const Header: React.FC = () => {
                         <Activity className="w-3.5 h-3.5 text-amber-600" />
                         Audit History Logs
                       </button>
+                      {canAccessSection('admin.roles_permissions') && (
+                        <button
+                          onClick={() => {
+                            setActiveTab('roles-permissions');
+                            setIsProfileOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-lg text-[#436320] bg-[#f3f8ef] hover:bg-[#8cc540]/20"
+                        >
+                          <KeyRound className="w-3.5 h-3.5 text-[#598327]" />
+                          Roles & Permissions
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -538,43 +564,49 @@ export const Header: React.FC = () => {
         <div className="hidden lg:flex items-center space-x-1 border-t border-[#f0f4ec] py-2 overflow-visible relative z-30">
           {activeModule === 'pm' ? (
             <>
-              <button
-                onClick={() => setActiveTab('dashboard')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === 'dashboard'
-                    ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                    : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-                }`}
-              >
-                <LayoutDashboard className="w-3.5 h-3.5" />
-                Main Dashboard
-              </button>
+              {canAccessSection('pm.dashboard') && (
+                <button
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'dashboard'
+                      ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                      : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                  }`}
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  Main Dashboard
+                </button>
+              )}
 
-              <button
-                onClick={() => setActiveTab('leaderboard')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === 'leaderboard'
-                    ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                    : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-                }`}
-              >
-                <Trophy className="w-3.5 h-3.5" />
-                Leaderboard
-              </button>
+              {canAccessSection('pm.leaderboard') && (
+                <button
+                  onClick={() => setActiveTab('leaderboard')}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'leaderboard'
+                      ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                      : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                  }`}
+                >
+                  <Trophy className="w-3.5 h-3.5" />
+                  Leaderboard
+                </button>
+              )}
 
-              <button
-                onClick={() => setActiveTab('my-performance')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === 'my-performance'
-                    ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                    : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-                }`}
-              >
-                <User className="w-3.5 h-3.5" />
-                My Performance
-              </button>
+              {canAccessSection('pm.my_performance') && (
+                <button
+                  onClick={() => setActiveTab('my-performance')}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'my-performance'
+                      ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                      : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                  }`}
+                >
+                  <User className="w-3.5 h-3.5" />
+                  My Performance
+                </button>
+              )}
 
-              {isSuperAdmin && (
+              {canAccessSection('pm.submissions') && (
                 <button
                   onClick={() => setActiveTab('admin-data')}
                   className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
@@ -588,74 +620,103 @@ export const Header: React.FC = () => {
                 </button>
               )}
 
-              <button
-                onClick={() => setActiveTab('reports')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === 'reports'
-                    ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                    : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-                }`}
-              >
-                <FileText className="w-3.5 h-3.5" />
-                Monthly R&R Report
-              </button>
+              {canAccessSection('pm.reports') && (
+                <button
+                  onClick={() => setActiveTab('reports')}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'reports'
+                      ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                      : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  Monthly R&R Report
+                </button>
+              )}
 
-              {isSuperAdmin && (
+              {(canAccessSection('pm.members') ||
+                canAccessSection('pm.kpis') ||
+                canAccessSection('pm.week_lock') ||
+                canAccessSection('pm.audit_logs') ||
+                canAccessSection('admin.roles_permissions')) && (
                 <>
                   <div className="h-4 w-px bg-[#e2ebd9] mx-1"></div>
 
-                  <button
-                    onClick={() => setActiveTab('user-management')}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                      activeTab === 'user-management'
-                        ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                        : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-                    }`}
-                  >
-                    <Users className="w-3.5 h-3.5" />
-                    <span>Team Members & Approvals</span>
-                    {pendingCount > 0 && (
-                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-[#101010] text-[#8cc540]">
-                        {pendingCount}
-                      </span>
-                    )}
-                  </button>
+                  {canAccessSection('pm.members') && (
+                    <button
+                      onClick={() => setActiveTab('user-management')}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                        activeTab === 'user-management'
+                          ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                          : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                      }`}
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      <span>Team Members & Approvals</span>
+                      {pendingCount > 0 && (
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-[#101010] text-[#8cc540]">
+                          {pendingCount}
+                        </span>
+                      )}
+                    </button>
+                  )}
 
-                  <button
-                    onClick={() => setActiveTab('kpi-settings')}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                      activeTab === 'kpi-settings'
-                        ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                        : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-                    }`}
-                  >
-                    <Sliders className="w-3.5 h-3.5" />
-                    KPI Config (100%)
-                  </button>
+                  {canAccessSection('pm.kpis') && (
+                    <button
+                      onClick={() => setActiveTab('kpi-settings')}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                        activeTab === 'kpi-settings'
+                          ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                          : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                      }`}
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      KPI Config
+                    </button>
+                  )}
 
-                  <button
-                    onClick={() => setActiveTab('period-management')}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                      activeTab === 'period-management'
-                        ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                        : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-                    }`}
-                  >
-                    <Calendar className="w-3.5 h-3.5" />
-                    Weeks & Lock
-                  </button>
+                  {canAccessSection('pm.week_lock') && (
+                    <button
+                      onClick={() => setActiveTab('period-management')}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                        activeTab === 'period-management'
+                          ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                          : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                      }`}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      Week Lock
+                    </button>
+                  )}
 
-                  <button
-                    onClick={() => setActiveTab('audit-logs')}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                      activeTab === 'audit-logs'
-                        ? 'bg-[#8cc540] text-[#101010] shadow-xs'
-                        : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
-                    }`}
-                  >
-                    <Activity className="w-3.5 h-3.5" />
-                    Audit Logs
-                  </button>
+                  {canAccessSection('pm.audit_logs') && (
+                    <button
+                      onClick={() => setActiveTab('audit-logs')}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                        activeTab === 'audit-logs'
+                          ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                          : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                      }`}
+                    >
+                      <Activity className="w-3.5 h-3.5" />
+                      Audit
+                    </button>
+                  )}
+
+                  {canAccessSection('admin.roles_permissions') && (
+                    <button
+                      onClick={() => setActiveTab('roles-permissions')}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                        activeTab === 'roles-permissions'
+                          ? 'bg-[#101010] text-white shadow-xs'
+                          : 'text-[#555555] hover:text-[#101010] hover:bg-[#f5f5f5]'
+                      }`}
+                      title="Settings → Roles & Permissions"
+                    >
+                      <KeyRound className="w-3.5 h-3.5 text-[#8cc540]" />
+                      <span>Roles & Permissions</span>
+                    </button>
+                  )}
                 </>
               )}
             </>
@@ -1006,43 +1067,51 @@ export const Header: React.FC = () => {
 
             {activeModule === 'pm' ? (
               <div className="grid grid-cols-2 gap-1.5">
-                <button
-                  onClick={() => {
-                    setActiveTab('dashboard');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                >
-                  <LayoutDashboard className="w-4 h-4 text-[#598327]" /> Main Dashboard
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab('leaderboard');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                >
-                  <Trophy className="w-4 h-4 text-amber-500" /> Leaderboard
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab('my-performance');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                >
-                  <User className="w-4 h-4 text-[#598327]" /> My Performance
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab('reports');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                >
-                  <FileText className="w-4 h-4 text-blue-600" /> R&R Report
-                </button>
-                {isSuperAdmin && (
+                {canAccessSection('pm.dashboard') && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('dashboard');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                  >
+                    <LayoutDashboard className="w-4 h-4 text-[#598327]" /> Main Dashboard
+                  </button>
+                )}
+                {canAccessSection('pm.leaderboard') && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('leaderboard');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                  >
+                    <Trophy className="w-4 h-4 text-amber-500" /> Leaderboard
+                  </button>
+                )}
+                {canAccessSection('pm.my_performance') && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('my-performance');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                  >
+                    <User className="w-4 h-4 text-[#598327]" /> My Performance
+                  </button>
+                )}
+                {canAccessSection('pm.reports') && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('reports');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                  >
+                    <FileText className="w-4 h-4 text-blue-600" /> R&R Report
+                  </button>
+                )}
+                {canAccessSection('pm.submissions') && (
                   <button
                     onClick={() => {
                       setActiveTab('admin-data');
@@ -1053,45 +1122,60 @@ export const Header: React.FC = () => {
                     <FileSpreadsheet className="w-4 h-4 text-blue-600" /> Submissions
                   </button>
                 )}
-                {isSuperAdmin && (
-                  <>
-                    <button
-                      onClick={() => {
-                        setActiveTab('user-management');
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                    >
-                      <Users className="w-4 h-4 text-indigo-600" /> Team Members
-                    </button>
-                    <button
-                      onClick={() => {
-                        setActiveTab('kpi-settings');
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                    >
-                      <Sliders className="w-4 h-4 text-pink-600" /> KPI Weights
-                    </button>
-                    <button
-                      onClick={() => {
-                        setActiveTab('period-management');
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                    >
-                      <Calendar className="w-4 h-4 text-teal-600" /> Weeks / Lock
-                    </button>
-                    <button
-                      onClick={() => {
-                        setActiveTab('audit-logs');
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
-                    >
-                      <Activity className="w-4 h-4 text-amber-600" /> Audit Logs
-                    </button>
-                  </>
+                {canAccessSection('pm.members') && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('user-management');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                  >
+                    <Users className="w-4 h-4 text-indigo-600" /> Team Members
+                  </button>
+                )}
+                {canAccessSection('pm.kpis') && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('kpi-settings');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                  >
+                    <Sliders className="w-4 h-4 text-pink-600" /> KPI Weights
+                  </button>
+                )}
+                {canAccessSection('pm.week_lock') && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('period-management');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                  >
+                    <Calendar className="w-4 h-4 text-teal-600" /> Weeks / Lock
+                  </button>
+                )}
+                {canAccessSection('pm.audit_logs') && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('audit-logs');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="p-2 rounded-lg text-left text-xs font-bold bg-[#f5f5f5] text-[#101010] flex items-center gap-2 hover:bg-[#8cc540]/20"
+                  >
+                    <Activity className="w-4 h-4 text-amber-600" /> Audit Logs
+                  </button>
+                )}
+                {canAccessSection('admin.roles_permissions') && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('roles-permissions');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="p-2 rounded-lg text-left text-xs font-bold bg-[#101010] text-[#8cc540] flex items-center gap-2 hover:bg-[#222222]"
+                  >
+                    <KeyRound className="w-4 h-4 text-[#8cc540]" /> Roles & Permissions
+                  </button>
                 )}
               </div>
             ) : (

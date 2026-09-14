@@ -1,4 +1,6 @@
-export type UserRole = 'super_admin' | 'admin' | 'team_member' | 'viewer';
+import { UserPermissionOverride } from './permissions';
+
+export type UserRole = 'super_admin' | 'admin' | 'team_member' | 'sales_member' | 'viewer' | string;
 
 export type UserStatus = 'active' | 'disabled' | 'pending_approval' | 'rejected';
 
@@ -166,6 +168,7 @@ export interface UserProfile {
   salesDepartment?: 'IT' | 'SMM';
   salesProfileCode?: 'PR' | 'WR' | 'HW' | 'DR' | 'RR';
   salesAssignedProfiles?: ('PR' | 'WR' | 'HW' | 'DR' | 'RR')[];
+  permissionOverride?: UserPermissionOverride;
   joiningDate?: string;
   lastLogin?: string;
   registrationNotes?: string;
@@ -397,3 +400,4 @@ export interface ToastMessage {
 }
 
 export * from './sales';
+export * from './permissions';

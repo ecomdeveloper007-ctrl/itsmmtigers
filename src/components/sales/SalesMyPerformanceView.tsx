@@ -487,8 +487,14 @@ export const SalesMyPerformanceView: React.FC = () => {
 
       {/* Delete Record Confirmation Modal */}
       {deletingRecord && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-red-200 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setDeletingRecord(null)}
+        >
+          <div
+            className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-md w-full max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] my-auto overflow-y-auto border border-red-200 shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center gap-3 text-red-600">
               <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center border border-red-200 shrink-0">
                 <Trash2 className="w-5 h-5" />

@@ -333,9 +333,15 @@ export const SalesEmployeesView: React.FC = () => {
 
       {/* Confirmation Modal for Permanent Delete */}
       {deletingEmployee && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="relative bg-white rounded-3xl border border-rose-200 shadow-2xl max-w-md w-full p-6 space-y-4 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 border border-rose-200 flex items-center justify-center mx-auto">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setDeletingEmployee(null)}
+        >
+          <div
+            className="relative bg-white rounded-2xl sm:rounded-3xl border border-rose-200 shadow-2xl max-w-md w-full max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] my-auto overflow-y-auto p-4 sm:p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 border border-rose-200 flex items-center justify-center mx-auto shrink-0">
               <Trash2 className="w-6 h-6" />
             </div>
 
