@@ -658,7 +658,7 @@ export const SalesKPITargetsEditor: React.FC<SalesKPITargetsEditorProps> = ({ on
               Target Month
             </label>
             <select
-              value={targetMonth || 'August'}
+              value={targetMonth || 'September'}
               onChange={(e) => setTargetMonth(e.target.value)}
               className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:outline-none focus:ring-2 focus:ring-[#8cc540] cursor-pointer"
             >

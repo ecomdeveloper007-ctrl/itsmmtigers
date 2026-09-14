@@ -23,13 +23,15 @@ export const PeriodManagement: React.FC = () => {
     savePeriod,
     togglePeriodLock,
     setActiveTab,
+    selectedMonth,
+    selectedYear,
     setSelectedMonth,
     setSelectedYear,
   } = useApp();
 
   const [isAddOpen, setIsAddOpen] = useState<boolean>(false);
-  const [formMonth, setFormMonth] = useState<string>('August');
-  const [formYear, setFormYear] = useState<number>(2026);
+  const [formMonth, setFormMonth] = useState<string>(selectedMonth || 'September');
+  const [formYear, setFormYear] = useState<number>(selectedYear || 2026);
   const [formWeekName, setFormWeekName] = useState<string>('Week 5');
   const [formWeekNumber, setFormWeekNumber] = useState<number>(5);
   const [formStartDate, setFormStartDate] = useState<string>('2026-08-29');

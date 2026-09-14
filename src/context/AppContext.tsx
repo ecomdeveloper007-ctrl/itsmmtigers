@@ -20,6 +20,7 @@ import {
   resolveUserTeam,
 } from '../services/calculationService';
 import { useAuth } from './AuthContext';
+import { getAvailableMonthsAndYears, getLatestMonthAndYear } from '../utils/monthUtils';
 
 interface AppContextType {
   // Data
@@ -96,8 +97,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Filters
-  const [selectedMonth, setSelectedMonth] = useState<string>('August');
+  // Filters - Default to current operational month September 2026
+  const [selectedMonth, setSelectedMonth] = useState<string>('September');
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>('all');
   const [selectedTeam, setSelectedTeam] = useState<TeamType>('all');
@@ -184,24 +185,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   }, []);
 
-  // Compute available months & years from periods and records
+  // Compute available months & years dynamically from periods and records
   const { availableMonths, availableYears } = useMemo(() => {
-    const monthsSet = new Set<string>(['August', 'September', 'October', 'November', 'December', 'July', 'June']);
-    const yearsSet = new Set<number>([2026, 2025, 2027]);
-
-    periods.forEach((p) => {
-      if (p.month) monthsSet.add(p.month);
-      if (p.year) yearsSet.add(p.year);
-    });
-    records.forEach((r) => {
-      if (r.month) monthsSet.add(r.month);
-      if (r.year) yearsSet.add(r.year);
-    });
-
-    return {
-      availableMonths: Array.from(monthsSet),
-      availableYears: Array.from(yearsSet).sort((a, b) => b - a),
-    };
+    return getAvailableMonthsAndYears(records, periods);
   }, [periods, records]);
 
   // Compute Real-Time Leaderboard with tie-breakers and metrics for currently selected team

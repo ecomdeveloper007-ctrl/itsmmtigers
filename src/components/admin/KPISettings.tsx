@@ -53,7 +53,7 @@ export const KPISettings: React.FC = () => {
 
   // Target Editor State
   const [targetCadence, setTargetCadence] = useState<TargetCadence>('monthly');
-  const [targetMonth, setTargetMonth] = useState<string>(selectedMonth || 'August');
+  const [targetMonth, setTargetMonth] = useState<string>(selectedMonth || 'September');
   const [targetYear, setTargetYear] = useState<number>(selectedYear || 2026);
   const [targetWeek, setTargetWeek] = useState<string>('Week 1');
   const [targetTeam, setTargetTeam] = useState<TargetTeamScope>('all');
