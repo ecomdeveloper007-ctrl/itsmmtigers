@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSales } from '../../context/SalesContext';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../context/PermissionContext';
 import {
   Users,
   UserPlus,
@@ -20,7 +21,6 @@ import {
   Lock,
 } from 'lucide-react';
 import { SalesEmployee, SalesProfileCode } from '../../types/sales';
-import { isUserAdminOrSuperAdmin } from '../../utils/salesAuthUtils';
 
 export const SalesEmployeesView: React.FC = () => {
   const {
@@ -34,8 +34,12 @@ export const SalesEmployeesView: React.FC = () => {
   } = useSales();
 
   const { selectedMonth, selectedYear } = useApp();
-  const { currentUser, isAdmin, isSuperAdmin } = useAuth();
-  const isPrivileged = isUserAdminOrSuperAdmin(currentUser);
+  const { currentUser } = useAuth();
+  const { hasPermission } = usePermissions();
+
+  const canCreate = hasPermission('sales.members', 'create');
+  const canEdit = hasPermission('sales.members', 'edit');
+  const canDelete = hasPermission('sales.members', 'delete');
 
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState<'all' | 'IT' | 'SMM'>('all');
@@ -74,15 +78,15 @@ export const SalesEmployeesView: React.FC = () => {
 
   const handleDeleteClick = (e: React.MouseEvent, emp: SalesEmployee) => {
     e.stopPropagation();
-    if (!isPrivileged) {
-      alert('Security Violation: Only Super Admin and Administrators can delete sales members.');
+    if (!canDelete) {
+      alert('Security Violation: You do not have permission to delete sales members.');
       return;
     }
     setDeletingEmployee(emp);
   };
 
   const handleConfirmPermanentDelete = async () => {
-    if (!deletingEmployee || !isPrivileged) return;
+    if (!deletingEmployee || !canDelete) return;
     setIsDeleting(true);
     try {
       await deleteSalesEmployee(deletingEmployee.id);
@@ -115,7 +119,7 @@ export const SalesEmployeesView: React.FC = () => {
           </p>
         </div>
 
-        {isPrivileged && (
+        {canCreate && (
           <button
             onClick={() => openSalesEmployeeModal()}
             className="px-4 py-2.5 rounded-2xl bg-[#8cc540] hover:bg-[#7db734] text-[#101010] font-black text-xs shadow-md shadow-[#8cc540]/30 transition-all flex items-center gap-2 cursor-pointer"
@@ -238,22 +242,26 @@ export const SalesEmployeesView: React.FC = () => {
                   </div>
                 </div>
 
-                {isPrivileged && (
+                {(canEdit || canDelete) && (
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => openSalesEmployeeModal(emp)}
-                      className="p-1.5 rounded-lg text-[#666666] hover:text-[#101010] hover:bg-[#f5f5f5] cursor-pointer"
-                      title="Edit Member"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => handleDeleteClick(e, emp)}
-                      className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
-                      title="Delete Member"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => openSalesEmployeeModal(emp)}
+                        className="p-1.5 rounded-lg text-[#666666] hover:text-[#101010] hover:bg-[#f5f5f5] cursor-pointer"
+                        title="Edit Member"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={(e) => handleDeleteClick(e, emp)}
+                        className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
+                        title="Delete Member"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

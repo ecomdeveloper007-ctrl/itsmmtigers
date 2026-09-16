@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSales } from '../../context/SalesContext';
 import { useAuth } from '../../context/AuthContext';
-import { isUserSuperAdmin } from '../../utils/salesAuthUtils';
+import { usePermissions } from '../../context/PermissionContext';
 import { SalesAuditLog } from '../../types/sales';
 import { SalesDataService } from '../../services/salesDataService';
 import {
@@ -26,7 +26,9 @@ import {
 export const SalesAuditLogsView: React.FC = () => {
   const { auditLogs, refreshAuditLogs } = useSales();
   const { currentUser } = useAuth();
-  const isSuperAdmin = isUserSuperAdmin(currentUser);
+  const { canAccessSection, hasPermission } = usePermissions();
+  const canView = canAccessSection('sales.audit_logs');
+  const canExport = hasPermission('sales.audit_logs', 'export');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -36,10 +38,10 @@ export const SalesAuditLogsView: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    if (isSuperAdmin) {
+    if (canView) {
       refreshAuditLogs();
     }
-  }, [isSuperAdmin]);
+  }, [canView]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -167,8 +169,8 @@ export const SalesAuditLogsView: React.FC = () => {
     }
   };
 
-  // Non-Super Admin Access Denied Banner
-  if (!isSuperAdmin) {
+  // Access Denied Banner if user has no view permission
+  if (!canView) {
     return (
       <div className="bg-white rounded-2xl border border-red-200 p-8 text-center max-w-xl mx-auto my-12 shadow-sm">
         <div className="w-14 h-14 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
@@ -176,7 +178,7 @@ export const SalesAuditLogsView: React.FC = () => {
         </div>
         <h2 className="text-xl font-black text-[#101010] mb-2">403 Forbidden: Access Restricted</h2>
         <p className="text-sm text-[#666666] leading-relaxed">
-          The Sales Audit Logs module is restricted to <strong>Super Admin</strong> personnel only. Sales Members are not permitted to inspect compliance audit trails.
+          Your role does not have permission to view the Sales Audit Logs module.
         </p>
       </div>
     );
@@ -189,7 +191,7 @@ export const SalesAuditLogsView: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#598327]/10 text-[#598327] border border-[#598327]/20">
-              Super Admin Security
+              Audit Trail
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-700">
               Module: Sales
@@ -210,20 +212,24 @@ export const SalesAuditLogsView: React.FC = () => {
             <RefreshCw className={`w-3.5 h-3.5 text-[#598327] ${isRefreshing ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
-          <button
-            onClick={handleExportCSV}
-            className="px-3.5 py-2 rounded-xl text-xs font-black bg-[#598327] text-white hover:bg-[#4d7222] transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
-          </button>
-          <button
-            onClick={handleExportJSON}
-            className="px-3.5 py-2 rounded-xl text-xs font-black border border-[#e2ebd9] text-[#101010] hover:bg-[#f8faf6] flex items-center gap-1.5 cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5 text-[#598327]" />
-            <span>JSON</span>
-          </button>
+          {canExport && (
+            <>
+              <button
+                onClick={handleExportCSV}
+                className="px-3.5 py-2 rounded-xl text-xs font-black bg-[#598327] text-white hover:bg-[#4d7222] transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Export CSV</span>
+              </button>
+              <button
+                onClick={handleExportJSON}
+                className="px-3.5 py-2 rounded-xl text-xs font-black border border-[#e2ebd9] text-[#101010] hover:bg-[#f8faf6] flex items-center gap-1.5 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-[#598327]" />
+                <span>JSON</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 

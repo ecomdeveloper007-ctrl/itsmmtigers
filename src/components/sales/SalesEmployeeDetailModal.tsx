@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useSales } from '../../context/SalesContext';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../context/PermissionContext';
 import {
   getProfileSettings,
   calculateSalesHistoryComparison,
 } from '../../services/salesCalculationService';
-import { isUserAdminOrSuperAdmin, canUserManageRecord } from '../../utils/salesAuthUtils';
+import { canUserManageRecord } from '../../utils/salesAuthUtils';
 import {
   X,
   User,
@@ -42,8 +43,13 @@ export const SalesEmployeeDetailModal: React.FC = () => {
   } = useSales();
 
   const { selectedMonth, selectedYear, addToast } = useApp();
-  const { currentUser, isAdmin, isSuperAdmin } = useAuth();
-  const isPrivileged = isUserAdminOrSuperAdmin(currentUser);
+  const { currentUser } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canEditMember = hasPermission('sales.members', 'edit');
+  const canDeleteMember = hasPermission('sales.members', 'delete');
+  const canEditRecord = hasPermission('sales.performance_records', 'edit');
+  const canDeleteRecord = hasPermission('sales.performance_records', 'delete');
+
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletingRecordId, setDeletingRecordId] = useState<string | null>(null);
   const [isDeletingRec, setIsDeletingRec] = useState<boolean>(false);
@@ -64,8 +70,8 @@ export const SalesEmployeeDetailModal: React.FC = () => {
   );
 
   const handleDelete = async () => {
-    if (!isPrivileged) {
-      addToast('error', 'Unauthorized', 'Only Administrators can delete sales members.');
+    if (!canDeleteMember) {
+      addToast('error', 'Unauthorized', 'You do not have permission to delete sales members.');
       return;
     }
     if (confirm(`Are you sure you want to delete ${emp.name} from the Sales system? All sales profile mappings will be removed.`)) {
@@ -142,29 +148,29 @@ export const SalesEmployeeDetailModal: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {isPrivileged && (
-              <>
-                <button
-                  onClick={() => {
-                    setSelectedEmployeeForDetail(null);
-                    openSalesEmployeeModal(emp);
-                  }}
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-[#444444] bg-[#f8faf6] hover:bg-[#edf4e8] border border-[#e2ebd9] flex items-center gap-1.5 cursor-pointer"
-                  title="Edit Profile"
-                >
-                  <Edit2 className="w-3.5 h-3.5 text-[#598327]" />
-                  <span>Edit</span>
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 flex items-center gap-1.5 cursor-pointer"
-                  title="Delete Sales Member"
-                >
-                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                  <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
-                </button>
-              </>
+            {canEditMember && (
+              <button
+                onClick={() => {
+                  setSelectedEmployeeForDetail(null);
+                  openSalesEmployeeModal(emp);
+                }}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-[#444444] bg-[#f8faf6] hover:bg-[#edf4e8] border border-[#e2ebd9] flex items-center gap-1.5 cursor-pointer"
+                title="Edit Profile"
+              >
+                <Edit2 className="w-3.5 h-3.5 text-[#598327]" />
+                <span>Edit</span>
+              </button>
+            )}
+            {canDeleteMember && (
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 flex items-center gap-1.5 cursor-pointer"
+                title="Delete Sales Member"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
+              </button>
             )}
             <button
               onClick={() => setSelectedEmployeeForDetail(null)}
@@ -219,25 +225,28 @@ export const SalesEmployeeDetailModal: React.FC = () => {
                       <span className="text-sm font-black text-[#436320]">
                         Score: {rec.totalPerformanceScore}/100 pts
                       </span>
-                      {canUserManageRecord(rec, currentUser, salesEmployees) && (
+                      {canUserManageRecord(rec, currentUser, salesEmployees, canEditRecord || canDeleteRecord) && (
                         <>
-                          <button
-                            onClick={() => {
-                              setSelectedEmployeeForDetail(null);
-                              openSalesEntryModal(rec);
-                            }}
-                            className="text-xs text-[#598327] hover:underline font-bold px-1.5 py-0.5 rounded hover:bg-[#edf4e8] transition-colors cursor-pointer"
-                          >
-                            Edit
-                          </button>
-                          {deletingRecordId !== rec.id ? (
+                          {canUserManageRecord(rec, currentUser, salesEmployees, canEditRecord) && (
                             <button
-                              onClick={() => setDeletingRecordId(rec.id)}
-                              className="text-xs text-rose-500 hover:text-rose-700 font-bold px-1.5 py-0.5 rounded hover:bg-rose-50 transition-colors cursor-pointer"
+                              onClick={() => {
+                                setSelectedEmployeeForDetail(null);
+                                openSalesEntryModal(rec);
+                              }}
+                              className="text-xs text-[#598327] hover:underline font-bold px-1.5 py-0.5 rounded hover:bg-[#edf4e8] transition-colors cursor-pointer"
                             >
-                              Delete
+                              Edit
                             </button>
-                          ) : (
+                          )}
+                          {canUserManageRecord(rec, currentUser, salesEmployees, canDeleteRecord) && (
+                            deletingRecordId !== rec.id ? (
+                              <button
+                                onClick={() => setDeletingRecordId(rec.id)}
+                                className="text-xs text-rose-500 hover:text-rose-700 font-bold px-1.5 py-0.5 rounded hover:bg-rose-50 transition-colors cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            ) : (
                             <div className="flex items-center gap-1.5 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-lg text-xs">
                               <span className="text-rose-700 font-bold text-[11px]">Delete?</span>
                               <button
@@ -263,7 +272,7 @@ export const SalesEmployeeDetailModal: React.FC = () => {
                                 No
                               </button>
                             </div>
-                          )}
+                          ))}
                         </>
                       )}
                     </div>

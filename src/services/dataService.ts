@@ -1392,6 +1392,21 @@ export class DataService {
     record: PerformanceRecord,
     actor: { id: string; name: string; role: UserRole }
   ): Promise<{ record: PerformanceRecord; isUpdate: boolean }> {
+    // 0. Backend Week Lock Validation:
+    // Reject creation or update if the target period/week is locked in the existing week lock system
+    const periods = await this.getPeriods();
+    const targetPeriod = periods.find(
+      (p) =>
+        (record.periodId && p.id.toLowerCase() === record.periodId.toLowerCase()) ||
+        (p.month?.toLowerCase() === record.month?.toLowerCase() &&
+          Number(p.year) === Number(record.year) &&
+          p.weekName?.toLowerCase() === record.weekName?.toLowerCase())
+    );
+
+    if (targetPeriod && targetPeriod.status === 'locked') {
+      throw new Error('This week is locked and performance submission is no longer allowed.');
+    }
+
     // 1. Backend Duplicate Prevention Check:
     // First check the database for an existing weekly performance record for the same:
     // Authenticated User / Employee + Performance Week (and profile if present).

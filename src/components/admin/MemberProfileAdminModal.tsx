@@ -29,7 +29,7 @@ export const MemberProfileAdminModal: React.FC<MemberProfileAdminModalProps> = (
   onEditUser,
 }) => {
   const { isSuperAdmin, allUsers } = useAuth();
-  const { selectedMonth, selectedYear, records, deletePerformanceRecord, openDataEntryModal } = useApp();
+  const { selectedMonth, selectedYear, records, deletePerformanceRecord, openDataEntryModal, isPeriodLocked } = useApp();
   const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
 
   if (!isSuperAdmin) {
@@ -257,8 +257,13 @@ export const MemberProfileAdminModal: React.FC<MemberProfileAdminModalProps> = (
                               onClose();
                               openDataEntryModal(r, r.periodId);
                             }}
-                            className="p-1.5 rounded-lg bg-white hover:bg-[#f0f4ec] text-[#555555] hover:text-[#101010] border border-[#e2ebd9] transition-colors cursor-pointer"
-                            title="Edit Submission"
+                            disabled={isPeriodLocked(r.periodId, r.month, r.year, r.weekName)}
+                            className={`p-1.5 rounded-lg border transition-colors ${
+                              isPeriodLocked(r.periodId, r.month, r.year, r.weekName)
+                                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                                : 'bg-white hover:bg-[#f0f4ec] text-[#555555] hover:text-[#101010] border-[#e2ebd9] cursor-pointer'
+                            }`}
+                            title={isPeriodLocked(r.periodId, r.month, r.year, r.weekName) ? 'This week is locked' : 'Edit Submission'}
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </button>

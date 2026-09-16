@@ -18,7 +18,7 @@ import {
   CheckCircle,
   Clock,
 } from 'lucide-react';
-import { PerformanceRecord } from '../../types';
+import { PerformanceRecord, PerformancePeriod } from '../../types';
 import {
   calculateAchievementPercentage,
   calculateKPIScore,
@@ -160,31 +160,125 @@ export const WeeklyDataEntryModal: React.FC = () => {
     [periods, allUsers, currentUser, records, populateFromRecord, clearFormFields]
   );
 
+  // Only unlocked weeks are available for selection
+  const unlockedPeriods = useMemo(() => {
+    return periods.filter((p) => p.status !== 'locked');
+  }, [periods]);
+
+  // Sort unlocked periods to find the latest available unlocked week
+  const getLatestUnlockedPeriod = useCallback((periodList: PerformancePeriod[]): PerformancePeriod | null => {
+    if (periodList.length === 0) return null;
+    return [...periodList].sort((a, b) => {
+      if (b.year !== a.year) return b.year - a.year;
+      if (b.weekNumber !== a.weekNumber) return b.weekNumber - a.weekNumber;
+      return (b.startDate || '').localeCompare(a.startDate || '');
+    })[0];
+  }, []);
+
+  // Format week label to display date range and week name
+  const formatPeriodLabel = useCallback((p: PerformancePeriod, hasData: boolean) => {
+    let dateStr = '';
+    if (p.startDate && p.endDate) {
+      try {
+        const s = new Date(p.startDate);
+        const e = new Date(p.endDate);
+        if (!isNaN(s.getTime()) && !isNaN(e.getTime())) {
+          const sStr = s.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+          const eStr = e.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+          dateStr = `${sStr} – ${eStr}`;
+        } else {
+          dateStr = `${p.startDate} – ${p.endDate}`;
+        }
+      } catch {
+        dateStr = `${p.startDate} – ${p.endDate}`;
+      }
+    }
+    const mainLabel = dateStr ? `${dateStr} (${p.weekName})` : `${p.weekName} - ${p.month} ${p.year}`;
+    return `${mainLabel}${hasData ? ' • [Existing Data]' : ''}`;
+  }, []);
+
   // Initialize form when modal opens
   useEffect(() => {
     if (isDataEntryModalOpen) {
       setValidationError(null);
+
+      const availableUnlocked = periods.filter((p) => p.status !== 'locked');
+
+      if (availableUnlocked.length === 0) {
+        setSelectedPeriodId('');
+        clearFormFields();
+        return;
+      }
+
       if (editingRecord) {
-        setSelectedUserId(editingRecord.userId);
-        setSelectedPeriodId(editingRecord.periodId);
-        populateFromRecord(editingRecord);
-        lastSyncKey.current = `${editingRecord.userId}_${editingRecord.periodId}`;
-      } else {
-        const initialUserId = currentUser?.uid || '';
-        const matchingPeriod = targetPeriodIdForEntry
-          ? periods.find((p) => p.id === targetPeriodIdForEntry)
-          : periods.find((p) => p.month === selectedMonth && p.year === selectedYear) ||
-            periods[0];
-        const initialPeriodId = matchingPeriod?.id || (periods.length > 0 ? periods[0].id : '');
+        const isEditingRecordPeriodUnlocked = availableUnlocked.some(
+          (p) =>
+            p.id.toLowerCase() === (editingRecord.periodId || '').toLowerCase() ||
+            (p.month?.toLowerCase() === editingRecord.month?.toLowerCase() &&
+              Number(p.year) === Number(editingRecord.year) &&
+              p.weekName?.toLowerCase() === editingRecord.weekName?.toLowerCase())
+        );
 
-        setSelectedUserId(initialUserId);
-        setSelectedPeriodId(initialPeriodId);
-
-        if (initialUserId && initialPeriodId) {
-          checkExistingRecord(initialUserId, initialPeriodId);
+        if (isEditingRecordPeriodUnlocked) {
+          const matchingUnlocked = availableUnlocked.find(
+            (p) =>
+              p.id.toLowerCase() === (editingRecord.periodId || '').toLowerCase() ||
+              (p.month?.toLowerCase() === editingRecord.month?.toLowerCase() &&
+                Number(p.year) === Number(editingRecord.year) &&
+                p.weekName?.toLowerCase() === editingRecord.weekName?.toLowerCase())
+          );
+          const validPeriodId = matchingUnlocked?.id || editingRecord.periodId;
+          setSelectedUserId(editingRecord.userId);
+          setSelectedPeriodId(validPeriodId);
+          populateFromRecord(editingRecord);
+          lastSyncKey.current = `${editingRecord.userId}_${validPeriodId}`;
+          return;
         } else {
-          clearFormFields();
+          // If the record's week is locked, it must not be editable through the submission form
+          // Default to latest available unlocked week
+          const latestPeriod = getLatestUnlockedPeriod(availableUnlocked);
+          const initialPeriodId = latestPeriod?.id || '';
+          const initialUserId = editingRecord.userId || currentUser?.uid || '';
+          setSelectedUserId(initialUserId);
+          setSelectedPeriodId(initialPeriodId);
+          if (initialUserId && initialPeriodId) {
+            checkExistingRecord(initialUserId, initialPeriodId);
+          } else {
+            clearFormFields();
+          }
+          return;
         }
+      }
+
+      const initialUserId = currentUser?.uid || '';
+
+      // Check if targetPeriodIdForEntry is provided and unlocked
+      let selectedTargetPeriod: PerformancePeriod | undefined;
+      if (targetPeriodIdForEntry) {
+        selectedTargetPeriod = availableUnlocked.find(
+          (p) => p.id.toLowerCase() === targetPeriodIdForEntry.toLowerCase()
+        );
+      }
+
+      // If not, find latest available unlocked week in current selected month/year, or overall latest unlocked week
+      if (!selectedTargetPeriod) {
+        const monthUnlocked = availableUnlocked.filter(
+          (p) => p.month.toLowerCase() === selectedMonth.toLowerCase() && Number(p.year) === Number(selectedYear)
+        );
+        selectedTargetPeriod =
+          getLatestUnlockedPeriod(monthUnlocked.length > 0 ? monthUnlocked : availableUnlocked) ||
+          availableUnlocked[0];
+      }
+
+      const initialPeriodId = selectedTargetPeriod?.id || '';
+
+      setSelectedUserId(initialUserId);
+      setSelectedPeriodId(initialPeriodId);
+
+      if (initialUserId && initialPeriodId) {
+        checkExistingRecord(initialUserId, initialPeriodId);
+      } else {
+        clearFormFields();
       }
     } else {
       lastSyncKey.current = '';
@@ -201,6 +295,48 @@ export const WeeklyDataEntryModal: React.FC = () => {
     populateFromRecord,
     clearFormFields,
     checkExistingRecord,
+    getLatestUnlockedPeriod,
+  ]);
+
+  // Guard to ensure selectedPeriodId is always one of the unlocked periods
+  useEffect(() => {
+    if (!isDataEntryModalOpen || periods.length === 0) return;
+    const availableUnlocked = periods.filter((p) => p.status !== 'locked');
+    if (availableUnlocked.length === 0) {
+      if (selectedPeriodId !== '') {
+        setSelectedPeriodId('');
+        clearFormFields();
+      }
+      return;
+    }
+
+    const isCurrentSelectedUnlocked = availableUnlocked.some((p) => p.id === selectedPeriodId);
+    if (!isCurrentSelectedUnlocked) {
+      const monthUnlocked = availableUnlocked.filter(
+        (p) => p.month.toLowerCase() === selectedMonth.toLowerCase() && Number(p.year) === Number(selectedYear)
+      );
+      const fallbackPeriod =
+        getLatestUnlockedPeriod(monthUnlocked.length > 0 ? monthUnlocked : availableUnlocked) ||
+        availableUnlocked[0];
+      if (fallbackPeriod) {
+        setSelectedPeriodId(fallbackPeriod.id);
+        const uId = selectedUserId || currentUser?.uid || '';
+        if (uId && fallbackPeriod.id) {
+          checkExistingRecord(uId, fallbackPeriod.id);
+        }
+      }
+    }
+  }, [
+    periods,
+    isDataEntryModalOpen,
+    selectedPeriodId,
+    selectedMonth,
+    selectedYear,
+    selectedUserId,
+    currentUser,
+    getLatestUnlockedPeriod,
+    checkExistingRecord,
+    clearFormFields,
   ]);
 
   const handleUserChange = (newUserId: string) => {
@@ -221,7 +357,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
 
   // Active period object
   const currentPeriod = periods.find((p) => p.id === selectedPeriodId);
-  const isLocked = currentPeriod?.status === 'locked' && !isSuperAdmin;
+  const isLocked = !currentPeriod || currentPeriod.status === 'locked';
 
   // Selected Target User (Only Super Admin can log/edit on behalf of other members)
   const targetUser = isSuperAdmin
@@ -281,8 +417,13 @@ export const WeeklyDataEntryModal: React.FC = () => {
     e.preventDefault();
     setValidationError(null);
 
+    if (unlockedPeriods.length === 0) {
+      setValidationError('No unlocked weeks are currently available for performance submission.');
+      return;
+    }
+
     if (!selectedPeriodId) {
-      setValidationError('Please select a valid performance period/week.');
+      setValidationError('Please select an unlocked performance period/week.');
       return;
     }
 
@@ -292,7 +433,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
     }
 
     if (isLocked) {
-      setValidationError('This period is locked. Modifications are disabled.');
+      setValidationError('This week is locked and performance submission is no longer allowed.');
       return;
     }
 
@@ -383,12 +524,17 @@ export const WeeklyDataEntryModal: React.FC = () => {
               </div>
             )}
 
-            {isLocked && (
+            {unlockedPeriods.length === 0 ? (
               <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-semibold">
                 <Lock className="w-4 h-4 shrink-0 text-amber-300" />
-                <span>This period has been locked by Super Admin. Read-only mode.</span>
+                <span>No unlocked weeks are currently available for performance submission.</span>
               </div>
-            )}
+            ) : isLocked ? (
+              <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-semibold">
+                <Lock className="w-4 h-4 shrink-0 text-amber-300" />
+                <span>This week is locked and performance submission is no longer allowed.</span>
+              </div>
+            ) : null}
 
           {/* Period & Member Selectors */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -402,7 +548,8 @@ export const WeeklyDataEntryModal: React.FC = () => {
                   value={selectedUserId}
                   onChange={(e) => handleUserChange(e.target.value)}
                   aria-label="Select Team Member"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  disabled={unlockedPeriods.length === 0}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-white focus:outline-none focus:ring-1 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {allUsers
                     .filter((u) => u.status === 'active')
@@ -425,28 +572,39 @@ export const WeeklyDataEntryModal: React.FC = () => {
               <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5">
                 Performance Period / Week
               </label>
-              <select
-                value={selectedPeriodId || ''}
-                onChange={(e) => handlePeriodChange(e.target.value)}
-                aria-label="Select Performance Period"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
-              >
-                {periods.map((p) => {
-                  const hasData = records.some((r) => {
-                    const rUid = String(r.userId || '').trim().toLowerCase();
-                    const userMatches = (targetUser?.uid && rUid === targetUser.uid.toLowerCase()) || (targetUser?.userId && rUid === targetUser.userId.toLowerCase());
-                    const periodMatches = String(r.periodId || '').toLowerCase() === p.id.toLowerCase() ||
-                      (r.month?.toLowerCase() === p.month.toLowerCase() && Number(r.year) === Number(p.year) && r.weekName?.toLowerCase() === p.weekName.toLowerCase());
-                    return userMatches && periodMatches;
-                  });
-                  const dateRange = p.startDate && p.endDate ? ` (${p.startDate} – ${p.endDate})` : '';
-                  return (
-                    <option key={p.id} value={p.id}>
-                      {p.weekName} - {p.month} {p.year}{dateRange} {hasData ? '• [Existing Data]' : ''} {p.status === 'locked' ? '🔒 (Locked)' : ''}
-                    </option>
-                  );
-                })}
-              </select>
+              {unlockedPeriods.length === 0 ? (
+                <div className="w-full bg-slate-950 border border-amber-500/40 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-amber-300 flex items-center gap-2">
+                  <Lock className="w-4 h-4 shrink-0 text-amber-400" />
+                  <span>No unlocked weeks are currently available for performance submission.</span>
+                </div>
+              ) : (
+                <select
+                  value={selectedPeriodId || ''}
+                  onChange={(e) => handlePeriodChange(e.target.value)}
+                  aria-label="Select Performance Period"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-white focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
+                >
+                  {unlockedPeriods.map((p) => {
+                    const hasData = records.some((r) => {
+                      const rUid = String(r.userId || '').trim().toLowerCase();
+                      const userMatches =
+                        (targetUser?.uid && rUid === targetUser.uid.toLowerCase()) ||
+                        (targetUser?.userId && rUid === targetUser.userId.toLowerCase());
+                      const periodMatches =
+                        String(r.periodId || '').toLowerCase() === p.id.toLowerCase() ||
+                        (r.month?.toLowerCase() === p.month.toLowerCase() &&
+                          Number(r.year) === Number(p.year) &&
+                          r.weekName?.toLowerCase() === p.weekName.toLowerCase());
+                      return userMatches && periodMatches;
+                    });
+                    return (
+                      <option key={p.id} value={p.id}>
+                        {formatPeriodLabel(p, hasData)}
+                      </option>
+                    );
+                  })}
+                </select>
+              )}
             </div>
           </div>
 
@@ -689,17 +847,19 @@ export const WeeklyDataEntryModal: React.FC = () => {
             </button>
             <button
               type="submit"
-              disabled={isLocked || isSubmitting}
-              className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all shadow-lg cursor-pointer ${
-                isLocked || isSubmitting
-                  ? 'bg-slate-800 text-slate-400 border border-slate-700 cursor-not-allowed'
+              disabled={unlockedPeriods.length === 0 || isLocked || isSubmitting}
+              className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all shadow-lg ${
+                unlockedPeriods.length === 0 || isLocked || isSubmitting
+                  ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
                   : activeExistingRecord
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/30'
-                  : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 shadow-orange-500/30'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/30 cursor-pointer'
+                  : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 shadow-orange-500/30 cursor-pointer'
               }`}
             >
               <Save className="w-4 h-4" />
-              {isSubmitting
+              {unlockedPeriods.length === 0
+                ? 'Submissions Unavailable'
+                : isSubmitting
                 ? 'Saving...'
                 : activeExistingRecord
                 ? 'Edit Performance'

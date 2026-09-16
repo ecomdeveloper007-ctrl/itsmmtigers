@@ -28,13 +28,26 @@ const PermissionContext = createContext<PermissionContextType | undefined>(undef
 
 export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
-  const [roles, setRoles] = useState<AppRole[]>(DEFAULT_APP_ROLES);
-  const [isLoadingRoles, setIsLoadingRoles] = useState<boolean>(true);
+  const [roles, setRoles] = useState<AppRole[]>(() => {
+    try {
+      const raw = localStorage.getItem('it_smm_app_roles');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load initial roles from cache:', e);
+    }
+    return DEFAULT_APP_ROLES;
+  });
+  const [isLoadingRoles, setIsLoadingRoles] = useState<boolean>(false);
 
-  const loadRoles = useCallback(async () => {
+  const loadRoles = useCallback(async (force = false) => {
     try {
       setIsLoadingRoles(true);
-      const fetched = await PermissionService.getRoles();
+      const fetched = await PermissionService.getRoles(force);
       setRoles(fetched);
     } catch (e) {
       console.warn('Error loading roles:', e);
@@ -44,7 +57,7 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    loadRoles();
+    loadRoles(true);
     const unsub = PermissionService.subscribeToRoles((updated) => {
       if (updated && updated.length > 0) {
         setRoles(updated);
@@ -53,6 +66,13 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     });
     return () => unsub();
   }, [loadRoles]);
+
+  // Re-fetch roles whenever authentication state changes (login, logout, role switch)
+  useEffect(() => {
+    if (currentUser) {
+      loadRoles(true);
+    }
+  }, [currentUser?.uid, currentUser?.role, loadRoles]);
 
   const activeRoles = useMemo(() => {
     return roles.filter((r) => r.status === 'active');

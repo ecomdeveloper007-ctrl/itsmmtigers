@@ -25,11 +25,11 @@ import {
 } from './salesCalculationService';
 import {
   isUserSuperAdmin,
-  isUserAdminOrSuperAdmin,
   canUserManageRecord,
   validateRecordAccess,
   findMatchingSalesEmployee,
 } from '../utils/salesAuthUtils';
+import { PermissionService } from './permissionService';
 
 const SALES_LS_KEYS = {
   EMPLOYEES: 'tiger_sales_employees_v3',
@@ -384,12 +384,17 @@ export class SalesDataService {
   }
 
   static async saveEmployee(employee: SalesEmployee, actor?: { id: string; name: string; role: string; email?: string }): Promise<SalesEmployee> {
-    if (actor && !isUserAdminOrSuperAdmin(actor)) {
-      throw new Error('403 Forbidden: Only Administrators and Super Admin can create or update sales members and profile assignments.');
-    }
-
     const all = await this.getEmployees();
     const idx = all.findIndex((e) => e.id === employee.id);
+
+    if (actor) {
+      const isSuper = isUserSuperAdmin(actor);
+      const action = idx >= 0 ? 'edit' : 'create';
+      const hasPerm = isSuper || PermissionService.checkUserPermission(actor as any, 'sales.members', action);
+      if (!hasPerm) {
+        throw new Error(`403 Forbidden: You do not have permission to ${action} sales members.`);
+      }
+    }
 
     const assigned = employee.assignedProfiles && employee.assignedProfiles.length > 0
       ? employee.assignedProfiles
@@ -437,8 +442,12 @@ export class SalesDataService {
   }
 
   static async deleteEmployee(empId: string, actor?: { id: string; name: string; role: string; email?: string }): Promise<void> {
-    if (actor && !isUserAdminOrSuperAdmin(actor)) {
-      throw new Error('403 Forbidden: Only Administrators and Super Admin can delete sales members.');
+    if (actor) {
+      const isSuper = isUserSuperAdmin(actor);
+      const hasPerm = isSuper || PermissionService.checkUserPermission(actor as any, 'sales.members', 'delete');
+      if (!hasPerm) {
+        throw new Error('403 Forbidden: You do not have permission to delete sales members.');
+      }
     }
 
     const cleanId = (empId || '').trim();
@@ -725,15 +734,17 @@ export class SalesDataService {
 
     // Backend-level security check
     if (actor) {
-      const accessCheck = validateRecordAccess(actor, record.employeeId, record.profileCode, employees);
+      const isSuper = isUserSuperAdmin(actor);
+      const canManageOthers = isSuper || PermissionService.checkUserPermission(actor as any, 'sales.performance_records', 'edit');
+      const accessCheck = validateRecordAccess(actor, record.employeeId, record.profileCode, employees, canManageOthers);
       if (!accessCheck.allowed) {
         throw new Error(accessCheck.message || '403 Forbidden: Access Denied.');
       }
 
       // If record is updating an existing record, verify that the existing record belongs to the actor as well
       const existingById = all.find((r) => r.id === record.id);
-      if (existingById && !isUserSuperAdmin(actor)) {
-        if (!canUserManageRecord(existingById, actor, employees)) {
+      if (existingById && !isSuper) {
+        if (!canUserManageRecord(existingById, actor, employees, canManageOthers)) {
           throw new Error('403 Forbidden: You cannot overwrite another member\'s performance record.');
         }
       }
@@ -832,8 +843,10 @@ export class SalesDataService {
     );
     const employees = await this.getEmployees();
 
-    if (actor && targetRec && !isUserAdminOrSuperAdmin(actor)) {
-      if (!canUserManageRecord(targetRec, actor, employees)) {
+    if (actor && targetRec) {
+      const isSuper = isUserSuperAdmin(actor);
+      const canManageOthers = isSuper || PermissionService.checkUserPermission(actor as any, 'sales.performance_records', 'delete');
+      if (!isSuper && !canUserManageRecord(targetRec, actor, employees, canManageOthers)) {
         throw new Error('403 Forbidden: You cannot delete another member\'s performance record.');
       }
     }
@@ -918,8 +931,12 @@ export class SalesDataService {
     settings: SalesRewardSettings,
     actor?: { id: string; name: string; role: string; email?: string }
   ): Promise<SalesRewardSettings> {
-    if (actor && !isUserAdminOrSuperAdmin(actor)) {
-      throw new Error('403 Forbidden: Only Administrators and Super Admin can update targets, KPIs, and reward settings.');
+    if (actor) {
+      const isSuper = isUserSuperAdmin(actor);
+      const hasPerm = isSuper || PermissionService.checkUserPermission(actor as any, 'sales.kpi_config', 'edit');
+      if (!hasPerm) {
+        throw new Error('403 Forbidden: You do not have permission to update targets, KPIs, and reward settings.');
+      }
     }
 
     const prev = await this.getSettings();
@@ -955,8 +972,12 @@ export class SalesDataService {
   }
 
   static async resetSettingsToDefault(actor?: { id: string; name: string; role: string; email?: string }): Promise<SalesRewardSettings> {
-    if (actor && !isUserAdminOrSuperAdmin(actor)) {
-      throw new Error('403 Forbidden: Only Administrators and Super Admin can reset sales targets and settings.');
+    if (actor) {
+      const isSuper = isUserSuperAdmin(actor);
+      const hasPerm = isSuper || PermissionService.checkUserPermission(actor as any, 'sales.kpi_config', 'edit');
+      if (!hasPerm) {
+        throw new Error('403 Forbidden: You do not have permission to reset sales targets and settings.');
+      }
     }
     return this.saveSettings(DEFAULT_SALES_SETTINGS, actor);
   }
@@ -968,8 +989,12 @@ export class SalesDataService {
     csvText: string,
     actor?: { id: string; name: string; role: string; email?: string }
   ): Promise<{ success: boolean; count: number; errors: string[] }> {
-    if (actor && !isUserAdminOrSuperAdmin(actor)) {
-      throw new Error('403 Forbidden: Only Administrators and Super Admin can import sales records via CSV.');
+    if (actor) {
+      const isSuper = isUserSuperAdmin(actor);
+      const hasPerm = isSuper || PermissionService.checkUserPermission(actor as any, 'sales.performance_records', 'create');
+      if (!hasPerm) {
+        throw new Error('403 Forbidden: You do not have permission to import sales records via CSV.');
+      }
     }
 
     const employees = await this.getEmployees();
@@ -1071,9 +1096,13 @@ export class SalesDataService {
 
   // --- AUDIT LOGS ---
   static async getAuditLogs(actor?: { role?: string; email?: string }): Promise<SalesAuditLog[]> {
-    // Backend security check: Only Admins and Super Admin can view Audit Logs
-    if (actor && !isUserAdminOrSuperAdmin(actor)) {
-      throw new Error('403 Forbidden: Sales Members are not permitted to access Audit Logs.');
+    // Backend security check: Only authorized roles can view Audit Logs
+    if (actor) {
+      const isSuper = isUserSuperAdmin(actor);
+      const hasPerm = isSuper || PermissionService.checkUserPermission(actor as any, 'sales.audit', 'view');
+      if (!hasPerm) {
+        throw new Error('403 Forbidden: You do not have permission to access Audit Logs.');
+      }
     }
 
     try {

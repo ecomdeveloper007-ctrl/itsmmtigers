@@ -68,7 +68,7 @@ export const UserManagement: React.FC = () => {
     updateUserDepartmentAndProfile,
   } = useAuth();
   const { addToast } = useApp();
-  const { roles } = usePermissions();
+  const { roles, hasPermission } = usePermissions();
 
   // Primary navigation: 'members' vs 'approvals'
   const [primaryTab, setPrimaryTab] = useState<'members' | 'approvals'>('members');
@@ -488,13 +488,15 @@ export const UserManagement: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={handleCreateUser}
-            className="px-4 py-2.5 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] text-[#101010] flex items-center gap-1.5 shadow-md shadow-[#8cc540]/25 transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>Add Member</span>
-          </button>
+          {hasPermission('pm.members', 'create') && (
+            <button
+              onClick={handleCreateUser}
+              className="px-4 py-2.5 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] text-[#101010] flex items-center gap-1.5 shadow-md shadow-[#8cc540]/25 transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Add Member</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -800,21 +802,25 @@ export const UserManagement: React.FC = () => {
                                 </div>
 
                                 <div className="flex items-center gap-2 self-end md:self-auto">
-                                  <button
-                                    onClick={() => openQuickDeptModal(u)}
-                                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-[#f0f4ec] text-[#101010] border border-[#e2ebd9] flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                                  >
-                                    <Building2 className="w-3.5 h-3.5 text-[#598327]" />
-                                    <span>Update Dept & Profile</span>
-                                  </button>
+                                  {hasPermission('pm.members', 'edit') && (
+                                    <>
+                                      <button
+                                        onClick={() => openQuickDeptModal(u)}
+                                        className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-[#f0f4ec] text-[#101010] border border-[#e2ebd9] flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                                      >
+                                        <Building2 className="w-3.5 h-3.5 text-[#598327]" />
+                                        <span>Update Dept & Profile</span>
+                                      </button>
 
-                                  <button
-                                    onClick={() => openEditModal(u)}
-                                    className="p-1.5 rounded-xl bg-white hover:bg-[#f0f4ec] text-[#555555] hover:text-[#101010] border border-[#e2ebd9] transition-colors cursor-pointer shadow-2xs"
-                                    title="Edit User Details"
-                                  >
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </button>
+                                      <button
+                                        onClick={() => openEditModal(u)}
+                                        className="p-1.5 rounded-xl bg-white hover:bg-[#f0f4ec] text-[#555555] hover:text-[#101010] border border-[#e2ebd9] transition-colors cursor-pointer shadow-2xs"
+                                        title="Edit User Details"
+                                      >
+                                        <Edit2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             ))}
@@ -1032,14 +1038,16 @@ export const UserManagement: React.FC = () => {
                                   {user.profileCode || (user.team === 'IT' || user.department?.toLowerCase().includes('it') ? 'PR' : 'RR')} Profile
                                 </span>
                               </div>
-                              <button
-                                onClick={() => openQuickDeptModal(user)}
-                                className="p-1 px-2 rounded-lg bg-white hover:bg-[#f0f4ec] text-[#555555] hover:text-[#101010] border border-[#e2ebd9] transition-colors cursor-pointer text-[10px] font-bold flex items-center gap-1 shrink-0 shadow-2xs"
-                                title="Update Department & Profile"
-                              >
-                                <Edit2 className="w-3 h-3" />
-                                <span>Update</span>
-                              </button>
+                              {hasPermission('pm.members', 'edit') && (
+                                <button
+                                  onClick={() => openQuickDeptModal(user)}
+                                  className="p-1 px-2 rounded-lg bg-white hover:bg-[#f0f4ec] text-[#555555] hover:text-[#101010] border border-[#e2ebd9] transition-colors cursor-pointer text-[10px] font-bold flex items-center gap-1 shrink-0 shadow-2xs"
+                                  title="Update Department & Profile"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                  <span>Update</span>
+                                </button>
+                              )}
                             </div>
                           </td>
                           <td className="py-3.5 px-4 whitespace-nowrap text-[#666666] font-medium">
@@ -1047,12 +1055,14 @@ export const UserManagement: React.FC = () => {
                           </td>
                           <td className="py-3.5 px-4 text-right whitespace-nowrap space-x-1.5">
                             {user.status === 'pending_approval' ? (
-                              <button
-                                onClick={() => handleApprove(user)}
-                                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs cursor-pointer"
-                              >
-                                Approve
-                              </button>
+                              hasPermission('pm.members', 'approve') && (
+                                <button
+                                  onClick={() => handleApprove(user)}
+                                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+                                >
+                                  Approve
+                                </button>
+                              )
                             ) : (
                               <>
                                 {isSuperAdmin && (
@@ -1071,48 +1081,56 @@ export const UserManagement: React.FC = () => {
                                 >
                                   <Eye className="w-3.5 h-3.5" />
                                 </button>
-                                <button
-                                  onClick={() => openEditModal(user)}
-                                  className="p-1.5 rounded-lg bg-white hover:bg-[#f0f4ec] text-[#666666] hover:text-[#101010] border border-[#e2ebd9] transition-colors cursor-pointer shadow-2xs"
-                                  title="Edit User"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setResetPasswordUser(user);
-                                    setNewPassword(user.password || 'tiger2026');
-                                  }}
-                                  className="p-1.5 rounded-lg bg-white hover:bg-amber-50 text-[#666666] hover:text-amber-700 border border-[#e2ebd9] transition-colors cursor-pointer shadow-2xs"
-                                  title="Reset Password"
-                                >
-                                  <KeyRound className="w-3.5 h-3.5" />
-                                </button>
+                                {hasPermission('pm.members', 'edit') && (
+                                  <button
+                                    onClick={() => openEditModal(user)}
+                                    className="p-1.5 rounded-lg bg-white hover:bg-[#f0f4ec] text-[#666666] hover:text-[#101010] border border-[#e2ebd9] transition-colors cursor-pointer shadow-2xs"
+                                    title="Edit User"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                {hasPermission('pm.members', 'edit') && (
+                                  <button
+                                    onClick={() => {
+                                      setResetPasswordUser(user);
+                                      setNewPassword(user.password || 'tiger2026');
+                                    }}
+                                    className="p-1.5 rounded-lg bg-white hover:bg-amber-50 text-[#666666] hover:text-amber-700 border border-[#e2ebd9] transition-colors cursor-pointer shadow-2xs"
+                                    title="Reset Password"
+                                  >
+                                    <KeyRound className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                                 {user.uid !== currentUser?.uid && (
                                   <>
-                                    <button
-                                      onClick={() => handleToggleStatus(user)}
-                                      className={`p-1.5 rounded-lg border border-[#e2ebd9] transition-colors cursor-pointer shadow-2xs ${
-                                        user.status === 'active'
-                                          ? 'bg-white hover:bg-rose-50 text-[#666666] hover:text-rose-600'
-                                          : 'bg-white hover:bg-emerald-50 text-[#666666] hover:text-emerald-600'
-                                      }`}
-                                      title={user.status === 'active' ? 'Disable Account' : 'Enable Account'}
-                                    >
-                                      {user.status === 'active' ? (
-                                        <XCircle className="w-3.5 h-3.5" />
-                                      ) : (
-                                        <CheckCircle className="w-3.5 h-3.5" />
-                                      )}
-                                    </button>
+                                    {hasPermission('pm.members', 'edit') && (
+                                      <button
+                                        onClick={() => handleToggleStatus(user)}
+                                        className={`p-1.5 rounded-lg border border-[#e2ebd9] transition-colors cursor-pointer shadow-2xs ${
+                                          user.status === 'active'
+                                            ? 'bg-white hover:bg-rose-50 text-[#666666] hover:text-rose-600'
+                                            : 'bg-white hover:bg-emerald-50 text-[#666666] hover:text-emerald-600'
+                                        }`}
+                                        title={user.status === 'active' ? 'Disable Account' : 'Enable Account'}
+                                      >
+                                        {user.status === 'active' ? (
+                                          <XCircle className="w-3.5 h-3.5" />
+                                        ) : (
+                                          <CheckCircle className="w-3.5 h-3.5" />
+                                        )}
+                                      </button>
+                                    )}
 
-                                    <button
-                                      onClick={() => setDeletingUser(user)}
-                                      className="p-1.5 rounded-lg bg-white hover:bg-rose-50 text-[#888888] hover:text-rose-600 border border-[#e2ebd9] hover:border-rose-200 transition-colors cursor-pointer shadow-2xs"
-                                      title="Delete Member Profile"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
+                                    {hasPermission('pm.members', 'delete') && (
+                                      <button
+                                        onClick={() => setDeletingUser(user)}
+                                        className="p-1.5 rounded-lg bg-white hover:bg-rose-50 text-[#888888] hover:text-rose-600 border border-[#e2ebd9] hover:border-rose-200 transition-colors cursor-pointer shadow-2xs"
+                                        title="Delete Member Profile"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
                                   </>
                                 )}
                               </>

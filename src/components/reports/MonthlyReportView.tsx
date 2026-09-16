@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../context/PermissionContext';
 import { TeamDashboardSwitcher } from '../dashboard/TeamDashboardSwitcher';
 import {
   FileText,
@@ -23,7 +24,8 @@ import { DataService } from '../../services/dataService';
 import { ALL_PROFILES, ProfileCode } from '../../types';
 
 export const MonthlyReportView: React.FC = () => {
-  const { allUsers, isSuperAdmin } = useAuth();
+  const { allUsers } = useAuth();
+  const { hasPermission } = usePermissions();
   const {
     leaderboardData,
     selectedMonth,
@@ -43,8 +45,8 @@ export const MonthlyReportView: React.FC = () => {
   };
 
   const handleExportCSV = () => {
-    if (!isSuperAdmin) {
-      addToast('error', 'Unauthorized', 'Only Super Admin is authorized to export raw team data.');
+    if (!hasPermission('pm.reports', 'export')) {
+      addToast('error', 'Unauthorized', 'You do not have permission to export raw team data.');
       return;
     }
     try {
@@ -84,7 +86,7 @@ export const MonthlyReportView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          {isSuperAdmin && (
+          {hasPermission('pm.reports', 'export') && (
             <button
               onClick={handleExportCSV}
               className="px-3.5 py-2 rounded-xl text-xs font-black bg-[#f5f5f5] hover:bg-[#eaeaea] text-[#101010] border border-[#e2ebd9] flex items-center gap-1.5 transition-colors cursor-pointer"

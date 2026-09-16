@@ -16,7 +16,8 @@ import {
   Lock,
 } from 'lucide-react';
 import { SalesPerformanceRecord, SalesProfileCode } from '../../types/sales';
-import { canUserManageRecord, isUserAdminOrSuperAdmin } from '../../utils/salesAuthUtils';
+import { canUserManageRecord } from '../../utils/salesAuthUtils';
+import { usePermissions } from '../../context/PermissionContext';
 
 const WEEKS_OPTIONS = ['all', 'Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'];
 
@@ -36,6 +37,9 @@ export const SalesPerformanceView: React.FC = () => {
 
   const { selectedMonth, selectedYear } = useApp();
   const { currentUser, isAdmin, isSuperAdmin } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canEditRecord = hasPermission('sales.performance_records', 'edit');
+  const canDeleteRecord = hasPermission('sales.performance_records', 'delete');
 
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState<'all' | 'IT' | 'SMM'>('all');
@@ -79,8 +83,8 @@ export const SalesPerformanceView: React.FC = () => {
 
   const handleDeleteClick = (e: React.MouseEvent, rec: SalesPerformanceRecord) => {
     e.stopPropagation();
-    if (!canUserManageRecord(rec, userForAuth, salesEmployees)) {
-      addToast('error', 'Unauthorized Action', 'Security Violation: You can only delete your own performance records.');
+    if (!canUserManageRecord(rec, userForAuth, salesEmployees, canDeleteRecord)) {
+      addToast('error', 'Unauthorized Action', 'Security Violation: You can only delete your own performance records or require delete permission.');
       return;
     }
     setDeletingRecord(rec);
@@ -328,27 +332,31 @@ export const SalesPerformanceView: React.FC = () => {
 
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        {canUserManageRecord(rec, userForAuth, salesEmployees) ? (
+                        {canUserManageRecord(rec, userForAuth, salesEmployees, canEditRecord || canDeleteRecord) ? (
                           <>
-                            <button
-                              onClick={() => openSalesEntryModal(rec)}
-                              className="p-1.5 rounded-lg text-[#666666] hover:text-[#101010] hover:bg-[#edf4e8] transition-colors cursor-pointer"
-                              title="Edit Entry"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => handleDeleteClick(e, rec)}
-                              className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
-                              title="Delete Entry"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {canUserManageRecord(rec, userForAuth, salesEmployees, canEditRecord) && (
+                              <button
+                                onClick={() => openSalesEntryModal(rec)}
+                                className="p-1.5 rounded-lg text-[#666666] hover:text-[#101010] hover:bg-[#edf4e8] transition-colors cursor-pointer"
+                                title="Edit Entry"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {canUserManageRecord(rec, userForAuth, salesEmployees, canDeleteRecord) && (
+                              <button
+                                onClick={(e) => handleDeleteClick(e, rec)}
+                                className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+                                title="Delete Entry"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </>
                         ) : (
                           <span
                             className="inline-flex items-center gap-1 text-[10px] text-slate-400 font-bold px-2 py-0.5 rounded bg-slate-50 border border-slate-200"
-                            title="Read-only: Record belongs to another sales member"
+                            title="Read-only: Record belongs to another sales member or lacks permission"
                           >
                             <Lock className="w-2.5 h-2.5" /> Read Only
                           </span>

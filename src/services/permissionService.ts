@@ -56,8 +56,8 @@ export class PermissionService {
   /**
    * Initialize and seed default system roles in Firestore and LocalStorage
    */
-  public static async initializeRoles(): Promise<AppRole[]> {
-    if (this.isInitialized && this.cachedRoles.length > 0) {
+  public static async initializeRoles(force = false): Promise<AppRole[]> {
+    if (!force && this.isInitialized && this.cachedRoles.length > 0) {
       return this.cachedRoles;
     }
 
@@ -74,26 +74,39 @@ export class PermissionService {
         // Ensure all built-in roles are preserved
         let updated = false;
         for (const defaultRole of DEFAULT_APP_ROLES) {
-          if (!fetched.find((r) => r.id === defaultRole.id)) {
+          const foundIndex = fetched.findIndex((r) => r.id === defaultRole.id);
+          if (foundIndex === -1) {
             await setDoc(doc(db, 'roles', defaultRole.id), defaultRole);
             fetched.push(defaultRole);
             updated = true;
+          } else if (defaultRole.id === 'super_admin') {
+            // Verify super_admin is set to Omnipotent (all permissions true)
+            const omnipotent = createOmnipotentPermissions();
+            fetched[foundIndex] = {
+              ...fetched[foundIndex],
+              permissions: omnipotent,
+              status: 'active',
+              isSystem: true,
+            };
+            await setDoc(doc(db, 'roles', 'super_admin'), fetched[foundIndex], { merge: true });
           }
         }
 
-        this.cachedRoles = fetched;
-        saveRolesToStorage(fetched);
+        const sorted = this.sortRoles(fetched);
+        this.cachedRoles = sorted;
+        saveRolesToStorage(sorted);
         this.isInitialized = true;
-        return fetched;
+        return sorted;
       } else {
         // First run: seed all default roles
         for (const role of DEFAULT_APP_ROLES) {
           await setDoc(doc(db, 'roles', role.id), role);
         }
-        this.cachedRoles = DEFAULT_APP_ROLES;
-        saveRolesToStorage(DEFAULT_APP_ROLES);
+        const sorted = this.sortRoles(DEFAULT_APP_ROLES);
+        this.cachedRoles = sorted;
+        saveRolesToStorage(sorted);
         this.isInitialized = true;
-        return DEFAULT_APP_ROLES;
+        return sorted;
       }
     } catch (error) {
       console.warn('Firebase error initializing roles, using local fallback:', error);
@@ -143,11 +156,11 @@ export class PermissionService {
   /**
    * Fetch all roles
    */
-  public static async getRoles(): Promise<AppRole[]> {
-    if (this.cachedRoles.length > 0) {
+  public static async getRoles(force = false): Promise<AppRole[]> {
+    if (!force && this.cachedRoles.length > 0) {
       return this.cachedRoles;
     }
-    return this.initializeRoles();
+    return this.initializeRoles(force);
   }
 
   /**
@@ -352,8 +365,12 @@ export class PermissionService {
 
     // 4. Role-based lookup
     const roles = providedRoles && providedRoles.length > 0 ? providedRoles : (this.cachedRoles.length > 0 ? this.cachedRoles : getRolesFromStorage());
-    const roleId = (user.role || 'team_member').trim();
-    const role = roles.find((r) => r.id === roleId);
+    const rawRoleId = (user.role || 'team_member').trim();
+    const roleId = rawRoleId.toLowerCase().replace(/[\s-]/g, '_');
+    const role = roles.find((r) => {
+      const rId = r.id.toLowerCase().trim();
+      return rId === roleId || rId === rawRoleId.toLowerCase();
+    });
 
     if (!role) {
       // Fallback for legacy role strings
@@ -369,7 +386,9 @@ export class PermissionService {
       return false;
     }
 
-    return role.permissions[sectionId]?.[action] === true;
+    const secPerms = role.permissions?.[sectionId];
+    if (!secPerms) return false;
+    return secPerms[action] === true;
   }
 
   /**
@@ -435,3 +454,6 @@ export class PermissionService {
     });
   }
 }
+
+export const permissionService = PermissionService;
+

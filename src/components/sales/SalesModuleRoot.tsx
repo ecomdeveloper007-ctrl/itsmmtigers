@@ -1,19 +1,8 @@
 import React, { useEffect } from 'react';
 import { useSales, SalesTab } from '../../context/SalesContext';
 import { useAuth } from '../../context/AuthContext';
-import { isUserSuperAdmin } from '../../utils/salesAuthUtils';
-import {
-  LayoutDashboard,
-  Users,
-  Calculator,
-  Trophy,
-  Target,
-  TrendingUp,
-  FileText,
-  Sliders,
-  ShieldCheck,
-  UserCheck,
-} from 'lucide-react';
+import { usePermissions } from '../../context/PermissionContext';
+import { ShieldAlert } from 'lucide-react';
 import { SalesDashboard } from './SalesDashboard';
 import { SalesEmployeesView } from './SalesEmployeesView';
 import { SalesPerformanceView } from './SalesPerformanceView';
@@ -30,48 +19,77 @@ import { SalesEmployeeModal } from './SalesEmployeeModal';
 import { SalesEmployeeDetailModal } from './SalesEmployeeDetailModal';
 import { SalesImportExportModal } from './SalesImportExportModal';
 
+const SALES_TAB_SECTION_MAP: Record<SalesTab, string> = {
+  'sales-dashboard': 'sales.dashboard',
+  'sales-my-performance': 'sales.my_performance',
+  'sales-performance': 'sales.performance_records',
+  'sales-leaderboard': 'sales.leaderboard',
+  'sales-employees': 'sales.members',
+  'sales-analytics': 'sales.targets',
+  'sales-history': 'sales.reports',
+  'sales-reports': 'sales.reports',
+  'sales-audit': 'sales.audit_logs',
+  'sales-settings': 'sales.rewards',
+};
+
 export const SalesModuleRoot: React.FC = () => {
   const { salesActiveTab, setSalesActiveTab } = useSales();
   const { currentUser } = useAuth();
-  const isSuperAdmin = isUserSuperAdmin(currentUser);
+  const { canAccessSection, hasPermission } = usePermissions();
 
-  // If a Sales Member tries to land on an admin-only tab, redirect to sales-dashboard
+  // Security Guard: If user lands on a tab their role is not authorized to view, redirect to an accessible tab
   useEffect(() => {
-    if (!isSuperAdmin) {
-      const adminOnlyTabs: SalesTab[] = [
-        'sales-employees',
-        'sales-reports',
-        'sales-settings',
-        'sales-leaderboard',
-        'sales-audit',
-      ];
-      if (adminOnlyTabs.includes(salesActiveTab)) {
-        setSalesActiveTab('sales-dashboard');
+    const requiredSection = SALES_TAB_SECTION_MAP[salesActiveTab];
+    if (requiredSection && !canAccessSection(requiredSection)) {
+      const allTabs = Object.keys(SALES_TAB_SECTION_MAP) as SalesTab[];
+      const firstAccessible = allTabs.find((t) => canAccessSection(SALES_TAB_SECTION_MAP[t]));
+      if (firstAccessible) {
+        setSalesActiveTab(firstAccessible);
       }
     }
-  }, [isSuperAdmin, salesActiveTab, setSalesActiveTab]);
+  }, [canAccessSection, salesActiveTab, setSalesActiveTab]);
+
+  const currentSection = SALES_TAB_SECTION_MAP[salesActiveTab];
+  const isTabAllowed = !currentSection || canAccessSection(currentSection);
 
   return (
     <div className="space-y-6">
       {/* Tab Content */}
       <div className="transition-all duration-150">
-        {salesActiveTab === 'sales-dashboard' && <SalesDashboard />}
-        {salesActiveTab === 'sales-my-performance' && <SalesMyPerformanceView />}
-        {salesActiveTab === 'sales-leaderboard' && isSuperAdmin && <SalesLeaderboardView />}
-        {salesActiveTab === 'sales-performance' && <SalesPerformanceView />}
-        {salesActiveTab === 'sales-employees' && isSuperAdmin && <SalesEmployeesView />}
-        {salesActiveTab === 'sales-analytics' && <SalesProfilePerformanceView />}
-        {salesActiveTab === 'sales-history' && <SalesMonthlyHistoryView />}
-        {salesActiveTab === 'sales-reports' && isSuperAdmin && <SalesReportsView />}
-        {salesActiveTab === 'sales-audit' && isSuperAdmin && <SalesAuditLogsView />}
-        {salesActiveTab === 'sales-settings' && isSuperAdmin && <SalesSettingsView />}
+        {salesActiveTab === 'sales-dashboard' && canAccessSection('sales.dashboard') && <SalesDashboard />}
+        {salesActiveTab === 'sales-my-performance' && canAccessSection('sales.my_performance') && <SalesMyPerformanceView />}
+        {salesActiveTab === 'sales-leaderboard' && canAccessSection('sales.leaderboard') && <SalesLeaderboardView />}
+        {salesActiveTab === 'sales-performance' && canAccessSection('sales.performance_records') && <SalesPerformanceView />}
+        {salesActiveTab === 'sales-employees' && canAccessSection('sales.members') && <SalesEmployeesView />}
+        {salesActiveTab === 'sales-analytics' && canAccessSection('sales.targets') && <SalesProfilePerformanceView />}
+        {salesActiveTab === 'sales-history' && canAccessSection('sales.reports') && <SalesMonthlyHistoryView />}
+        {salesActiveTab === 'sales-reports' && canAccessSection('sales.reports') && <SalesReportsView />}
+        {salesActiveTab === 'sales-audit' && canAccessSection('sales.audit_logs') && <SalesAuditLogsView />}
+        {salesActiveTab === 'sales-settings' && canAccessSection('sales.rewards') && <SalesSettingsView />}
+
+        {/* Access Restricted Notice */}
+        {!isTabAllowed && (
+          <div className="bg-white rounded-3xl p-12 border border-rose-200 text-center max-w-lg mx-auto my-12 shadow-sm space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto">
+              <ShieldAlert className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-black text-[#101010]">Access Restricted</h2>
+            <p className="text-sm text-[#666666]">
+              Your role does not have permission to view this section of Sales Management.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Global Sales Modals */}
       <SalesPerformanceEntryModal />
-      {isSuperAdmin && <SalesEmployeeModal />}
+      {(hasPermission('sales.members', 'create') || hasPermission('sales.members', 'edit')) && (
+        <SalesEmployeeModal />
+      )}
       <SalesEmployeeDetailModal />
-      {isSuperAdmin && <SalesImportExportModal />}
+      {(hasPermission('sales.import_export', 'import') || hasPermission('sales.import_export', 'export')) && (
+        <SalesImportExportModal />
+      )}
     </div>
   );
 };

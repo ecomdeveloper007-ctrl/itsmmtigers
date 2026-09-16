@@ -434,8 +434,8 @@ export const MemberDashboard: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-[#e4ece0] text-xs">
               {userRecords.map((rec) => {
-                const locked = isPeriodLocked(rec.periodId);
-                const canEdit = !locked || isSuperAdmin;
+                const locked = isPeriodLocked(rec.periodId, rec.month, rec.year, rec.weekName);
+                const canEdit = !locked;
                 return (
                   <tr key={rec.id} className="hover:bg-[#f3f8ef]/60 transition-colors">
                     <td className="py-3.5 px-4 font-bold text-[#101010] whitespace-nowrap">

@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useSales } from '../../context/SalesContext';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
-import { isUserSuperAdmin, findMatchingSalesEmployee } from '../../utils/salesAuthUtils';
+import { usePermissions } from '../../context/PermissionContext';
+import { findMatchingSalesEmployee } from '../../utils/salesAuthUtils';
 import { SalesProfileCode, SalesPerformanceRecord } from '../../types/sales';
 import {
   getProfileSettings,
@@ -38,7 +39,8 @@ export const SalesMyPerformanceView: React.FC = () => {
   } = useSales();
   const { currentUser } = useAuth();
   const { selectedMonth, selectedYear } = useApp();
-  const isSuperAdmin = isUserSuperAdmin(currentUser);
+  const { hasPermission } = usePermissions();
+  const canSwitchMember = hasPermission('sales.performance_records', 'view') || hasPermission('sales.members', 'view');
 
   const [deletingRecord, setDeletingRecord] = useState<SalesPerformanceRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
@@ -48,17 +50,17 @@ export const SalesMyPerformanceView: React.FC = () => {
     return findMatchingSalesEmployee(currentUser, salesEmployees);
   }, [currentUser, salesEmployees]);
 
-  // For Super Admin, allow viewing as any member
+  // For users with multi-member view permission, allow viewing as any member
   const [selectedEmpIdForView, setSelectedEmpIdForView] = useState<string>(
     currentEmp?.id || (salesEmployees[0]?.id ?? '')
   );
 
   const activeEmp = useMemo(() => {
-    if (isSuperAdmin && selectedEmpIdForView) {
+    if (canSwitchMember && selectedEmpIdForView) {
       return salesEmployees.find((e) => e.id === selectedEmpIdForView) || currentEmp;
     }
     return currentEmp;
-  }, [isSuperAdmin, selectedEmpIdForView, salesEmployees, currentEmp]);
+  }, [canSwitchMember, selectedEmpIdForView, salesEmployees, currentEmp]);
 
   // Profiles assigned to this employee
   const assignedProfiles: SalesProfileCode[] = useMemo(() => {
@@ -157,7 +159,7 @@ export const SalesMyPerformanceView: React.FC = () => {
 
         {/* Action Buttons & Admin Member Switcher */}
         <div className="flex items-center gap-2 flex-wrap">
-          {isSuperAdmin && (
+          {canSwitchMember && (
             <div className="flex items-center gap-1.5 mr-2">
               <span className="text-xs font-bold text-[#666666]">Viewing:</span>
               <select

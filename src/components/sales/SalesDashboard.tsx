@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useSales } from '../../context/SalesContext';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
-import { isUserSuperAdmin, findMatchingSalesEmployee } from '../../utils/salesAuthUtils';
+import { usePermissions } from '../../context/PermissionContext';
+import { findMatchingSalesEmployee } from '../../utils/salesAuthUtils';
 import {
   Users,
   Send,
@@ -67,9 +68,25 @@ export const SalesDashboard: React.FC = () => {
 
   const { selectedMonth, selectedYear, setSelectedMonth, setSelectedYear } = useApp();
   const { currentUser } = useAuth();
-  const isSuperAdmin = isUserSuperAdmin(currentUser);
-
+  const { hasPermission, canAccessSection } = usePermissions();
   const matchedMember = findMatchingSalesEmployee(currentUser, salesEmployees);
+
+  const canManageSales =
+    canAccessSection('sales.members') ||
+    canAccessSection('sales.performance_records') ||
+    currentUser?.role === 'admin' ||
+    currentUser?.role === 'super_admin' ||
+    !matchedMember;
+
+  const canAccessAuditLogs = canAccessSection('sales.audit_logs');
+  const canCreateEntry =
+    hasPermission('sales.performance_entry', 'create') ||
+    hasPermission('sales.performance_records', 'create');
+  const canCreateMember = hasPermission('sales.members', 'create');
+  const canImportExport =
+    hasPermission('sales.import_export', 'import') ||
+    hasPermission('sales.import_export', 'export');
+
   const [localSearch, setLocalSearch] = useState('');
 
   // Personal Records for Sales Member
@@ -113,7 +130,7 @@ export const SalesDashboard: React.FC = () => {
     : items;
 
   const handleViewEmployee = (empId: string) => {
-    if (!isSuperAdmin && matchedMember && empId !== matchedMember.id) {
+    if (!canManageSales && matchedMember && empId !== matchedMember.id) {
       return;
     }
     const emp = salesEmployees.find((e) => e.id === empId);
@@ -130,7 +147,7 @@ export const SalesDashboard: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2">
             <span className="px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-[#8cc540]/20 text-[#436320] border border-[#8cc540]/40 flex items-center gap-1.5">
               <Trophy className="w-3.5 h-3.5 text-[#598327]" />
-              {isSuperAdmin ? 'Sales Main Dashboard' : 'Sales Member Portal'}
+              {canManageSales ? 'Sales Main Dashboard' : 'Sales Member Portal'}
             </span>
             <span className="text-xs font-bold text-[#666666]">
               • Current Period: {selectedPeriodType === 'daily' ? `Daily (${selectedDate})` : selectedPeriodType === 'weekly' ? `Weekly (${selectedWeek}, ${selectedMonth} ${selectedYear})` : `Monthly (${selectedMonth} ${selectedYear})`}
@@ -138,7 +155,7 @@ export const SalesDashboard: React.FC = () => {
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-black text-[#101010] tracking-tight mt-1.5">
-            {isSuperAdmin
+            {canManageSales
               ? 'Sales Performance Overview'
               : `Welcome back, ${matchedMember?.name || currentUser?.name || 'Sales Representative'}`}
           </h1>
@@ -149,67 +166,79 @@ export const SalesDashboard: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {isSuperAdmin ? (
+          {canManageSales ? (
             <>
-              <button
-                onClick={() => openSalesEntryModal(undefined, undefined, undefined, 'daily')}
-                className="px-4 py-2.5 rounded-2xl bg-[#8cc540] hover:bg-[#7db734] text-[#101010] font-black text-xs shadow-md shadow-[#8cc540]/30 transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>+ Daily Entry</span>
-              </button>
+              {canCreateEntry && (
+                <>
+                  <button
+                    onClick={() => openSalesEntryModal(undefined, undefined, undefined, 'daily')}
+                    className="px-4 py-2.5 rounded-2xl bg-[#8cc540] hover:bg-[#7db734] text-[#101010] font-black text-xs shadow-md shadow-[#8cc540]/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ Daily Entry</span>
+                  </button>
 
-              <button
-                onClick={() => openSalesEntryModal(undefined, undefined, undefined, 'weekly')}
-                className="px-3.5 py-2.5 rounded-2xl bg-[#f8faf6] hover:bg-[#edf4e8] text-[#101010] font-bold text-xs border border-[#e2ebd9] transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Layers className="w-4 h-4 text-blue-600" />
-                <span>+ Weekly Entry</span>
-              </button>
+                  <button
+                    onClick={() => openSalesEntryModal(undefined, undefined, undefined, 'weekly')}
+                    className="px-3.5 py-2.5 rounded-2xl bg-[#f8faf6] hover:bg-[#edf4e8] text-[#101010] font-bold text-xs border border-[#e2ebd9] transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Layers className="w-4 h-4 text-blue-600" />
+                    <span>+ Weekly Entry</span>
+                  </button>
+                </>
+              )}
 
-              <button
-                onClick={() => openSalesEmployeeModal()}
-                className="px-3.5 py-2.5 rounded-2xl bg-[#f8faf6] hover:bg-[#edf4e8] text-[#101010] font-bold text-xs border border-[#e2ebd9] transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Users className="w-4 h-4 text-[#598327]" />
-                <span>+ Member</span>
-              </button>
+              {canCreateMember && (
+                <button
+                  onClick={() => openSalesEmployeeModal()}
+                  className="px-3.5 py-2.5 rounded-2xl bg-[#f8faf6] hover:bg-[#edf4e8] text-[#101010] font-bold text-xs border border-[#e2ebd9] transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Users className="w-4 h-4 text-[#598327]" />
+                  <span>+ Member</span>
+                </button>
+              )}
 
-              <button
-                onClick={() => setIsSalesImportModalOpen(true)}
-                className="px-3.5 py-2.5 rounded-2xl bg-[#f8faf6] hover:bg-[#edf4e8] text-[#101010] font-bold text-xs border border-[#e2ebd9] transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Upload className="w-4 h-4 text-[#598327]" />
-                <span>Import/Export</span>
-              </button>
+              {canImportExport && (
+                <button
+                  onClick={() => setIsSalesImportModalOpen(true)}
+                  className="px-3.5 py-2.5 rounded-2xl bg-[#f8faf6] hover:bg-[#edf4e8] text-[#101010] font-bold text-xs border border-[#e2ebd9] transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Upload className="w-4 h-4 text-[#598327]" />
+                  <span>Import/Export</span>
+                </button>
+              )}
 
-              <button
-                onClick={() => setSalesActiveTab('sales-audit')}
-                className="px-3.5 py-2.5 rounded-2xl bg-[#f8faf6] hover:bg-[#edf4e8] text-rose-800 font-bold text-xs border border-rose-200 transition-all flex items-center gap-1.5 cursor-pointer"
-                title="Sales Audit Logs"
-              >
-                <ShieldCheck className="w-4 h-4 text-rose-600" />
-                <span>Audit Logs</span>
-              </button>
+              {canAccessAuditLogs && (
+                <button
+                  onClick={() => setSalesActiveTab('sales-audit')}
+                  className="px-3.5 py-2.5 rounded-2xl bg-[#f8faf6] hover:bg-[#edf4e8] text-rose-800 font-bold text-xs border border-rose-200 transition-all flex items-center gap-1.5 cursor-pointer"
+                  title="Sales Audit Logs"
+                >
+                  <ShieldCheck className="w-4 h-4 text-rose-600" />
+                  <span>Audit Logs</span>
+                </button>
+              )}
             </>
           ) : (
-            <>
-              <button
-                onClick={() => openSalesEntryModal(undefined, matchedMember?.id, undefined, 'daily')}
-                className="px-4 py-2.5 rounded-2xl bg-[#8cc540] hover:bg-[#7db734] text-[#101010] font-black text-xs shadow-md shadow-[#8cc540]/30 transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>+ Log Today's Entry (Daily)</span>
-              </button>
+            canCreateEntry && (
+              <>
+                <button
+                  onClick={() => openSalesEntryModal(undefined, matchedMember?.id, undefined, 'daily')}
+                  className="px-4 py-2.5 rounded-2xl bg-[#8cc540] hover:bg-[#7db734] text-[#101010] font-black text-xs shadow-md shadow-[#8cc540]/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>+ Log Today's Entry (Daily)</span>
+                </button>
 
-              <button
-                onClick={() => openSalesEntryModal(undefined, matchedMember?.id, undefined, 'weekly')}
-                className="px-3.5 py-2.5 rounded-2xl bg-[#f8faf6] hover:bg-[#edf4e8] text-[#101010] font-bold text-xs border border-[#e2ebd9] transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Layers className="w-4 h-4 text-blue-600" />
-                <span>+ Log Weekly Batch</span>
-              </button>
-            </>
+                <button
+                  onClick={() => openSalesEntryModal(undefined, matchedMember?.id, undefined, 'weekly')}
+                  className="px-3.5 py-2.5 rounded-2xl bg-[#f8faf6] hover:bg-[#edf4e8] text-[#101010] font-bold text-xs border border-[#e2ebd9] transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Layers className="w-4 h-4 text-blue-600" />
+                  <span>+ Log Weekly Batch</span>
+                </button>
+              </>
+            )
           )}
         </div>
       </div>
@@ -288,8 +317,8 @@ export const SalesDashboard: React.FC = () => {
             </select>
           )}
 
-          {/* Department Filter (Super Admin) */}
-          {isSuperAdmin && (
+          {/* Department Filter */}
+          {canManageSales && (
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setSelectedDepartment('all')}
@@ -326,8 +355,8 @@ export const SalesDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Profile Filter (Super Admin) */}
-          {isSuperAdmin && (
+          {/* Profile Filter */}
+          {canManageSales && (
             <select
               value={selectedProfile}
               onChange={(e) => setSelectedProfile(e.target.value as any)}
@@ -342,8 +371,8 @@ export const SalesDashboard: React.FC = () => {
             </select>
           )}
 
-          {/* Member Filter (Super Admin) */}
-          {isSuperAdmin && (
+          {/* Member Filter */}
+          {canManageSales && (
             <select
               value={selectedMemberId}
               onChange={(e) => setSelectedMemberId(e.target.value)}
@@ -359,7 +388,7 @@ export const SalesDashboard: React.FC = () => {
           )}
         </div>
 
-        {!isSuperAdmin && matchedMember && (
+        {!canManageSales && matchedMember && (
           <div className="flex items-center gap-2">
             <span className="px-3 py-1 bg-[#f3f8ef] border border-[#8cc540]/40 rounded-xl text-xs font-bold text-[#436320] flex items-center gap-1.5">
               <UserCheck className="w-3.5 h-3.5 text-[#598327]" />
@@ -486,8 +515,8 @@ export const SalesDashboard: React.FC = () => {
       )}
 
       {/* 4. High-Level Cards */}
-      {isSuperAdmin ? (
-        /* Super Admin: Full 8-card Management Overview */
+      {canManageSales ? (
+        /* Management Overview */
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
           {/* Card 1: Total Sales Members */}
           <div className="p-3.5 rounded-2xl bg-white border border-[#e2ebd9] shadow-xs space-y-1">
@@ -695,7 +724,7 @@ export const SalesDashboard: React.FC = () => {
               />
             </div>
 
-            {isSuperAdmin && (
+            {canAccessSection('sales.leaderboard') && (
               <button
                 onClick={() => setSalesActiveTab('sales-leaderboard')}
                 className="px-3 py-1.5 rounded-xl bg-[#f8faf6] hover:bg-[#edf4e8] border border-[#e2ebd9] text-xs font-bold text-[#436320] flex items-center gap-1 cursor-pointer transition-all"
@@ -862,7 +891,7 @@ export const SalesDashboard: React.FC = () => {
       </div>
 
       {/* 6. Performance Breakdown & Department Insights */}
-      {isSuperAdmin && (
+      {canManageSales && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* IT Sales Department Card */}
           <div className="bg-white rounded-3xl border border-[#e2ebd9] p-5 shadow-xs space-y-3">
@@ -932,8 +961,8 @@ export const SalesDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* 7. AUDIT LOGS QUICK ACCESS SECTION (SUPER ADMIN ONLY) */}
-      {isSuperAdmin && (
+      {/* 7. AUDIT LOGS QUICK ACCESS SECTION */}
+      {canAccessAuditLogs && (
         <div className="bg-white rounded-3xl border border-[#e2ebd9] p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">

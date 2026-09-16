@@ -37,6 +37,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ onOpenImportModa
     deletePerformanceRecord,
     purgeAllPerformanceRecords,
     openDataEntryModal,
+    isPeriodLocked,
     selectedMonth,
     selectedYear,
     addToast,
@@ -353,8 +354,13 @@ export const DataManagement: React.FC<DataManagementProps> = ({ onOpenImportModa
                   <td className="py-3.5 px-4 text-right whitespace-nowrap space-x-1.5">
                     <button
                       onClick={() => openDataEntryModal(rec, rec.periodId)}
-                      className="p-1.5 rounded-lg bg-white hover:bg-[#f0f4ec] text-[#555555] hover:text-[#101010] border border-[#e2ebd9] transition-colors cursor-pointer shadow-2xs"
-                      title="Edit Record"
+                      disabled={isPeriodLocked(rec.periodId, rec.month, rec.year, rec.weekName)}
+                      className={`p-1.5 rounded-lg border transition-colors shadow-2xs ${
+                        isPeriodLocked(rec.periodId, rec.month, rec.year, rec.weekName)
+                          ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                          : 'bg-white hover:bg-[#f0f4ec] text-[#555555] hover:text-[#101010] border-[#e2ebd9] cursor-pointer'
+                      }`}
+                      title={isPeriodLocked(rec.periodId, rec.month, rec.year, rec.weekName) ? 'This week is locked' : 'Edit Record'}
                     >
                       <Edit className="w-3.5 h-3.5" />
                     </button>

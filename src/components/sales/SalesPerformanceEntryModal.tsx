@@ -20,11 +20,11 @@ import {
   getMonthAndYearFromDate,
 } from '../../services/salesCalculationService';
 import {
-  isUserAdminOrSuperAdmin,
   findMatchingSalesEmployee,
   canUserManageRecord,
   validateRecordAccess,
 } from '../../utils/salesAuthUtils';
+import { usePermissions } from '../../context/PermissionContext';
 import {
   X,
   Calculator,
@@ -80,7 +80,10 @@ export const SalesPerformanceEntryModal: React.FC = () => {
   const [formError, setFormError] = useState<string>('');
 
   const activeEmployees = useMemo(() => salesEmployees.filter((e) => e.status === 'active'), [salesEmployees]);
-  const isPrivileged = isUserAdminOrSuperAdmin(currentUser);
+  const { isSuperAdmin } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canManageOthers = isSuperAdmin || hasPermission('sales.performance_records', 'edit');
+  const isPrivileged = canManageOthers;
 
   // Find matching sales employee for current logged in user if team member
   const matchedUserEmp = useMemo(() => {
@@ -112,8 +115,8 @@ export const SalesPerformanceEntryModal: React.FC = () => {
   // Check if current user has edit permission for the record being edited
   const isAuthorizedToEdit = useMemo(() => {
     if (!editingSalesRecord) return true;
-    return canUserManageRecord(editingSalesRecord, currentUser, salesEmployees);
-  }, [editingSalesRecord, currentUser, salesEmployees]);
+    return canUserManageRecord(editingSalesRecord, currentUser, salesEmployees, canManageOthers);
+  }, [editingSalesRecord, currentUser, salesEmployees, canManageOthers]);
 
   const selectedEmp = useMemo(() => {
     if (!isPrivileged) {

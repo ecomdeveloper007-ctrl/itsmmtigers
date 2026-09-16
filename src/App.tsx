@@ -24,14 +24,14 @@ import { SalesProvider } from './context/SalesContext';
 import { PermissionProvider, usePermissions } from './context/PermissionContext';
 import { SalesModuleRoot } from './components/sales/SalesModuleRoot';
 import { RolesPermissionsManagement } from './components/admin/RolesPermissionsManagement';
-import { Trophy, Crown, Sparkles, ArrowRight, Flame } from 'lucide-react';
+import { Trophy, Crown, Sparkles, ArrowRight, Flame, ShieldAlert } from 'lucide-react';
 
 const TAB_SECTION_MAP: Record<string, string> = {
   'dashboard': 'pm.dashboard',
   'leaderboard': 'pm.leaderboard',
   'my-performance': 'pm.my_performance',
   'admin-data': 'pm.submissions',
-  'user-management': 'admin.users',
+  'user-management': 'pm.members',
   'roles-permissions': 'admin.roles_permissions',
   'kpi-settings': 'pm.kpis',
   'period-management': 'pm.week_lock',
@@ -41,24 +41,36 @@ const TAB_SECTION_MAP: Record<string, string> = {
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading, currentUser, isAdmin, isSuperAdmin } = useAuth();
-  const { activeModule, activeTab, setActiveTab, openWinnerModal, leaderboardData, selectedTeam, settings } = useApp();
-  const { canAccessSection } = usePermissions();
+  const { activeModule, setActiveModule, activeTab, setActiveTab, openWinnerModal, leaderboardData, selectedTeam, settings } = useApp();
+  const { canAccessSection, canAccessModule } = usePermissions();
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
 
-  // Security Guard: Prevent users from accessing tabs their role is not authorized to view
+  // Module Guard: Ensure user only accesses enabled modules
+  React.useEffect(() => {
+    if (activeModule === 'pm' && !canAccessModule('pm') && canAccessModule('sales')) {
+      setActiveModule('sales');
+    } else if (activeModule === 'sales' && !canAccessModule('sales') && canAccessModule('pm')) {
+      setActiveModule('pm');
+    }
+  }, [activeModule, canAccessModule, setActiveModule]);
+
+  // Tab Security Guard: Prevent users from accessing tabs their role is not authorized to view
   React.useEffect(() => {
     if (activeModule === 'pm') {
       const requiredSection = TAB_SECTION_MAP[activeTab];
       if (requiredSection && !canAccessSection(requiredSection)) {
-        // Fallback to my-performance or dashboard if accessible
-        if (canAccessSection('pm.my_performance')) {
-          setActiveTab('my-performance');
-        } else if (canAccessSection('pm.dashboard')) {
-          setActiveTab('dashboard');
+        // Fallback to the first accessible PM tab
+        const accessibleTab = Object.keys(TAB_SECTION_MAP).find((tab) =>
+          canAccessSection(TAB_SECTION_MAP[tab])
+        );
+        if (accessibleTab) {
+          setActiveTab(accessibleTab as any);
+        } else if (canAccessModule('sales')) {
+          setActiveModule('sales');
         }
       }
     }
-  }, [activeTab, activeModule, canAccessSection, setActiveTab]);
+  }, [activeTab, activeModule, canAccessSection, canAccessModule, setActiveTab, setActiveModule]);
 
   if (isLoading) {
     return (
@@ -322,30 +334,43 @@ const AppContent: React.FC = () => {
             )}
 
             {/* MY PERFORMANCE TAB */}
-            {activeTab === 'my-performance' && <MemberDashboard />}
+            {activeTab === 'my-performance' && canAccessSection('pm.my_performance') && <MemberDashboard />}
 
-            {/* ADMIN DATA MANAGEMENT TAB (Super Admin Only) */}
-            {activeTab === 'admin-data' && isSuperAdmin && (
+            {/* ADMIN DATA MANAGEMENT TAB */}
+            {activeTab === 'admin-data' && canAccessSection('pm.submissions') && (
               <DataManagement onOpenImportModal={() => setIsImportModalOpen(true)} />
             )}
 
-            {/* USER MANAGEMENT TAB (Super Admin) */}
-            {activeTab === 'user-management' && isSuperAdmin && <UserManagement />}
+            {/* USER MANAGEMENT TAB */}
+            {activeTab === 'user-management' && canAccessSection('pm.members') && <UserManagement />}
 
-            {/* KPI SETTINGS TAB (Super Admin) */}
-            {activeTab === 'kpi-settings' && isSuperAdmin && <KPISettings />}
+            {/* KPI SETTINGS TAB */}
+            {activeTab === 'kpi-settings' && canAccessSection('pm.kpis') && <KPISettings />}
 
-            {/* PERIOD MANAGEMENT TAB (Super Admin) */}
-            {activeTab === 'period-management' && isSuperAdmin && <PeriodManagement />}
+            {/* PERIOD MANAGEMENT TAB */}
+            {activeTab === 'period-management' && canAccessSection('pm.week_lock') && <PeriodManagement />}
 
-            {/* AUDIT LOGS TAB (Super Admin) */}
-            {activeTab === 'audit-logs' && isSuperAdmin && <AuditLogsView />}
+            {/* AUDIT LOGS TAB */}
+            {activeTab === 'audit-logs' && canAccessSection('pm.audit_logs') && <AuditLogsView />}
 
-            {/* ROLES & PERMISSIONS TAB (Super Admin) */}
-            {activeTab === 'roles-permissions' && isSuperAdmin && <RolesPermissionsManagement />}
+            {/* ROLES & PERMISSIONS TAB */}
+            {activeTab === 'roles-permissions' && canAccessSection('admin.roles_permissions') && <RolesPermissionsManagement />}
 
             {/* MONTHLY REPORT TAB */}
-            {activeTab === 'reports' && <MonthlyReportView />}
+            {activeTab === 'reports' && canAccessSection('pm.reports') && <MonthlyReportView />}
+
+            {/* ACCESS DENIED FALLBACK */}
+            {TAB_SECTION_MAP[activeTab] && !canAccessSection(TAB_SECTION_MAP[activeTab]) && (
+              <div className="bg-white rounded-3xl p-12 border border-rose-200 text-center max-w-lg mx-auto my-12 shadow-sm space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto">
+                  <ShieldAlert className="w-8 h-8" />
+                </div>
+                <h2 className="text-xl font-black text-[#101010]">Access Restricted</h2>
+                <p className="text-sm text-[#666666]">
+                  Your role is currently not authorized to access this section. If you believe this is in error, please contact your Super Administrator.
+                </p>
+              </div>
+            )}
           </>
         )}
       </main>

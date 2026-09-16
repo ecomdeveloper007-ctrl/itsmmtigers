@@ -20,7 +20,8 @@ import {
   getProfilePerformance,
   computeCompleteSalesRecord,
 } from '../services/salesCalculationService';
-import { isUserSuperAdmin, isUserAdminOrSuperAdmin, findMatchingSalesEmployee } from '../utils/salesAuthUtils';
+import { isUserSuperAdmin, findMatchingSalesEmployee } from '../utils/salesAuthUtils';
+import { PermissionService } from '../services/permissionService';
 import { useApp } from './AppContext';
 import { useAuth } from './AuthContext';
 
@@ -339,16 +340,16 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   // Actions
   const actor = useMemo(() => {
     const isSuper = isUserSuperAdmin(currentUser);
-    const isAdmin = isUserAdminOrSuperAdmin(currentUser);
+    const hasAdminPerm = PermissionService.checkUserPermission(currentUser as any, 'sales.members', 'edit');
     return {
       id: currentUser?.uid || currentUser?.userId || 'anonymous_user',
       uid: currentUser?.uid || currentUser?.userId || 'anonymous_user',
       userId: currentUser?.userId,
       email: currentUser?.email,
       name: currentUser?.name || 'User',
-      role: isSuper ? 'super_admin' : isAdmin ? 'admin' : (currentUser?.role || 'team_member'),
+      role: isSuper ? 'super_admin' : (currentUser?.role || 'team_member'),
       isSuperAdmin: isSuper,
-      isAdmin,
+      isAdmin: hasAdminPerm,
     };
   }, [currentUser]);
 
@@ -486,8 +487,10 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const saveSalesRewardSettings = async (settings: SalesRewardSettings): Promise<boolean> => {
     try {
-      if (!isUserAdminOrSuperAdmin(currentUser)) {
-        addToast('error', 'Unauthorized Action', '403 Forbidden: Only Administrators and Super Admin can modify targets, KPIs, and reward settings.');
+      const isSuper = isUserSuperAdmin(currentUser);
+      const hasPerm = isSuper || PermissionService.checkUserPermission(currentUser as any, 'sales.kpi_config', 'edit');
+      if (!hasPerm) {
+        addToast('error', 'Unauthorized Action', '403 Forbidden: You do not have permission to modify targets, KPIs, and reward settings.');
         return false;
       }
 
@@ -514,8 +517,10 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const resetSalesRewardSettings = async (): Promise<boolean> => {
     try {
-      if (!isUserAdminOrSuperAdmin(currentUser)) {
-        addToast('error', 'Unauthorized Action', '403 Forbidden: Only Administrators and Super Admin can reset targets and settings.');
+      const isSuper = isUserSuperAdmin(currentUser);
+      const hasPerm = isSuper || PermissionService.checkUserPermission(currentUser as any, 'sales.kpi_config', 'edit');
+      if (!hasPerm) {
+        addToast('error', 'Unauthorized Action', '403 Forbidden: You do not have permission to reset targets and settings.');
         return false;
       }
       await SalesDataService.resetSettingsToDefault(actor);
@@ -532,9 +537,11 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const importSalesCSV = async (csvText: string): Promise<{ success: boolean; count: number; errors: string[] }> => {
     try {
-      if (!isUserAdminOrSuperAdmin(currentUser)) {
-        addToast('error', 'Unauthorized Action', '403 Forbidden: Only Administrators and Super Admin can import performance records.');
-        return { success: false, count: 0, errors: ['403 Forbidden: Only Administrators and Super Admin can import performance records.'] };
+      const isSuper = isUserSuperAdmin(currentUser);
+      const hasPerm = isSuper || PermissionService.checkUserPermission(currentUser as any, 'sales.performance_records', 'create');
+      if (!hasPerm) {
+        addToast('error', 'Unauthorized Action', '403 Forbidden: You do not have permission to import performance records.');
+        return { success: false, count: 0, errors: ['403 Forbidden: You do not have permission to import performance records.'] };
       }
       const res = await SalesDataService.importSalesCSV(csvText, actor);
       if (res.success) {

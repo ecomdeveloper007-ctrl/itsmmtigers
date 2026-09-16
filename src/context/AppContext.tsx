@@ -81,7 +81,7 @@ interface AppContextType {
 
   // Helpers
   getMemberSummary: (userId: string) => MemberPerformanceSummary | undefined;
-  isPeriodLocked: (periodId: string) => boolean;
+  isPeriodLocked: (periodId: string, month?: string, year?: number, weekName?: string) => boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -239,8 +239,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
   };
 
-  const isPeriodLocked = (periodId: string): boolean => {
-    const period = periods.find((p) => p.id === periodId);
+  const isPeriodLocked = (periodId: string, month?: string, year?: number, weekName?: string): boolean => {
+    const period = periods.find(
+      (p) =>
+        (periodId && p.id.toLowerCase() === periodId.toLowerCase()) ||
+        (month &&
+          year &&
+          weekName &&
+          p.month.toLowerCase() === month.toLowerCase() &&
+          Number(p.year) === Number(year) &&
+          p.weekName.toLowerCase() === weekName.toLowerCase())
+    );
     return period?.status === 'locked';
   };
 
@@ -249,6 +258,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const closeWinnerModal = () => setIsWinnerModalOpen(false);
 
   const openDataEntryModal = (record?: PerformanceRecord, periodId?: string) => {
+    const targetPeriodId = periodId || record?.periodId;
+    if (targetPeriodId && isPeriodLocked(targetPeriodId, record?.month, record?.year, record?.weekName)) {
+      addToast('warning', 'Period Locked', 'This week is locked and performance submission is no longer allowed.');
+      return;
+    }
     setEditingRecord(record || null);
     setTargetPeriodIdForEntry(periodId || null);
     setIsDataEntryModalOpen(true);
@@ -262,6 +276,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const savePerformanceRecord = async (record: PerformanceRecord): Promise<boolean> => {
     if (!currentUser) return false;
+    if (isPeriodLocked(record.periodId, record.month, record.year, record.weekName)) {
+      addToast('error', 'Submission Rejected', 'This week is locked and performance submission is no longer allowed.');
+      return false;
+    }
     try {
       const result = await DataService.saveRecord(record, {
         id: currentUser.uid,
@@ -281,9 +299,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         `${result?.isUpdate ? 'Updated record' : 'Recorded'} for ${record.userName} (${record.weekName})`
       );
       return true;
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      addToast('error', 'Failed to save performance', 'Please try again.');
+      addToast('error', 'Submission Rejected', e?.message || 'Failed to save performance. Please try again.');
       return false;
     }
   };
