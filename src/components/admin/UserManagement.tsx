@@ -29,6 +29,7 @@ import {
   Filter,
   Camera,
   Upload,
+  Lock,
 } from 'lucide-react';
 import {
   UserProfile,
@@ -277,7 +278,9 @@ export const UserManagement: React.FC = () => {
   ) => {
     setApprovingUserId(user.uid);
     try {
-      const res = await approveUser(user.uid, role, moduleAssignment);
+      // Only Super Admin can assign a custom or elevated role; defaults to team_member for all others
+      const effectiveRole: UserRole = isSuperAdmin ? role : 'team_member';
+      const res = await approveUser(user.uid, effectiveRole, moduleAssignment);
       if (res.success) {
         if (moduleAssignment === 'both' || moduleAssignment === 'sales') {
           await SalesDataService.syncUserToSales({
@@ -360,13 +363,18 @@ export const UserManagement: React.FC = () => {
     }
 
     const isIT = ['PR', 'WR', 'HW'].includes(formProfileCode);
+    // Only Super Admin can change user roles; if not super admin, preserve existing role (or default to team_member)
+    const effectiveRole: UserRole = isSuperAdmin
+      ? formRole
+      : (editingUser ? editingUser.role : 'team_member');
+
     const updatedUser: UserProfile = {
       uid: editingUser ? editingUser.uid : `user_${Date.now()}`,
       userId: formUserId.trim().toLowerCase(),
       name: formName.trim(),
       email: formEmail.trim().toLowerCase() || `${formUserId.trim().toLowerCase()}@coozmoo.com`,
       password: formPassword.trim() || (editingUser?.password || 'tiger2026'),
-      role: formRole,
+      role: effectiveRole,
       status: formStatus,
       profileCode: formProfileCode,
       department: formDepartment.trim() || getDefaultDepartmentForProfile(formProfileCode),
@@ -1229,36 +1237,50 @@ export const UserManagement: React.FC = () => {
                   <div className="bg-[#f8faf6] p-4 rounded-2xl border border-[#e2ebd9] space-y-3.5 text-xs">
                     {/* Role Selection */}
                     <div>
-                      <label className="block text-[10px] font-black uppercase tracking-wider text-[#666666] mb-1">
-                        Assign Access Role:
-                      </label>
-                      <select
-                        value={pendingApprovalRoles[user.uid] || 'team_member'}
-                        onChange={(e) =>
-                          setPendingApprovalRoles((prev) => ({
-                            ...prev,
-                            [user.uid]: e.target.value as UserRole,
-                          }))
-                        }
-                        className="w-full bg-white border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540]/40 cursor-pointer"
-                      >
-                        {roles.length > 0 ? (
-                          roles
-                            .filter((r) => r.status === 'active' && (isSuperAdmin || r.id !== 'super_admin'))
-                            .map((r) => (
-                              <option key={r.id} value={r.id}>
-                                {r.name} {r.isSystem ? '(System)' : ''}
-                              </option>
-                            ))
-                        ) : (
-                          <>
-                            <option value="team_member">Team Member (Submit & View Own Data)</option>
-                            <option value="admin">Admin (Manage Data & Reports)</option>
-                            <option value="viewer">Viewer (Read-Only Access)</option>
-                            {isSuperAdmin && <option value="super_admin">Super Admin (Full Control)</option>}
-                          </>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[10px] font-black uppercase tracking-wider text-[#666666]">
+                          Assign Access Role:
+                        </label>
+                        {!isSuperAdmin && (
+                          <span className="text-[10px] text-amber-700 font-bold flex items-center gap-1">
+                            <Lock className="w-3 h-3" /> Super Admin Only
+                          </span>
                         )}
-                      </select>
+                      </div>
+                      {isSuperAdmin ? (
+                        <select
+                          value={pendingApprovalRoles[user.uid] || 'team_member'}
+                          onChange={(e) =>
+                            setPendingApprovalRoles((prev) => ({
+                              ...prev,
+                              [user.uid]: e.target.value as UserRole,
+                            }))
+                          }
+                          className="w-full bg-white border border-[#e2ebd9] rounded-xl px-3 py-2 text-xs font-bold text-[#101010] focus:ring-2 focus:ring-[#8cc540]/40 cursor-pointer"
+                        >
+                          {roles.length > 0 ? (
+                            roles
+                              .filter((r) => r.status === 'active')
+                              .map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.name} {r.isSystem ? '(System)' : ''}
+                                </option>
+                              ))
+                          ) : (
+                            <>
+                              <option value="team_member">Team Member (Submit & View Own Data)</option>
+                              <option value="admin">Admin (Manage Data & Reports)</option>
+                              <option value="viewer">Viewer (Read-Only Access)</option>
+                              <option value="super_admin">Super Admin (Full Control)</option>
+                            </>
+                          )}
+                        </select>
+                      ) : (
+                        <div className="w-full bg-[#f0f4ec] border border-[#d6e3cd] rounded-xl px-3 py-2 text-xs font-bold text-[#333333] flex items-center justify-between">
+                          <span>Team Member (Default)</span>
+                          <span className="text-[10px] bg-white border border-[#c3d6b6] px-1.5 py-0.5 rounded text-[#598327]">Standard Role</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Module Assignment */}
@@ -1508,31 +1530,45 @@ export const UserManagement: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider mb-1">
-                    Role
-                  </label>
-                  <select
-                    value={formRole}
-                    onChange={(e) => setFormRole(e.target.value as UserRole)}
-                    className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] font-medium cursor-pointer"
-                  >
-                    {roles.length > 0 ? (
-                      roles
-                        .filter((r) => r.status === 'active' && (isSuperAdmin || r.id !== 'super_admin'))
-                        .map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.name} {r.isSystem ? '(System)' : ''}
-                          </option>
-                        ))
-                    ) : (
-                      <>
-                        <option value="team_member">Team Member</option>
-                        <option value="admin">Admin</option>
-                        <option value="viewer">Viewer (Read-Only)</option>
-                        {isSuperAdmin && <option value="super_admin">Super Admin</option>}
-                      </>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-[#101010] uppercase tracking-wider">
+                      Role
+                    </label>
+                    {!isSuperAdmin && (
+                      <span className="text-[10px] text-amber-700 font-bold flex items-center gap-1">
+                        <Lock className="w-3 h-3" /> Super Admin Only
+                      </span>
                     )}
-                  </select>
+                  </div>
+                  {isSuperAdmin ? (
+                    <select
+                      value={formRole}
+                      onChange={(e) => setFormRole(e.target.value as UserRole)}
+                      className="w-full bg-[#f8faf6] border border-[#e2ebd9] rounded-xl px-3.5 py-2.5 text-xs text-[#101010] font-medium cursor-pointer focus:ring-2 focus:ring-[#8cc540]/40"
+                    >
+                      {roles.length > 0 ? (
+                        roles
+                          .filter((r) => r.status === 'active')
+                          .map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.name} {r.isSystem ? '(System)' : ''}
+                            </option>
+                          ))
+                      ) : (
+                        <>
+                          <option value="team_member">Team Member</option>
+                          <option value="admin">Admin</option>
+                          <option value="viewer">Viewer (Read-Only)</option>
+                          <option value="super_admin">Super Admin</option>
+                        </>
+                      )}
+                    </select>
+                  ) : (
+                    <div className="w-full bg-[#f0f4ec] border border-[#d6e3cd] rounded-xl px-3.5 py-2.5 text-xs text-[#333333] font-semibold flex items-center justify-between">
+                      <span className="capitalize">{roles.find((r) => r.id === formRole)?.name || formRole?.replace(/_/g, ' ') || 'Team Member'}</span>
+                      <span className="text-[10px] bg-white border border-[#c3d6b6] px-2 py-0.5 rounded text-[#598327] font-bold">Locked</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>

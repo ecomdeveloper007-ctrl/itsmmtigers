@@ -14,13 +14,16 @@ import {
   Search,
   ShieldCheck,
   Clock,
+  Trash2,
 } from 'lucide-react';
 import { PerformancePeriod, PeriodStatus } from '../../types';
 
 export const PeriodManagement: React.FC = () => {
   const {
     periods,
+    records,
     savePeriod,
+    deletePeriod,
     togglePeriodLock,
     setActiveTab,
     selectedMonth,
@@ -38,7 +41,7 @@ export const PeriodManagement: React.FC = () => {
   const [formEndDate, setFormEndDate] = useState<string>('2026-08-31');
   const [formStatus, setFormStatus] = useState<PeriodStatus>('active');
 
-  // Confirmation Modal State
+  // Confirmation Modal State (Lock / Unlock)
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     period: PerformancePeriod | null;
@@ -49,15 +52,46 @@ export const PeriodManagement: React.FC = () => {
     targetStatus: 'locked',
   });
 
+  // Delete Modal State (Manually Added Weeks)
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    period: PerformancePeriod | null;
+    isDeleting: boolean;
+  }>({
+    isOpen: false,
+    period: null,
+    isDeleting: false,
+  });
+
+  // Helper to identify manually created weeks
+  const isManualPeriod = (p: PerformancePeriod): boolean => {
+    if (p.isManual === true) return true;
+    if (!p.id) return false;
+    const lower = p.id.toLowerCase();
+    const systemIds = [
+      'period_2026_august_w1',
+      'period_2026_august_w2',
+      'period_2026_august_w3',
+      'period_2026_august_w4',
+      'period_2026_september_w1',
+      'period_2026_september_w2',
+      'period_2026_september_w3',
+      'period_2026_september_w4',
+    ];
+    return !systemIds.includes(lower);
+  };
+
   // Filters
   const [selectedMonthFilter, setSelectedMonthFilter] = useState<string>('all');
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState<'all' | 'locked' | 'active'>('all');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<'all' | 'locked' | 'active' | 'manual'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const filteredPeriods = useMemo(() => {
     return periods.filter((p) => {
       if (selectedMonthFilter !== 'all' && p.month !== selectedMonthFilter) return false;
-      if (selectedStatusFilter !== 'all' && p.status !== selectedStatusFilter) return false;
+      if (selectedStatusFilter === 'locked' && p.status !== 'locked') return false;
+      if (selectedStatusFilter === 'active' && p.status === 'locked') return false;
+      if (selectedStatusFilter === 'manual' && !isManualPeriod(p)) return false;
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const matchesName = p.weekName.toLowerCase().includes(query);
@@ -72,7 +106,8 @@ export const PeriodManagement: React.FC = () => {
     const total = periods.length;
     const locked = periods.filter((p) => p.status === 'locked').length;
     const active = periods.filter((p) => p.status !== 'locked').length;
-    return { total, locked, active };
+    const manual = periods.filter(isManualPeriod).length;
+    return { total, locked, active, manual };
   }, [periods]);
 
   const handleCreatePeriod = async (e: React.FormEvent) => {
@@ -89,6 +124,7 @@ export const PeriodManagement: React.FC = () => {
       startDate: formStartDate,
       endDate: formEndDate,
       status: formStatus,
+      isManual: true,
       createdAt: new Date().toISOString(),
     };
 
@@ -109,6 +145,26 @@ export const PeriodManagement: React.FC = () => {
     if (!confirmModal.period) return;
     await togglePeriodLock(confirmModal.period.id, confirmModal.targetStatus);
     setConfirmModal({ isOpen: false, period: null, targetStatus: 'locked' });
+  };
+
+  const handleOpenDelete = (period: PerformancePeriod) => {
+    setDeleteModal({
+      isOpen: true,
+      period,
+      isDeleting: false,
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteModal.period) return;
+    setDeleteModal((prev) => ({ ...prev, isDeleting: true }));
+    try {
+      await deletePeriod(deleteModal.period.id);
+      setDeleteModal({ isOpen: false, period: null, isDeleting: false });
+    } catch (e) {
+      console.error('Delete period error:', e);
+      setDeleteModal((prev) => ({ ...prev, isDeleting: false }));
+    }
   };
 
   return (
@@ -213,6 +269,7 @@ export const PeriodManagement: React.FC = () => {
             <option value="all">All Statuses ({stats.total})</option>
             <option value="active">Open Only ({stats.active})</option>
             <option value="locked">Locked Only ({stats.locked})</option>
+            <option value="manual">Manually Added ({stats.manual})</option>
           </select>
 
           <select
@@ -281,6 +338,11 @@ export const PeriodManagement: React.FC = () => {
                           <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-[#f0f4ec] text-[#436320] border border-[#8cc540]/30">
                             Week #{p.weekNumber}
                           </span>
+                          {isManualPeriod(p) && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                              Manual Week
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="py-4 px-4 font-bold text-[#101010] whitespace-nowrap">
@@ -342,6 +404,17 @@ export const PeriodManagement: React.FC = () => {
                             </>
                           )}
                         </button>
+                        {isManualPeriod(p) && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDelete(p)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:text-rose-900 transition-all cursor-pointer shadow-2xs"
+                            title="Delete manually added week"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Delete Week</span>
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -410,6 +483,84 @@ export const PeriodManagement: React.FC = () => {
                 }`}
               >
                 {confirmModal.targetStatus === 'locked' ? 'Confirm Lock' : 'Confirm Unlock'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Manually Added Week Confirmation Modal */}
+      {deleteModal.isOpen && deleteModal.period && (
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => !deleteModal.isDeleting && setDeleteModal({ isOpen: false, period: null, isDeleting: false })}
+        >
+          <div
+            className="relative w-full max-w-md max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] bg-white border border-[#e2ebd9] rounded-2xl sm:rounded-3xl shadow-xl overflow-y-auto p-4 sm:p-6 space-y-4 my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700">
+                <Trash2 className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-[#101010]">
+                  Delete Manually Added Week?
+                </h3>
+                <span className="text-xs text-[#666666] font-medium">
+                  {deleteModal.period.weekName} ({deleteModal.period.month} {deleteModal.period.year})
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-[#f8faf6] border border-[#e2ebd9] rounded-xl p-3.5 space-y-1.5 text-xs text-[#555555]">
+              <div className="flex justify-between">
+                <span className="text-[#888888]">Period Name:</span>
+                <strong className="text-[#101010] font-bold">{deleteModal.period.weekName}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#888888]">Date Range:</span>
+                <span className="font-semibold text-[#101010]">{deleteModal.period.startDate} to {deleteModal.period.endDate}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#888888]">Current Status:</span>
+                <span className="font-bold capitalize text-[#101010]">{deleteModal.period.status}</span>
+              </div>
+              {(() => {
+                const associatedRecordsCount = records.filter((r) => r.periodId === deleteModal.period?.id).length;
+                if (associatedRecordsCount > 0) {
+                  return (
+                    <div className="mt-2 pt-2 border-t border-amber-200 text-amber-800 bg-amber-50/80 -mx-1.5 -mb-1.5 p-2 rounded-b-lg font-medium flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
+                      <span>Notice: {associatedRecordsCount} submitted member performance record(s) are linked to this week.</span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+
+            <p className="text-xs text-[#666666] leading-relaxed">
+              Deleting this week will permanently remove it from tracking periods, member performance submission dropdowns, and period management. This action cannot be undone.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#e2ebd9]">
+              <button
+                type="button"
+                disabled={deleteModal.isDeleting}
+                onClick={() => setDeleteModal({ isOpen: false, period: null, isDeleting: false })}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#666666] hover:bg-[#f8faf6] hover:text-[#101010] transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteModal.isDeleting}
+                onClick={handleConfirmDelete}
+                className="px-5 py-2 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-500 text-white transition-all shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{deleteModal.isDeleting ? 'Deleting...' : 'Delete Week'}</span>
               </button>
             </div>
           </div>

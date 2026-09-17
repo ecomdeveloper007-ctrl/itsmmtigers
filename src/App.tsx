@@ -57,6 +57,10 @@ const AppContent: React.FC = () => {
   // Tab Security Guard: Prevent users from accessing tabs their role is not authorized to view
   React.useEffect(() => {
     if (activeModule === 'pm') {
+      // Allow roles-permissions to remain active to show explicit 403 Forbidden when unauthorized
+      if (activeTab === 'roles-permissions') {
+        return;
+      }
       const requiredSection = TAB_SECTION_MAP[activeTab];
       if (requiredSection && !canAccessSection(requiredSection)) {
         // Fallback to the first accessible PM tab
@@ -71,6 +75,32 @@ const AppContent: React.FC = () => {
       }
     }
   }, [activeTab, activeModule, canAccessSection, canAccessModule, setActiveTab, setActiveModule]);
+
+  // URL / Direct Access Handling: Support direct tab / action checks
+  React.useEffect(() => {
+    const handleUrlNavigation = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const tabParam = params.get('tab') || window.location.hash.replace('#', '');
+        if (tabParam === 'roles-permissions') {
+          setActiveTab('roles-permissions');
+        }
+        const switchParam = params.get('switchView') || params.get('switchUser');
+        if (switchParam && !isSuperAdmin) {
+          console.error('403 Forbidden\nYou do not have permission to access this feature.');
+        }
+      } catch (err) {
+        console.error('URL navigation parse error:', err);
+      }
+    };
+    handleUrlNavigation();
+    window.addEventListener('popstate', handleUrlNavigation);
+    window.addEventListener('hashchange', handleUrlNavigation);
+    return () => {
+      window.removeEventListener('popstate', handleUrlNavigation);
+      window.removeEventListener('hashchange', handleUrlNavigation);
+    };
+  }, [isSuperAdmin, setActiveTab]);
 
   if (isLoading) {
     return (
@@ -354,13 +384,27 @@ const AppContent: React.FC = () => {
             {activeTab === 'audit-logs' && canAccessSection('pm.audit_logs') && <AuditLogsView />}
 
             {/* ROLES & PERMISSIONS TAB */}
-            {activeTab === 'roles-permissions' && canAccessSection('admin.roles_permissions') && <RolesPermissionsManagement />}
+            {activeTab === 'roles-permissions' && (
+              isSuperAdmin ? (
+                <RolesPermissionsManagement />
+              ) : (
+                <div className="bg-white rounded-3xl p-12 border border-rose-200 text-center max-w-lg mx-auto my-12 shadow-sm space-y-4">
+                  <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto">
+                    <ShieldAlert className="w-8 h-8" />
+                  </div>
+                  <h2 className="text-xl font-black text-[#101010]">403 Forbidden</h2>
+                  <p className="text-sm text-[#666666]">
+                    You do not have permission to access this feature.
+                  </p>
+                </div>
+              )
+            )}
 
             {/* MONTHLY REPORT TAB */}
             {activeTab === 'reports' && canAccessSection('pm.reports') && <MonthlyReportView />}
 
             {/* ACCESS DENIED FALLBACK */}
-            {TAB_SECTION_MAP[activeTab] && !canAccessSection(TAB_SECTION_MAP[activeTab]) && (
+            {activeTab !== 'roles-permissions' && TAB_SECTION_MAP[activeTab] && !canAccessSection(TAB_SECTION_MAP[activeTab]) && (
               <div className="bg-white rounded-3xl p-12 border border-rose-200 text-center max-w-lg mx-auto my-12 shadow-sm space-y-4">
                 <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto">
                   <ShieldAlert className="w-8 h-8" />

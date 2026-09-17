@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserProfile, UserRole, UserStatus, ProfileCode } from '../types';
 import { DataService, INITIAL_USERS } from '../services/dataService';
+import { isUserSuperAdmin } from '../utils/salesAuthUtils';
 
 interface AuthContextType {
   currentUser: UserProfile | null;
@@ -319,13 +320,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     assignedProfileCode?: ProfileCode
   ) => {
     if (!currentUser) return;
+    // Strict Super Admin Access: Only Super Admin can assign custom or elevated roles
+    const effectiveRole: UserRole = currentUser.role === 'super_admin' ? assignedRole : 'team_member';
     setAllUsers((prev) =>
       prev.map((u) =>
         u.uid === userId || (u.userId && u.userId.toLowerCase() === userId.toLowerCase())
           ? {
               ...u,
               status: 'active',
-              role: assignedRole,
+              role: effectiveRole,
               profileCode: assignedProfileCode || u.profileCode,
               approvedBy: currentUser.name,
               approvedAt: new Date().toISOString(),
@@ -336,7 +339,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
     await DataService.approveRegistration(
       userId,
-      assignedRole,
+      effectiveRole,
       {
         id: currentUser.uid,
         name: currentUser.name,
@@ -387,8 +390,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const switchUser = (userIdOrUid: string) => {
     // Strict security: Only super_admin is authorized to switch sessions
     if (!isSuperAdmin) {
-      console.warn('Access Denied: Only Super Admin can switch active user session.');
-      return;
+      const errorMsg = '403 Forbidden\nYou do not have permission to access this feature.';
+      console.error(errorMsg);
+      throw new Error(errorMsg);
     }
     const user = allUsers.find((u) => u.uid === userIdOrUid || u.userId === userIdOrUid);
     if (user && user.status === 'active') {
@@ -465,12 +469,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return !!res;
   };
 
-  const isSuperAdmin =
-    currentUser?.role === 'super_admin' ||
-    currentUser?.email?.toLowerCase() === 'prakash.choudhary@coozmoo.com' ||
-    currentUser?.email?.toLowerCase() === 'ecomdeveloper007@gmail.com' ||
-    currentUser?.userId?.toLowerCase() === 'prakash.choudhary' ||
-    currentUser?.userId?.toLowerCase() === 'ecomdeveloper007';
+  const isSuperAdmin = isUserSuperAdmin(currentUser);
   const isAdmin =
     currentUser?.role === 'admin' ||
     currentUser?.role === 'administrator' ||

@@ -8,25 +8,23 @@ export function isUserSuperAdmin(
   user?: { role?: string; email?: string; userId?: string; uid?: string; id?: string; isSuperAdmin?: boolean } | null
 ): boolean {
   if (!user) return false;
-  if (user.isSuperAdmin === true) return true;
+  // An Admin or Member role is strictly NOT a Super Admin
   const role = (user.role || '').toLowerCase().replace(/[\s_-]/g, '');
+  if (role === 'admin' || role === 'administrator' || role === 'teammember' || role === 'salesmember') {
+    return false;
+  }
+  if (user.isSuperAdmin === true) return true;
   const email = (user.email || '').toLowerCase().trim();
   const userId = (user.userId || user.id || user.uid || '').toLowerCase().trim();
   return (
     role === 'superadmin' ||
-    role.includes('super') ||
     email === 'prakash.choudhary@coozmoo.com' ||
     email === 'ecomdeveloper007@gmail.com' ||
-    email.startsWith('prakash.choudhary') ||
-    email.startsWith('ecomdeveloper007') ||
-    email.includes('super') ||
+    email === 'superadmin@growthcrm.com' ||
     userId === 'prakash.choudhary' ||
     userId === 'ecomdeveloper007' ||
     userId === 'user_superadmin_prakash' ||
-    userId === 'user_superadmin_ecomdev' ||
-    userId.includes('superadmin') ||
-    userId.includes('super_admin') ||
-    userId.includes('ecomdev')
+    userId === 'user_superadmin_ecomdev'
   );
 }
 

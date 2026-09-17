@@ -4,6 +4,7 @@ import { UserProfile } from '../types';
 import { PermissionService } from '../services/permissionService';
 import { useAuth } from './AuthContext';
 import { DEFAULT_APP_ROLES } from '../data/defaultRoles';
+import { isUserSuperAdmin } from '../utils/salesAuthUtils';
 
 interface PermissionContextType {
   roles: AppRole[];
@@ -112,8 +113,8 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const createRole = useCallback(
     async (roleData: Partial<AppRole> & { id: string; name: string }): Promise<AppRole> => {
-      if (!currentUser) {
-        throw new Error('403 Forbidden: Authentication required.');
+      if (!currentUser || !isUserSuperAdmin(currentUser)) {
+        throw new Error('403 Forbidden\nYou do not have permission to access this feature.');
       }
       const saved = await PermissionService.saveRole(roleData, {
         uid: currentUser.uid,
@@ -129,8 +130,8 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const updateRole = useCallback(
     async (roleData: Partial<AppRole> & { id: string; name: string }): Promise<AppRole> => {
-      if (!currentUser) {
-        throw new Error('403 Forbidden: Authentication required.');
+      if (!currentUser || !isUserSuperAdmin(currentUser)) {
+        throw new Error('403 Forbidden\nYou do not have permission to access this feature.');
       }
       const saved = await PermissionService.saveRole(roleData, {
         uid: currentUser.uid,
@@ -146,8 +147,8 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const deleteRole = useCallback(
     async (roleId: string): Promise<boolean> => {
-      if (!currentUser) {
-        throw new Error('403 Forbidden: Authentication required.');
+      if (!currentUser || !isUserSuperAdmin(currentUser)) {
+        throw new Error('403 Forbidden\nYou do not have permission to access this feature.');
       }
       const success = await PermissionService.deleteRole(roleId, {
         uid: currentUser.uid,

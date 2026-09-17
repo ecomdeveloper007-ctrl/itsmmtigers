@@ -180,7 +180,7 @@ export class PermissionService {
     actor: { uid: string; name: string; email?: string; role?: string }
   ): Promise<AppRole> {
     if (!isUserSuperAdmin(actor)) {
-      throw new Error('403 Forbidden: Only Super Admin is authorized to create or modify roles.');
+      throw new Error('403 Forbidden\nYou do not have permission to access this feature.');
     }
 
     const roles = await this.getRoles();
@@ -258,7 +258,7 @@ export class PermissionService {
     actor: { uid: string; name: string; email?: string; role?: string }
   ): Promise<boolean> {
     if (!isUserSuperAdmin(actor)) {
-      throw new Error('403 Forbidden: Only Super Admin is authorized to delete roles.');
+      throw new Error('403 Forbidden\nYou do not have permission to access this feature.');
     }
 
     const roles = await this.getRoles();
@@ -429,7 +429,7 @@ export class PermissionService {
   ): void {
     const isAllowed = this.checkUserPermission(user, sectionId, action, providedRoles);
     if (!isAllowed) {
-      const errorMsg = `403 Forbidden: You do not have permission to perform '${action}' on '${sectionId}'.`;
+      const errorMsg = '403 Forbidden\nYou do not have permission to access this feature.';
       console.error(errorMsg, { user: user?.email, role: user?.role, sectionId, action });
       throw new Error(errorMsg);
     }

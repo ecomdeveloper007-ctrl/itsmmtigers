@@ -70,9 +70,23 @@ const MODULE_META: Record<SystemModule, { label: string; icon: React.FC<{ classN
 };
 
 export const RolesPermissionsManagement: React.FC = () => {
-  const { currentUser, allUsers } = useAuth();
+  const { currentUser, allUsers, isSuperAdmin } = useAuth();
   const { addToast, setActiveTab } = useApp();
   const { roles, createRole, updateRole, deleteRole, isLoadingRoles } = usePermissions();
+
+  if (!isSuperAdmin) {
+    return (
+      <div className="bg-white rounded-3xl p-12 border border-rose-200 text-center max-w-lg mx-auto my-12 shadow-sm space-y-4">
+        <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-black text-[#101010]">403 Forbidden</h2>
+        <p className="text-sm text-[#666666]">
+          You do not have permission to access this feature.
+        </p>
+      </div>
+    );
+  }
 
   const [selectedRoleId, setSelectedRoleId] = useState<string>('super_admin');
   const [activeModuleTab, setActiveModuleTab] = useState<SystemModule>('pm');

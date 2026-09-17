@@ -211,6 +211,7 @@ export interface PerformancePeriod {
   startDate: string;
   endDate: string;
   status: PeriodStatus;
+  isManual?: boolean; // flag indicating if the week was manually added
   createdAt: string;
 }
 

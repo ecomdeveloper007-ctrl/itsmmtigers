@@ -33,6 +33,7 @@ const LS_KEYS = {
   DELETED_USERS: 'tiger_deleted_users_v2',
   KPIS: 'tiger_kpis_v2',
   PERIODS: 'tiger_periods_v2',
+  DELETED_PERIODS: 'tiger_deleted_periods_v2',
   RECORDS: 'tiger_records_v2',
   DELETED_RECORDS: 'tiger_deleted_records_v2',
   SETTINGS: 'tiger_settings_v2',
@@ -196,6 +197,8 @@ export const INITIAL_PERIODS: PerformancePeriod[] = [
     createdAt: '2026-09-22T00:00:00.000Z',
   },
 ];
+
+export const INITIAL_PERIOD_IDS = new Set(INITIAL_PERIODS.map((p) => p.id.toLowerCase()));
 
 // Initial Performance Records (Clean Slate - No hardcoded dummy data)
 export const INITIAL_RECORDS: PerformanceRecord[] = [];
@@ -527,6 +530,20 @@ export class DataService {
         (u.email && u.email.toLowerCase() === cleanUser.email.toLowerCase())
     );
     const isNew = idx < 0;
+    const existing = idx >= 0 ? users[idx] : null;
+
+    // Strict Super Admin Access: Only Super Admin can assign or update user roles or permissions
+    if (actor.role !== 'super_admin') {
+      if (existing) {
+        cleanUser.role = existing.role || 'team_member';
+        cleanUser.permissionOverride = existing.permissionOverride;
+      } else {
+        if (cleanUser.role === 'super_admin' || cleanUser.role === 'admin') {
+          cleanUser.role = 'team_member';
+        }
+      }
+    }
+
     if (idx >= 0) {
       users[idx] = cleanUser;
     } else {
@@ -846,10 +863,13 @@ export class DataService {
       return;
     }
 
+    // Strict Super Admin Access: Only Super Admin can assign a custom or elevated role on registration approval
+    const finalRole: UserRole = actor.role === 'super_admin' ? assignedRole : 'team_member';
+
     const updatedUser: UserProfile = {
       ...target,
       status: 'active',
-      role: assignedRole,
+      role: finalRole,
       profileCode:
         assignedProfileCode ||
         target.profileCode ||
@@ -1055,18 +1075,40 @@ export class DataService {
 
   // ================= PERIODS =================
 
+  public static getDeletedPeriodIds(): Set<string> {
+    const raw = getFromStorage<string[]>(LS_KEYS.DELETED_PERIODS, []);
+    return new Set((raw || []).map((id) => String(id).trim().toLowerCase()).filter(Boolean));
+  }
+
+  public static addDeletedPeriodIds(ids: string[]) {
+    const current = getFromStorage<string[]>(LS_KEYS.DELETED_PERIODS, []);
+    const set = new Set((current || []).map((id) => String(id).trim().toLowerCase()).filter(Boolean));
+    for (const id of ids) {
+      if (id && id.trim()) {
+        set.add(id.trim().toLowerCase());
+      }
+    }
+    saveToStorage(LS_KEYS.DELETED_PERIODS, Array.from(set));
+  }
+
   public static async getPeriods(): Promise<PerformancePeriod[]> {
     const localPeriods = getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, INITIAL_PERIODS);
+    const deletedPeriodIds = this.getDeletedPeriodIds();
     const periodMap = new Map<string, PerformancePeriod>();
 
-    // 1. Baseline periods
+    // 1. Baseline initial periods (filtered by deletions)
     for (const p of INITIAL_PERIODS) {
-      periodMap.set(p.id, { ...p });
+      if (!deletedPeriodIds.has(p.id.toLowerCase())) {
+        periodMap.set(p.id, { ...p, isManual: false });
+      }
     }
 
     // 2. Local storage periods
     for (const p of localPeriods) {
-      if (p.id) periodMap.set(p.id, { ...p });
+      if (p.id && !deletedPeriodIds.has(p.id.toLowerCase())) {
+        const isManuallyAdded = p.isManual ?? !INITIAL_PERIOD_IDS.has(p.id.toLowerCase());
+        periodMap.set(p.id, { ...p, isManual: isManuallyAdded });
+      }
     }
 
     // 3. Firestore periods
@@ -1075,12 +1117,17 @@ export class DataService {
       if (!snap.empty) {
         for (const docSnap of snap.docs) {
           const cloudPeriod = docSnap.data() as PerformancePeriod;
-          periodMap.set(cloudPeriod.id, cloudPeriod);
+          if (cloudPeriod && cloudPeriod.id && !deletedPeriodIds.has(cloudPeriod.id.toLowerCase())) {
+            const isManuallyAdded = cloudPeriod.isManual ?? !INITIAL_PERIOD_IDS.has(cloudPeriod.id.toLowerCase());
+            periodMap.set(cloudPeriod.id, { ...cloudPeriod, isManual: isManuallyAdded });
+          }
         }
       } else {
         // Seed firestore with initial periods
         for (const p of INITIAL_PERIODS) {
-          await setDoc(doc(db, 'performancePeriods', p.id), p);
+          if (!deletedPeriodIds.has(p.id.toLowerCase())) {
+            await setDoc(doc(db, 'performancePeriods', p.id), { ...p, isManual: false });
+          }
         }
       }
     } catch (e) {
@@ -1098,18 +1145,29 @@ export class DataService {
     period: PerformancePeriod,
     actor: { id: string; name: string; role: UserRole }
   ): Promise<void> {
+    const isManuallyAdded = period.isManual ?? !INITIAL_PERIOD_IDS.has(period.id.toLowerCase());
+    const cleanPeriod: PerformancePeriod = {
+      ...period,
+      isManual: isManuallyAdded,
+    };
+
+    // If it was previously marked as deleted, unmark it
+    const deleted = getFromStorage<string[]>(LS_KEYS.DELETED_PERIODS, []);
+    const filteredDeleted = deleted.filter((id) => id.toLowerCase() !== cleanPeriod.id.toLowerCase());
+    saveToStorage(LS_KEYS.DELETED_PERIODS, filteredDeleted);
+
     try {
-      await setDoc(doc(db, 'performancePeriods', period.id), period);
+      await setDoc(doc(db, 'performancePeriods', cleanPeriod.id), cleanPeriod);
     } catch (e) {
       console.warn('Firestore savePeriod error:', e);
     }
 
     const periods = getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, INITIAL_PERIODS);
-    const idx = periods.findIndex((p) => p.id === period.id);
+    const idx = periods.findIndex((p) => p.id === cleanPeriod.id);
     if (idx >= 0) {
-      periods[idx] = period;
+      periods[idx] = cleanPeriod;
     } else {
-      periods.push(period);
+      periods.push(cleanPeriod);
     }
     saveToStorage(LS_KEYS.PERIODS, periods);
 
@@ -1119,10 +1177,52 @@ export class DataService {
       userRole: actor.role,
       action: 'Performance Period Saved',
       entityType: 'period',
-      entityId: period.id,
-      details: `Saved period ${period.month} ${period.year} - ${period.weekName} (Status: ${period.status})`,
-      newValue: period,
+      entityId: cleanPeriod.id,
+      details: `Saved ${isManuallyAdded ? 'manual' : 'system'} period ${cleanPeriod.month} ${cleanPeriod.year} - ${cleanPeriod.weekName} (Status: ${cleanPeriod.status})`,
+      newValue: cleanPeriod,
     });
+  }
+
+  public static async deletePeriod(
+    periodId: string,
+    actor: { id: string; name: string; role: UserRole }
+  ): Promise<{ success: boolean; message?: string }> {
+    const cleanId = periodId.trim();
+    const cleanIdLower = cleanId.toLowerCase();
+
+    // 1. Mark as deleted in tombstone cache
+    this.addDeletedPeriodIds([cleanIdLower]);
+
+    // 2. Remove from local storage cache
+    const periods = getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, INITIAL_PERIODS);
+    const existing = periods.find((p) => p.id.toLowerCase() === cleanIdLower);
+    const updatedPeriods = periods.filter((p) => p.id.toLowerCase() !== cleanIdLower);
+    saveToStorage(LS_KEYS.PERIODS, updatedPeriods);
+
+    // 3. Delete from Firestore
+    try {
+      await deleteDoc(doc(db, 'performancePeriods', cleanId));
+    } catch (e) {
+      console.warn('Firestore deletePeriod error:', e);
+    }
+
+    // 4. Audit Log
+    try {
+      await this.logAudit({
+        userId: actor.id,
+        userName: actor.name,
+        userRole: actor.role,
+        action: 'Performance Period Deleted',
+        entityType: 'period',
+        entityId: cleanId,
+        details: `Deleted manually added week: ${existing ? `${existing.month} ${existing.year} - ${existing.weekName}` : cleanId}`,
+        oldValue: existing,
+      });
+    } catch (err) {
+      console.warn('Audit log error on deletePeriod:', err);
+    }
+
+    return { success: true };
   }
 
   public static async togglePeriodLock(
@@ -1886,8 +1986,8 @@ export class DataService {
                 deletedSet.has(docIdLower) ||
                 (cloudRecord.id && deletedSet.has(String(cloudRecord.id).trim().toLowerCase()))
               ) {
-                // Delete persistent ghost document from firestore
-                deleteDoc(d.ref).catch(() => {});
+                // Skip deleted records
+                continue;
               } else {
                 rawList.push({
                   ...cloudRecord,
@@ -1922,19 +2022,37 @@ export class DataService {
       return onSnapshot(
         collection(db, 'performancePeriods'),
         (snapshot) => {
+          const deletedSet = this.getDeletedPeriodIds();
           if (!snapshot.empty) {
-            const periods = snapshot.docs.map((d) => d.data() as PerformancePeriod);
+            const periods = snapshot.docs
+              .map((d) => d.data() as PerformancePeriod)
+              .filter((p) => p && p.id && !deletedSet.has(p.id.toLowerCase()))
+              .map((p) => ({
+                ...p,
+                isManual: p.isManual ?? !INITIAL_PERIOD_IDS.has(p.id.toLowerCase()),
+              }));
             const sorted = periods.sort((a, b) => b.year - a.year || a.weekNumber - b.weekNumber);
             saveToStorage(LS_KEYS.PERIODS, sorted);
             callback(sorted);
           } else {
-            const cached = getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, INITIAL_PERIODS);
+            const cached = getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, INITIAL_PERIODS)
+              .filter((p) => p && p.id && !deletedSet.has(p.id.toLowerCase()))
+              .map((p) => ({
+                ...p,
+                isManual: p.isManual ?? !INITIAL_PERIOD_IDS.has(p.id.toLowerCase()),
+              }));
             callback(cached);
           }
         },
         (error) => {
           console.warn('Real-time periods subscription warning:', error);
-          const cached = getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, INITIAL_PERIODS);
+          const deletedSet = this.getDeletedPeriodIds();
+          const cached = getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, INITIAL_PERIODS)
+            .filter((p) => p && p.id && !deletedSet.has(p.id.toLowerCase()))
+            .map((p) => ({
+              ...p,
+              isManual: p.isManual ?? !INITIAL_PERIOD_IDS.has(p.id.toLowerCase()),
+            }));
           callback(cached);
         }
       );

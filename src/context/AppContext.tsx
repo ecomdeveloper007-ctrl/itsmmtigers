@@ -71,6 +71,7 @@ interface AppContextType {
   saveKPIConfig: (kpis: KPIConfig[]) => Promise<{ success: boolean; message?: string }>;
   saveAppSettings: (settings: AppSettings) => Promise<boolean>;
   savePeriod: (period: PerformancePeriod) => Promise<boolean>;
+  deletePeriod: (periodId: string) => Promise<boolean>;
   togglePeriodLock: (periodId: string, status: 'active' | 'locked') => Promise<boolean>;
   refreshAllData: () => Promise<void>;
 
@@ -420,6 +421,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const deletePeriod = async (periodId: string): Promise<boolean> => {
+    if (!currentUser) return false;
+    try {
+      const target = periods.find((p) => p.id === periodId);
+      const res = await DataService.deletePeriod(periodId, {
+        id: currentUser.uid,
+        name: currentUser.name,
+        role: currentUser.role,
+      });
+      if (res.success) {
+        const updated = await DataService.getPeriods();
+        setPeriods(updated);
+        addToast(
+          'success',
+          'Week Deleted',
+          target ? `${target.month} ${target.year} - ${target.weekName} was deleted.` : 'The week has been removed.'
+        );
+        return true;
+      } else {
+        addToast('error', 'Delete Failed', res.message || 'Could not delete the period.');
+        return false;
+      }
+    } catch (e) {
+      console.error(e);
+      addToast('error', 'Failed to delete period');
+      return false;
+    }
+  };
+
   const togglePeriodLock = async (
     periodId: string,
     status: 'active' | 'locked'
@@ -488,6 +518,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         saveKPIConfig,
         saveAppSettings,
         savePeriod,
+        deletePeriod,
         togglePeriodLock,
         refreshAllData,
         toasts,

@@ -504,7 +504,7 @@ export const Header: React.FC = () => {
                     canAccessSection('pm.kpis') ||
                     canAccessSection('pm.week_lock') ||
                     canAccessSection('pm.audit_logs') ||
-                    canAccessSection('admin.roles_permissions')) && (
+                    isSuperAdmin) && (
                     <div className="py-2 space-y-1">
                       <p className="px-3 text-[10px] font-black text-[#888888] uppercase tracking-wider">
                         Administration
@@ -557,7 +557,7 @@ export const Header: React.FC = () => {
                           Audit History Logs
                         </button>
                       )}
-                      {canAccessSection('admin.roles_permissions') && (
+                      {isSuperAdmin && (
                         <button
                           onClick={() => {
                             setActiveTab('roles-permissions');
@@ -676,7 +676,7 @@ export const Header: React.FC = () => {
                 canAccessSection('pm.kpis') ||
                 canAccessSection('pm.week_lock') ||
                 canAccessSection('pm.audit_logs') ||
-                canAccessSection('admin.roles_permissions')) && (
+                isSuperAdmin) && (
                 <>
                   <div className="h-4 w-px bg-[#e2ebd9] mx-1"></div>
 
@@ -741,7 +741,7 @@ export const Header: React.FC = () => {
                     </button>
                   )}
 
-                  {canAccessSection('admin.roles_permissions') && (
+                  {isSuperAdmin && (
                     <button
                       onClick={() => setActiveTab('roles-permissions')}
                       className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
@@ -1237,7 +1237,7 @@ export const Header: React.FC = () => {
                     <Activity className="w-4 h-4 text-amber-600" /> Audit Logs
                   </button>
                 )}
-                {canAccessSection('admin.roles_permissions') && (
+                {isSuperAdmin && (
                   <button
                     onClick={() => {
                       setActiveTab('roles-permissions');
