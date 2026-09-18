@@ -163,7 +163,7 @@ export const TeamDashboardSwitcher: React.FC = () => {
             </span>
             <span className="font-bold text-blue-800 truncate block max-w-[140px]">
               {itLeaderboardData.winner?.userName || 'Amitabh Sharma'} (
-              {itLeaderboardData.winner?.finalScoreDisplay || '75.60'} pts)
+              {itLeaderboardData.winner?.finalScoreDisplay || '75.60'})
             </span>
           </div>
         </div>
@@ -176,7 +176,7 @@ export const TeamDashboardSwitcher: React.FC = () => {
             </span>
             <span className="font-bold text-purple-800 truncate block max-w-[140px]">
               {smmLeaderboardData.winner?.userName || 'Divya Bhardwaj'} (
-              {smmLeaderboardData.winner?.finalScoreDisplay || '68.02'} pts)
+              {smmLeaderboardData.winner?.finalScoreDisplay || '68.02'})
             </span>
           </div>
         </div>

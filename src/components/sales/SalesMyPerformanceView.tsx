@@ -533,7 +533,7 @@ export const SalesMyPerformanceView: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[10px] text-[#777777] block">Score</span>
-                  <span className="font-black text-[#101010]">{deletingRecord.totalPerformanceScore} pts</span>
+                  <span className="font-black text-[#101010]">{deletingRecord.totalPerformanceScore}</span>
                 </div>
               </div>
             </div>

@@ -174,7 +174,7 @@ export const MonthlyReportView: React.FC = () => {
                 <span className="text-3xl font-black text-[#101010] print:text-black">
                   {winner.finalScoreDisplay}
                 </span>
-                <span className="text-sm font-bold text-[#888888]">/ 100 PTS</span>
+                <span className="text-sm font-bold text-[#888888]">/ 100</span>
               </div>
             </div>
           </div>

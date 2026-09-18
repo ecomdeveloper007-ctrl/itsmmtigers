@@ -162,7 +162,7 @@ export const SalesMonthlyHistoryView: React.FC = () => {
                               {h.month} {h.year}
                             </td>
                             <td className="p-3 text-right font-black text-sm text-[#101010]">
-                              {h.score} pts
+                              {h.score}
                             </td>
                             <td className="p-3 text-right font-black">
                               {h.scoreChange !== undefined ? (

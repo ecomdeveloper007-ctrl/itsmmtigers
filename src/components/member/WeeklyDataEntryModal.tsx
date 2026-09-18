@@ -831,7 +831,7 @@ export const WeeklyDataEntryModal: React.FC = () => {
               <span className="text-2xl font-black text-amber-300">
                 {liveCalculations.totalScoreDisplay}
               </span>
-              <span className="text-xs font-bold text-slate-400"> / 100 PTS</span>
+              <span className="text-xs font-bold text-slate-400"> / 100</span>
             </div>
           </div>
           </div>

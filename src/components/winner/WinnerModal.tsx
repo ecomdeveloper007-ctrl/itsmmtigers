@@ -415,7 +415,7 @@ export const WinnerModal: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-4">
                           <span className="text-[#666666] font-medium">${(item.revenueGenerated ?? 0).toLocaleString()}</span>
-                          <span className="font-black text-[#436320]">{item.finalScoreDisplay} pts</span>
+                          <span className="font-black text-[#436320]">{item.finalScoreDisplay}</span>
                         </div>
                       </div>
                     ))}

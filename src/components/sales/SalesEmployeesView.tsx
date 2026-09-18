@@ -276,7 +276,7 @@ export const SalesEmployeesView: React.FC = () => {
                           {selectedMonth} {selectedYear} ({empRecords.length} entries)
                         </span>
                         <span className="font-black text-sm text-[#101010]">
-                          {avgScore} PTS Avg
+                          Avg Score: {avgScore}
                         </span>
                       </div>
                       <div className="text-right">

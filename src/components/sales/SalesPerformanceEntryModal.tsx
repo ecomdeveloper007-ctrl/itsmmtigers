@@ -682,7 +682,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
                 className="w-full bg-white border border-blue-300 rounded-xl px-3 py-2 text-xs font-bold text-blue-950 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               />
               <div className="flex items-center justify-between text-[10px] text-blue-800 font-semibold">
-                <span>Score: {liveScores.followupScore}/20 pts</span>
+                <span>Score: {liveScores.followupScore}/20</span>
                 <span>Target: {profileConfig.followupTarget}/wk</span>
               </div>
             </div>
@@ -707,7 +707,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
                 className="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 text-xs font-bold text-amber-950 focus:ring-2 focus:ring-amber-500 focus:outline-none"
               />
               <div className="flex items-center justify-between text-[10px] text-amber-800 font-semibold">
-                <span>Score: {liveScores.orderValueScore}/30 pts</span>
+                <span>Score: {liveScores.orderValueScore}/30</span>
                 <span>Target: ₹{(profileConfig.orderValueTarget || 100000).toLocaleString('en-IN')}/wk</span>
               </div>
             </div>
@@ -721,7 +721,7 @@ export const SalesPerformanceEntryModal: React.FC = () => {
                 Live Performance Score Calculation
               </span>
               <span className="text-base font-black text-[#436320]">
-                {liveScores.totalPerformanceScore} / 100 pts
+                {liveScores.totalPerformanceScore} / 100
               </span>
             </div>
 

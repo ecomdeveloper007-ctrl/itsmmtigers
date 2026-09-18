@@ -134,7 +134,7 @@ export const PerformanceCharts: React.FC = () => {
       {activeChart === 'score' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs text-[#666666] font-medium">
-            <span>Leaderboard Score Rating (Max 100 Pts)</span>
+            <span>Leaderboard Score Rating (Max 100)</span>
             <span>Excellence Threshold: 90+</span>
           </div>
 
@@ -216,7 +216,7 @@ export const PerformanceCharts: React.FC = () => {
               <div className="flex items-center justify-between border-b border-[#e2ebd9] pb-2">
                 <div>
                   <h4 className="font-bold text-[#101010] text-xs">{member.userName}</h4>
-                  <p className="text-[10px] text-[#666666]">Rank #{member.rank} • {member.finalScoreDisplay} pts</p>
+                  <p className="text-[10px] text-[#666666]">Rank #{member.rank} • Score {member.finalScoreDisplay}</p>
                 </div>
                 <span className="text-xs font-black text-[#436320]">
                   {member.achievementPercentage.toFixed(0)}% Avg
@@ -234,7 +234,7 @@ export const PerformanceCharts: React.FC = () => {
                     <div className="flex justify-between text-[10px]">
                       <span className="text-[#666666] font-medium">{kpi.kpiName}</span>
                       <span className="font-bold text-[#101010]">
-                        {kpi.achievementPercentage.toFixed(0)}% ({kpi.score.toFixed(2)} pts)
+                        {kpi.achievementPercentage.toFixed(0)}% ({kpi.score.toFixed(2)})
                       </span>
                     </div>
                     <div className="w-full h-1.5 bg-[#f5f5f5] rounded-full overflow-hidden">

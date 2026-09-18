@@ -271,7 +271,7 @@ export const SalesPerformanceView: React.FC = () => {
                         {rec.conversionRate}%
                       </div>
                       <div className="text-[10px] text-emerald-700 font-bold">
-                        {rec.conversionScore ?? rec.orderConvertScore}/50 pts ({rec.conversions ?? rec.orderConvert} ord)
+                        {rec.conversionScore ?? rec.orderConvertScore}/50 ({rec.conversions ?? rec.orderConvert} ord)
                       </div>
                     </td>
 
@@ -280,7 +280,7 @@ export const SalesPerformanceView: React.FC = () => {
                         {rec.followups ?? rec.followupSent}
                       </div>
                       <div className="text-[10px] text-blue-700 font-medium">
-                        {rec.followupsScore ?? rec.followupScore}/20 pts
+                        {rec.followupsScore ?? rec.followupScore}/20
                       </div>
                     </td>
 
@@ -289,7 +289,7 @@ export const SalesPerformanceView: React.FC = () => {
                         ${(rec.orderValue || 0).toLocaleString()}
                       </div>
                       <div className="text-[10px] text-amber-700 font-medium">
-                        {rec.orderValueScore ?? 0}/30 pts
+                        {rec.orderValueScore ?? 0}/30
                       </div>
                     </td>
 
@@ -297,7 +297,7 @@ export const SalesPerformanceView: React.FC = () => {
                       <span className="font-black text-base text-[#101010]">
                         {rec.totalPerformanceScore}
                       </span>
-                      <span className="text-[10px] text-[#598327] font-bold block">/ 100 PTS</span>
+                      <span className="text-[10px] text-[#598327] font-bold block">/ 100</span>
                     </td>
 
                     <td className="p-4 text-right">
@@ -423,7 +423,7 @@ export const SalesPerformanceView: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[10px] text-[#777777] block">Score</span>
-                  <span className="font-black text-[#101010]">{deletingRecord.totalPerformanceScore} pts</span>
+                  <span className="font-black text-[#101010]">{deletingRecord.totalPerformanceScore}</span>
                 </div>
               </div>
             </div>

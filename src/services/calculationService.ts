@@ -913,6 +913,7 @@ export function calculateLeaderboard(
     winner: activeWinner,
     top3: activeTop3,
     teamStats: activeStats,
+    averageScore: activeStats.avgTeamScore.toFixed(2),
     itTeamStats,
     smmTeamStats,
     itRankings: itSummaries,

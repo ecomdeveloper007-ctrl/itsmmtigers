@@ -223,7 +223,7 @@ export const SalesEmployeeDetailModal: React.FC = () => {
 
                     <div className="flex items-center gap-2.5">
                       <span className="text-sm font-black text-[#436320]">
-                        Score: {rec.totalPerformanceScore}/100 pts
+                        Score: {rec.totalPerformanceScore}/100
                       </span>
                       {canUserManageRecord(rec, currentUser, salesEmployees, canEditRecord || canDeleteRecord) && (
                         <>

@@ -231,7 +231,7 @@ export const SalesLeaderboardView: React.FC = () => {
                         {item.conversionRate}%
                       </div>
                       <div className="text-[10px] text-emerald-700 font-bold">
-                        {item.conversionScore ?? item.orderConvertScore} / 50 pts ({item.conversions ?? item.orderConvert} ord)
+                        {item.conversionScore ?? item.orderConvertScore} / 50 ({item.conversions ?? item.orderConvert} ord)
                       </div>
                     </td>
 
@@ -241,7 +241,7 @@ export const SalesLeaderboardView: React.FC = () => {
                         {item.followups ?? item.followupSent}
                       </div>
                       <div className="text-[10px] text-blue-700 font-medium">
-                        {item.followupsScore ?? item.followupScore} / 20 pts
+                        {item.followupsScore ?? item.followupScore} / 20
                       </div>
                     </td>
 
@@ -251,7 +251,7 @@ export const SalesLeaderboardView: React.FC = () => {
                         ${(item.orderValue || 0).toLocaleString()}
                       </div>
                       <div className="text-[10px] text-amber-700 font-medium">
-                        {item.orderValueScore ?? 0} / 30 pts
+                        {item.orderValueScore ?? 0} / 30
                       </div>
                     </td>
 
@@ -260,7 +260,7 @@ export const SalesLeaderboardView: React.FC = () => {
                       <span className="font-black text-base text-[#101010]">
                         {item.totalPerformanceScore}
                       </span>
-                      <span className="text-[10px] text-[#598327] font-bold block">/ 100 PTS</span>
+                      <span className="text-[10px] text-[#598327] font-bold block">/ 100</span>
                     </td>
 
                     {/* Reward */}

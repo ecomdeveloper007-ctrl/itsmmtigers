@@ -174,7 +174,7 @@ export const SalesProfilePerformanceView: React.FC = () => {
                   <span className="font-bold text-[#101010]">1. Total Reachout</span>
                   <div className="text-right">
                     <span className="font-black text-[#101010]">{summary.avgReachout}</span>
-                    <span className="text-[#666666]"> / {config.reachoutTarget} ({config.reachoutWeight} pts)</span>
+                    <span className="text-[#666666]"> / {config.reachoutTarget} (Weight: {config.reachoutWeight})</span>
                   </div>
                 </div>
 
@@ -183,7 +183,7 @@ export const SalesProfilePerformanceView: React.FC = () => {
                   <span className="font-bold text-[#101010]">2. Order Convert</span>
                   <div className="text-right">
                     <span className="font-black text-[#436320]">{summary.avgOrders}</span>
-                    <span className="text-[#666666]"> / {config.orderConvertTarget} ({config.orderConvertWeight} pts)</span>
+                    <span className="text-[#666666]"> / {config.orderConvertTarget} (Weight: {config.orderConvertWeight})</span>
                   </div>
                 </div>
 
@@ -192,7 +192,7 @@ export const SalesProfilePerformanceView: React.FC = () => {
                   <span className="font-bold text-[#101010]">3. Repeat Orders</span>
                   <div className="text-right">
                     <span className="font-black text-[#101010]">{summary.avgRepeatOrders}</span>
-                    <span className="text-[#666666]"> / {config.repeatOrdersTarget} ({config.repeatOrdersWeight} pts)</span>
+                    <span className="text-[#666666]"> / {config.repeatOrdersTarget} (Weight: {config.repeatOrdersWeight})</span>
                   </div>
                 </div>
 
@@ -201,7 +201,7 @@ export const SalesProfilePerformanceView: React.FC = () => {
                   <span className="font-bold text-[#101010]">4. Follow-up Sent</span>
                   <div className="text-right">
                     <span className="font-black text-[#101010]">{summary.avgFollowups}</span>
-                    <span className="text-[#666666]"> / {config.followupTarget} ({config.followupWeight} pts)</span>
+                    <span className="text-[#666666]"> / {config.followupTarget} (Weight: {config.followupWeight})</span>
                   </div>
                 </div>
               </div>

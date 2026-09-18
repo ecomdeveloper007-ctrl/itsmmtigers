@@ -474,7 +474,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ onSelectMemb
 
               <div className="text-right">
                 <div className="text-xl font-black text-[#101010]">{member.finalScoreDisplay}</div>
-                <div className="text-[10px] text-[#888888] font-bold">/ 100 PTS</div>
+                <div className="text-[10px] text-[#888888] font-bold">/ 100</div>
               </div>
             </div>
 

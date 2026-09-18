@@ -1258,7 +1258,7 @@ export const KPISettings: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-emerald-700 uppercase mb-1">
-                    Excellent Cutoff (PTS)
+                    Excellent Cutoff
                   </label>
                   <input
                     type="number"
@@ -1277,7 +1277,7 @@ export const KPISettings: React.FC = () => {
 
                 <div>
                   <label className="block text-[10px] font-bold text-blue-700 uppercase mb-1">
-                    Very Good Cutoff (PTS)
+                    Very Good Cutoff
                   </label>
                   <input
                     type="number"
@@ -1296,7 +1296,7 @@ export const KPISettings: React.FC = () => {
 
                 <div>
                   <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1">
-                    Good Cutoff (PTS)
+                    Good Cutoff
                   </label>
                   <input
                     type="number"

@@ -118,7 +118,7 @@ export const TeamComparisonCard: React.FC = () => {
               </div>
             </div>
             <span className="px-2.5 py-1 rounded-full text-xs font-black bg-blue-50 text-blue-700 border border-blue-200">
-              Avg: {itScore.toFixed(2)} pts
+              Avg: {itScore.toFixed(2)}
             </span>
           </div>
 
@@ -173,7 +173,7 @@ export const TeamComparisonCard: React.FC = () => {
               </div>
             </div>
             <span className="px-2.5 py-1 rounded-full text-xs font-black bg-purple-50 text-purple-700 border border-purple-200">
-              Avg: {smmScore.toFixed(2)} pts
+              Avg: {smmScore.toFixed(2)}
             </span>
           </div>
 

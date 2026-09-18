@@ -180,7 +180,7 @@ export const MemberDashboard: React.FC = () => {
             <span className="text-3xl font-black text-[#101010]">
               {summary?.finalScoreDisplay || '0.00'}
             </span>
-            <span className="text-xs font-bold text-[#888888]">/ 100 PTS</span>
+            <span className="text-xs font-bold text-[#888888]">/ 100</span>
           </div>
           <p className="text-[11px] text-[#666666] font-medium">Calculated across 6 KPI weights</p>
         </div>
@@ -258,7 +258,7 @@ export const MemberDashboard: React.FC = () => {
             <div className="flex justify-between text-[11px] text-[#666666] font-medium">
               <span>Progress: {summary?.breakdown?.['kpi_revenue']?.achievementPercentage?.toFixed(1) || '0.0'}%</span>
               <span className="text-[#436320] font-black">
-                Score: {summary?.breakdown?.['kpi_revenue']?.score?.toFixed(2) || '0.00'} / 30 pts
+                Score: {summary?.breakdown?.['kpi_revenue']?.score?.toFixed(2) || '0.00'} / 30
               </span>
             </div>
           </div>
@@ -285,7 +285,7 @@ export const MemberDashboard: React.FC = () => {
             <div className="flex justify-between text-[11px] text-[#666666] font-medium">
               <span>Progress: {summary?.breakdown?.['kpi_projects']?.achievementPercentage?.toFixed(1) || '0.0'}%</span>
               <span className="text-blue-700 font-black">
-                Score: {summary?.breakdown?.['kpi_projects']?.score?.toFixed(2) || '0.00'} / 20 pts
+                Score: {summary?.breakdown?.['kpi_projects']?.score?.toFixed(2) || '0.00'} / 20
               </span>
             </div>
           </div>
@@ -312,7 +312,7 @@ export const MemberDashboard: React.FC = () => {
             <div className="flex justify-between text-[11px] text-[#666666] font-medium">
               <span>Progress: {summary?.breakdown?.['kpi_upsells']?.achievementPercentage?.toFixed(1) || '0.0'}%</span>
               <span className="text-purple-700 font-black">
-                Score: {summary?.breakdown?.['kpi_upsells']?.score?.toFixed(2) || '0.00'} / 15 pts
+                Score: {summary?.breakdown?.['kpi_upsells']?.score?.toFixed(2) || '0.00'} / 15
               </span>
             </div>
           </div>
@@ -339,7 +339,7 @@ export const MemberDashboard: React.FC = () => {
             <div className="flex justify-between text-[11px] text-[#666666] font-medium">
               <span>Progress: {summary?.breakdown?.['kpi_rating']?.achievementPercentage?.toFixed(1) || '0.0'}%</span>
               <span className="text-amber-600 font-black">
-                Score: {summary?.breakdown?.['kpi_rating']?.score?.toFixed(2) || '0.00'} / 10 pts
+                Score: {summary?.breakdown?.['kpi_rating']?.score?.toFixed(2) || '0.00'} / 10
               </span>
             </div>
           </div>
@@ -366,7 +366,7 @@ export const MemberDashboard: React.FC = () => {
             <div className="flex justify-between text-[11px] text-[#666666] font-medium">
               <span>Progress: {summary?.breakdown?.['kpi_followup']?.achievementPercentage?.toFixed(1) || '0.0'}%</span>
               <span className="text-indigo-700 font-black">
-                Score: {summary?.breakdown?.['kpi_followup']?.score?.toFixed(2) || '0.00'} / 10 pts
+                Score: {summary?.breakdown?.['kpi_followup']?.score?.toFixed(2) || '0.00'} / 10
               </span>
             </div>
           </div>
@@ -393,7 +393,7 @@ export const MemberDashboard: React.FC = () => {
             <div className="flex justify-between text-[11px] text-[#666666] font-medium">
               <span>Progress: {summary?.breakdown?.['kpi_repeat']?.achievementPercentage?.toFixed(1) || '0.0'}%</span>
               <span className="text-emerald-700 font-black">
-                Score: {summary?.breakdown?.['kpi_repeat']?.score?.toFixed(2) || '0.00'} / 15 pts
+                Score: {summary?.breakdown?.['kpi_repeat']?.score?.toFixed(2) || '0.00'} / 15
               </span>
             </div>
           </div>

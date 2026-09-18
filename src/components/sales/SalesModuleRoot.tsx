@@ -14,10 +14,6 @@ import { SalesReportsView } from './SalesReportsView';
 import { SalesSettingsView } from './SalesSettingsView';
 import { SalesAuditLogsView } from './SalesAuditLogsView';
 import { SalesMyPerformanceView } from './SalesMyPerformanceView';
-import { SalesPerformanceEntryModal } from './SalesPerformanceEntryModal';
-import { SalesEmployeeModal } from './SalesEmployeeModal';
-import { SalesEmployeeDetailModal } from './SalesEmployeeDetailModal';
-import { SalesImportExportModal } from './SalesImportExportModal';
 
 const SALES_TAB_SECTION_MAP: Record<SalesTab, string> = {
   'sales-dashboard': 'sales.dashboard',
@@ -80,16 +76,6 @@ export const SalesModuleRoot: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* Global Sales Modals */}
-      <SalesPerformanceEntryModal />
-      {(hasPermission('sales.members', 'create') || hasPermission('sales.members', 'edit')) && (
-        <SalesEmployeeModal />
-      )}
-      <SalesEmployeeDetailModal />
-      {(hasPermission('sales.import_export', 'import') || hasPermission('sales.import_export', 'export')) && (
-        <SalesImportExportModal />
-      )}
     </div>
   );
 };

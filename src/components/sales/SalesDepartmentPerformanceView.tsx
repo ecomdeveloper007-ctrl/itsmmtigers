@@ -127,7 +127,7 @@ export const SalesDepartmentPerformanceView: React.FC = () => {
                     <span className="text-[#666666] ml-2">({p.employeeCount} reps)</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-black text-[#101010]">{p.avgScore} pts</span>
+                    <span className="font-black text-[#101010]">{p.avgScore}</span>
                     <span className="text-[#598327] font-bold ml-2">({p.avgConversionRate}%)</span>
                   </div>
                 </div>
@@ -221,7 +221,7 @@ export const SalesDepartmentPerformanceView: React.FC = () => {
                     <span className="text-[#666666] ml-2">({p.employeeCount} reps)</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-black text-[#101010]">{p.avgScore} pts</span>
+                    <span className="font-black text-[#101010]">{p.avgScore}</span>
                     <span className="text-[#598327] font-bold ml-2">({p.avgConversionRate}%)</span>
                   </div>
                 </div>

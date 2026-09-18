@@ -29,7 +29,6 @@ import {
   Search,
   Filter,
   CheckCircle2,
-  Clock,
   ArrowUpRight,
   ExternalLink,
   Target,
@@ -61,7 +60,6 @@ export const SalesDashboard: React.FC = () => {
     salesEmployees,
     salesSettings,
     salesRecords,
-    auditLogs,
     itDepartmentSummary,
     smmDepartmentSummary,
   } = useSales();
@@ -136,8 +134,6 @@ export const SalesDashboard: React.FC = () => {
     const emp = salesEmployees.find((e) => e.id === empId);
     if (emp) setSelectedEmployeeForDetail(emp);
   };
-
-  const recentAuditLogs = auditLogs.slice(0, 4);
 
   return (
     <div className="space-y-6">
@@ -627,7 +623,7 @@ export const SalesDashboard: React.FC = () => {
               #{myRank || 1} <span className="text-xs font-normal text-[#666666]">of {items.length}</span>
             </div>
             <div className="text-[10px] text-[#598327] font-bold">
-              {myRank === 1 ? 'Current Winner!' : `${winner ? `${Math.max(0, Number((winner.totalPerformanceScore - myAvgScore).toFixed(1)))} pts behind #1` : 'Active Competitor'}`}
+              {myRank === 1 ? 'Current Winner!' : `${winner ? `${Math.max(0, Number((winner.totalPerformanceScore - myAvgScore).toFixed(1)))} behind #1` : 'Active Competitor'}`}
             </div>
           </div>
 
@@ -921,7 +917,7 @@ export const SalesDashboard: React.FC = () => {
               </div>
               <div>
                 <span className="text-[10px] text-[#777777] block">Avg Score</span>
-                <span className="font-black text-[#101010] text-sm">{itDepartmentSummary?.avgScore ?? 0} pts</span>
+                <span className="font-black text-[#101010] text-sm">{itDepartmentSummary?.avgScore ?? 0}</span>
               </div>
             </div>
           </div>
@@ -954,71 +950,9 @@ export const SalesDashboard: React.FC = () => {
               </div>
               <div>
                 <span className="text-[10px] text-[#777777] block">Avg Score</span>
-                <span className="font-black text-[#101010] text-sm">{smmDepartmentSummary?.avgScore ?? 0} pts</span>
+                <span className="font-black text-[#101010] text-sm">{smmDepartmentSummary?.avgScore ?? 0}</span>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* 7. AUDIT LOGS QUICK ACCESS SECTION */}
-      {canAccessAuditLogs && (
-        <div className="bg-white rounded-3xl border border-[#e2ebd9] p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center border border-rose-200">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-[#101010] tracking-tight">
-                  Sales Module Audit Logs & Compliance Trail
-                </h3>
-                <p className="text-xs text-[#666666]">
-                  Restricted to Super Admin only. Records member creations, performance updates, and config changes.
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setSalesActiveTab('sales-audit')}
-              className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all"
-            >
-              <span>View Full Audit Logs ({auditLogs.length})</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Quick List of Recent Audit Logs */}
-          <div className="divide-y divide-[#f0f4ec] rounded-2xl border border-[#e2ebd9] overflow-hidden">
-            {recentAuditLogs.length > 0 ? (
-              recentAuditLogs.map((log) => (
-                <div key={log.id} className="p-3.5 bg-[#f8faf6] hover:bg-white transition-colors flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-white border border-[#e2ebd9] text-[#436320]">
-                      {log.actionCategory || 'Sales'}
-                    </span>
-                    <div>
-                      <p className="text-xs font-bold text-[#101010]">{log.action}</p>
-                      <p className="text-[11px] text-[#666666]">{log.details}</p>
-                    </div>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <span className="text-[10px] text-[#777777] block flex items-center gap-1 justify-end">
-                      <Clock className="w-3 h-3 text-[#999999]" />
-                      {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <span className="text-[10px] font-bold text-[#555555] block">
-                      by {log.userName || 'Super Admin'}
-                    </span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="p-6 text-center text-xs text-[#777777]">
-                No audit log activities recorded yet.
-              </div>
-            )}
           </div>
         </div>
       )}

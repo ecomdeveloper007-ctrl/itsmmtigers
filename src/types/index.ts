@@ -352,6 +352,7 @@ export interface LeaderboardData {
   winner?: MemberPerformanceSummary;
   top3: MemberPerformanceSummary[];
   teamStats: TeamStatsSummary;
+  averageScore?: string;
   itTeamStats?: TeamStatsSummary;
   smmTeamStats?: TeamStatsSummary;
   itRankings?: MemberPerformanceSummary[];
