@@ -35,7 +35,7 @@ export const SalesLeaderboardView: React.FC = () => {
     salesSettings,
   } = useSales();
 
-  const { selectedMonth, selectedYear } = useApp();
+  const { selectedMonth, selectedYear, openWinnerModal } = useApp();
 
   const items = salesLeaderboardData.items;
 
@@ -66,6 +66,14 @@ export const SalesLeaderboardView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <button
+            id="btn-announce-sales-winner"
+            onClick={() => openWinnerModal('sales')}
+            className="px-4 py-2.5 rounded-2xl bg-white hover:bg-[#f3f8ef] text-[#3d591d] font-black text-xs border border-[#8cc540]/40 transition-all flex items-center gap-2 shadow-xs cursor-pointer hover:border-[#8cc540]"
+          >
+            <Crown className="w-4 h-4 text-amber-500" />
+            <span>Announce Winner</span>
+          </button>
           <button
             onClick={() => openSalesEntryModal()}
             className="px-4 py-2.5 rounded-2xl bg-[#8cc540] hover:bg-[#7db734] text-[#101010] font-black text-xs shadow-md shadow-[#8cc540]/30 transition-all flex items-center gap-2 cursor-pointer"
@@ -139,6 +147,108 @@ export const SalesLeaderboardView: React.FC = () => {
           </select>
         </div>
       </div>
+
+      {/* Sales Winner Announcement Spotlight */}
+      {salesLeaderboardData.winner && (
+        <div className="relative rounded-3xl bg-gradient-to-b from-[#f3f8ef] via-white to-white border-2 border-[#8cc540] p-6 sm:p-7 shadow-sm overflow-hidden">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-[#e2ebd9]">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-[#8cc540]/20 text-[#436320] border border-[#8cc540]/40">
+                  <Trophy className="w-4 h-4" />
+                </span>
+                <h2 className="text-sm font-black uppercase tracking-wider text-[#101010]">
+                  Sales Winner Announcement
+                </h2>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#f3f8ef] text-[#436320] border border-[#8cc540]/40 uppercase">
+                  {selectedWeek === 'all'
+                    ? `${selectedMonth} ${selectedYear}`
+                    : `${selectedWeek} • ${selectedMonth} ${selectedYear}`}
+                </span>
+              </div>
+              <p className="text-xs text-[#666666] mt-0.5">
+                Calculated using verified Sales performance: 50% Conv. Rate • 20% Follow-ups • 30% Order Value
+              </p>
+            </div>
+
+            <button
+              onClick={() => openWinnerModal('sales')}
+              className="px-3.5 py-1.5 rounded-xl text-xs font-black text-[#3d591d] bg-[#f3f8ef] hover:bg-[#8cc540]/20 border border-[#8cc540]/40 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Celebrate & Podium</span>
+            </button>
+          </div>
+
+          {/* Champion Profile & Key Sales Metrics */}
+          <div className="pt-5 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-5 w-full md:w-auto">
+              <div className="relative shrink-0">
+                <img
+                  src={
+                    salesLeaderboardData.winner.avatarUrl ||
+                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+                  }
+                  alt={salesLeaderboardData.winner.employeeName}
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-[#8cc540] shadow-sm"
+                />
+                <span className="absolute -bottom-2 -right-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-[#101010] shadow-xs uppercase">
+                  🥇 Rank 1
+                </span>
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-black text-[#101010] truncate">
+                    {salesLeaderboardData.winner.employeeName}
+                  </h3>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-[#f3f8ef] text-[#436320] border border-[#8cc540]/30">
+                    {salesLeaderboardData.winner.performanceBand}
+                  </span>
+                </div>
+                <p className="text-xs text-[#666666] font-medium mt-0.5">
+                  {salesLeaderboardData.winner.department} Sales • Profile{' '}
+                  <strong className="text-[#101010]">{salesLeaderboardData.winner.profileCode}</strong>
+                </p>
+                <div className="flex items-baseline gap-1 mt-1.5">
+                  <span className="text-2xl sm:text-3xl font-black text-[#101010]">
+                    {salesLeaderboardData.winner.totalPerformanceScore}%
+                  </span>
+                  <span className="text-xs text-[#888888] font-bold">/ 100 Sales Score</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Metric Badges */}
+            <div className="grid grid-cols-3 gap-3 w-full md:w-auto text-center text-xs">
+              <div className="p-3 rounded-2xl bg-[#f8faf6] border border-[#e2ebd9]">
+                <span className="text-[10px] text-[#666666] font-bold uppercase block">
+                  Conv. Rate (50%)
+                </span>
+                <span className="text-base font-black text-[#101010]">
+                  {salesLeaderboardData.winner.conversionRate}%
+                </span>
+              </div>
+              <div className="p-3 rounded-2xl bg-[#f8faf6] border border-[#e2ebd9]">
+                <span className="text-[10px] text-[#666666] font-bold uppercase block">
+                  Follow-ups (20%)
+                </span>
+                <span className="text-base font-black text-[#101010]">
+                  {salesLeaderboardData.winner.followups}
+                </span>
+              </div>
+              <div className="p-3 rounded-2xl bg-[#f8faf6] border border-[#e2ebd9]">
+                <span className="text-[10px] text-[#666666] font-bold uppercase block">
+                  Order Value (30%)
+                </span>
+                <span className="text-base font-black text-[#101010]">
+                  {salesSettings.currencySymbol || '₹'}
+                  {salesLeaderboardData.winner.orderValue.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Leaderboard Table */}
       <div className="bg-white rounded-3xl border border-[#e2ebd9] shadow-xs overflow-hidden">

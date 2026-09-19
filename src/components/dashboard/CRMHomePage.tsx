@@ -224,7 +224,7 @@ export const CRMHomePage: React.FC = () => {
               {isAdmin && (
                 <button
                   id="hero-btn-announce-winner"
-                  onClick={openWinnerModal}
+                  onClick={() => openWinnerModal('pm')}
                   className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white text-[#3d591d] border border-[#8cc540]/40 hover:bg-[#8cc540]/10 flex items-center gap-2 cursor-pointer transition-all shadow-xs transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Crown className="w-4 h-4 text-amber-500" />
@@ -550,7 +550,7 @@ export const CRMHomePage: React.FC = () => {
 
             {isAdmin && (
               <button
-                onClick={openWinnerModal}
+                onClick={() => openWinnerModal('pm')}
                 className="px-3 py-1.5 rounded-lg text-xs font-bold text-[#3d591d] bg-[#f3f8ef] hover:bg-[#8cc540]/20 border border-[#8cc540]/30 transition-all cursor-pointer"
               >
                 🏆 Celebrate

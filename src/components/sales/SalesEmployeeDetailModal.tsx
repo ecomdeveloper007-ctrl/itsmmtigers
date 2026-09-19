@@ -28,6 +28,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { SalesProfileCode } from '../../types/sales';
+import { MultiModulePerformanceCard } from '../common/MultiModulePerformanceCard';
 
 export const SalesEmployeeDetailModal: React.FC = () => {
   const {
@@ -183,6 +184,9 @@ export const SalesEmployeeDetailModal: React.FC = () => {
 
         {/* Scrollable Content Body */}
         <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-6">
+          {/* Dual-Module Performance Overview (If working across both PM & Sales) */}
+          <MultiModulePerformanceCard salesEmployee={emp} />
+
           <div className="flex items-center justify-between">
             <h3 className="text-base font-black text-[#101010] flex items-center gap-2">
               <Calendar className="w-4 h-4 text-[#598327]" />

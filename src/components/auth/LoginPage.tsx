@@ -29,7 +29,6 @@ import {
   Clock,
   Camera,
   Upload,
-  Briefcase,
   Users,
   TrendingUp,
   Layers,
@@ -220,12 +219,6 @@ export const LoginPage: React.FC = () => {
               >
                 Our Platform
               </button>
-              <button
-                onClick={() => scrollToSection('features')}
-                className="hover:text-[#101010] transition-colors cursor-pointer"
-              >
-                Features
-              </button>
             </nav>
 
             {/* Right: Prominent Login Button with original green/dark styling */}
@@ -263,12 +256,6 @@ export const LoginPage: React.FC = () => {
                 className="w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold text-[#101010] hover:bg-[#f3f8ef]"
               >
                 Our Platform
-              </button>
-              <button
-                onClick={() => scrollToSection('features')}
-                className="w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold text-[#101010] hover:bg-[#f3f8ef]"
-              >
-                Features
               </button>
             </div>
           )}
@@ -825,170 +812,6 @@ export const LoginPage: React.FC = () => {
             </div>
           </div>
         </section>
-
-        {/* =========================================================================
-            5. FEATURE SECTION (Prompt Requirement #6)
-           ========================================================================= */}
-        <section id="features" className="bg-white border-t border-[#e4ece0] py-16 sm:py-24 scroll-mt-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto space-y-3 mb-16">
-              <span className="text-xs font-black text-[#436320] uppercase tracking-widest bg-[#f3f8ef] px-3 py-1 rounded-full border border-[#8cc540]/30">
-                Platform Capabilities
-              </span>
-              <h2 className="text-3xl sm:text-4xl font-black text-[#101010] tracking-tight">
-                Designed for High-Velocity Modern Teams
-              </h2>
-              <p className="text-sm sm:text-base text-[#555555] font-medium">
-                Explore the six pillars engineered to streamline workflows and energize team dedication.
-              </p>
-            </div>
-
-            {/* 6 Attractive Feature Cards (Prompt Requirement #6) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Card 1: Sales Performance */}
-              <div className="p-7 rounded-3xl bg-[#f3f8ef]/60 border border-[#e4ece0] shadow-sm hover:shadow-xl hover:border-[#8cc540] hover:-translate-y-1 transition-all duration-300 space-y-4 group">
-                <div className="w-12 h-12 rounded-2xl bg-white border border-[#e4ece0] text-[#101010] flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
-                  <TrendingUp className="w-6 h-6 text-[#8cc540]" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-[#101010]">Sales Performance</h3>
-                  <p className="text-xs text-[#555555] font-medium mt-1.5 leading-relaxed">
-                    Track, analyze and grow revenue with data-driven insights. Monitor daily logs, deal tiers, and closing velocity.
-                  </p>
-                </div>
-                <div className="pt-2 text-[11px] font-black text-[#436320] flex items-center gap-1">
-                  <span>Revenue Analytics</span>
-                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform text-[#8cc540]" />
-                </div>
-              </div>
-
-              {/* Card 2: Project Management */}
-              <div className="p-7 rounded-3xl bg-[#f3f8ef]/60 border border-[#e4ece0] shadow-sm hover:shadow-xl hover:border-[#8cc540] hover:-translate-y-1 transition-all duration-300 space-y-4 group">
-                <div className="w-12 h-12 rounded-2xl bg-[#101010] text-[#8cc540] flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
-                  <Briefcase className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-[#101010]">Project Management</h3>
-                  <p className="text-xs text-[#555555] font-medium mt-1.5 leading-relaxed">
-                    Manage projects, track progress and achieve team goals. Coordinate deliverables with complete operational clarity.
-                  </p>
-                </div>
-                <div className="pt-2 text-[11px] font-black text-[#101010] flex items-center gap-1">
-                  <span>Workflow Alignment</span>
-                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform text-[#8cc540]" />
-                </div>
-              </div>
-
-              {/* Card 3: KPI & Targets */}
-              <div className="p-7 rounded-3xl bg-[#f3f8ef]/60 border border-[#e4ece0] shadow-sm hover:shadow-xl hover:border-[#8cc540] hover:-translate-y-1 transition-all duration-300 space-y-4 group">
-                <div className="w-12 h-12 rounded-2xl bg-white border border-[#e4ece0] text-[#101010] flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
-                  <Target className="w-6 h-6 text-[#8cc540]" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-[#101010]">KPI & Targets</h3>
-                  <p className="text-xs text-[#555555] font-medium mt-1.5 leading-relaxed">
-                    Set goals, measure performance and stay on track. Automated scoring matrices translate effort into transparent evaluation.
-                  </p>
-                </div>
-                <div className="pt-2 text-[11px] font-black text-[#436320] flex items-center gap-1">
-                  <span>Weighted Scoring</span>
-                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform text-[#8cc540]" />
-                </div>
-              </div>
-
-              {/* Card 4: Rewards & Recognition */}
-              <div className="p-7 rounded-3xl bg-[#f3f8ef]/60 border border-[#e4ece0] shadow-sm hover:shadow-xl hover:border-[#8cc540] hover:-translate-y-1 transition-all duration-300 space-y-4 group">
-                <div className="w-12 h-12 rounded-2xl bg-[#fef3c7] border border-amber-200 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
-                  <Award className="w-6 h-6 text-amber-500" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-[#101010]">Rewards & Recognition</h3>
-                  <p className="text-xs text-[#555555] font-medium mt-1.5 leading-relaxed">
-                    Celebrate achievements and motivate your team. Crown weekly champions and reward milestone excellence openly.
-                  </p>
-                </div>
-                <div className="pt-2 text-[11px] font-black text-amber-600 flex items-center gap-1">
-                  <span>Podium Celebrations</span>
-                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform text-[#8cc540]" />
-                </div>
-              </div>
-
-              {/* Card 5: Team Collaboration */}
-              <div className="p-7 rounded-3xl bg-[#f3f8ef]/60 border border-[#e4ece0] shadow-sm hover:shadow-xl hover:border-[#8cc540] hover:-translate-y-1 transition-all duration-300 space-y-4 group">
-                <div className="w-12 h-12 rounded-2xl bg-white border border-[#e4ece0] text-[#101010] flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
-                  <Users className="w-6 h-6 text-[#8cc540]" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-[#101010]">Team Collaboration</h3>
-                  <p className="text-xs text-[#555555] font-medium mt-1.5 leading-relaxed">
-                    Work together, stay aligned and build stronger teams. Connect engineering, management, and sales seamlessly.
-                  </p>
-                </div>
-                <div className="pt-2 text-[11px] font-black text-[#436320] flex items-center gap-1">
-                  <span>Cross-Department Synergy</span>
-                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform text-[#8cc540]" />
-                </div>
-              </div>
-
-              {/* Card 6: Reports & Insights */}
-              <div className="p-7 rounded-3xl bg-[#f3f8ef]/60 border border-[#e4ece0] shadow-sm hover:shadow-xl hover:border-[#8cc540] hover:-translate-y-1 transition-all duration-300 space-y-4 group">
-                <div className="w-12 h-12 rounded-2xl bg-[#101010] text-[#8cc540] flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
-                  <BarChart3 className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-[#101010]">Reports & Insights</h3>
-                  <p className="text-xs text-[#555555] font-medium mt-1.5 leading-relaxed">
-                    Get detailed reports to make better business decisions. Export performance audit histories and executive summaries.
-                  </p>
-                </div>
-                <div className="pt-2 text-[11px] font-black text-[#101010] flex items-center gap-1">
-                  <span>Executive Summaries</span>
-                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform text-[#8cc540]" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* =========================================================================
-            8. INSPIRATIONAL CTA (Prompt Requirement #10)
-           ========================================================================= */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-          <div className="rounded-3xl bg-[#101010] text-white p-8 sm:p-14 text-center space-y-6 relative overflow-hidden border border-[#242424] shadow-2xl">
-            {/* Ambient Background Accents using brand green #8cc540 */}
-            <div className="absolute top-0 right-0 w-96 h-96 bg-[#8cc540]/15 rounded-full blur-3xl pointer-events-none"></div>
-            <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#8cc540]/10 rounded-full blur-3xl pointer-events-none"></div>
-
-            <div className="relative z-10 max-w-2xl mx-auto space-y-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#181818] border border-[#8cc540]/40 text-[#8cc540] text-xs font-black">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Ready to Elevate Your Team?</span>
-              </span>
-
-              {/* Headline (Prompt Requirement #10) */}
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">
-                Build a Stronger Team.<br />
-                <span className="text-[#8cc540]">Create a Brighter Tomorrow.</span>
-              </h2>
-
-              {/* Supporting Text (Prompt Requirement #10) */}
-              <p className="text-sm sm:text-base text-slate-300 font-medium">
-                Bring performance, goals, collaboration and recognition together in one platform.
-              </p>
-
-              {/* Button: Login to Your Dashboard → (Prompt Requirement #10) */}
-              <div className="pt-4">
-                <button
-                  onClick={() => scrollToLogin('signin')}
-                  className="px-8 py-3.5 rounded-2xl bg-[#8cc540] hover:bg-[#74a831] text-[#101010] text-base font-black shadow-xl shadow-[#8cc540]/25 transition-all inline-flex items-center gap-2.5 transform hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
-                >
-                  <span>Login to Your Dashboard</span>
-                  <ArrowRight className="w-5 h-5 text-[#101010]" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
 
       {/* =========================================================================
@@ -1028,10 +851,10 @@ export const LoginPage: React.FC = () => {
                   </li>
                   <li>
                     <button
-                      onClick={() => scrollToSection('features')}
+                      onClick={() => scrollToSection('platform')}
                       className="hover:text-[#8cc540] transition-colors cursor-pointer"
                     >
-                      Features
+                      Our Platform
                     </button>
                   </li>
                 </ul>

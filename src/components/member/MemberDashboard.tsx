@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { PerformanceRecord } from '../../types';
 import { EditProfileModal } from '../common/EditProfileModal';
+import { MultiModulePerformanceCard } from '../common/MultiModulePerformanceCard';
 
 export const MemberDashboard: React.FC = () => {
   const { currentUser, isSuperAdmin } = useAuth();
@@ -136,6 +137,9 @@ export const MemberDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Cross-Module Performance Tracker (For members with roles/records in PM & Sales) */}
+      <MultiModulePerformanceCard user={currentUser} />
 
       {/* Main Scorecard / KPI Summary Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

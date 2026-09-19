@@ -50,7 +50,9 @@ interface AppContextType {
 
   // Winner modal
   isWinnerModalOpen: boolean;
-  openWinnerModal: () => void;
+  winnerModalModule: 'pm' | 'sales';
+  setWinnerModalModule: (module: 'pm' | 'sales') => void;
+  openWinnerModal: (targetModule?: 'pm' | 'sales') => void;
   closeWinnerModal: () => void;
 
   // Modals & Navigation
@@ -109,6 +111,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [activeModule, setActiveModule] = useState<'pm' | 'sales'>('pm');
   const [activeTab, setActiveTab] = useState<'dashboard' | 'leaderboard' | 'my-performance' | 'admin-data' | 'user-management' | 'period-management' | 'kpi-settings' | 'audit-logs' | 'reports'>('dashboard');
   const [isWinnerModalOpen, setIsWinnerModalOpen] = useState<boolean>(false);
+  const [winnerModalModule, setWinnerModalModule] = useState<'pm' | 'sales'>('pm');
   const [isDataEntryModalOpen, setIsDataEntryModalOpen] = useState<boolean>(false);
   const [editingRecord, setEditingRecord] = useState<PerformanceRecord | null>(null);
   const [targetPeriodIdForEntry, setTargetPeriodIdForEntry] = useState<string | null>(null);
@@ -255,7 +258,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Actions
-  const openWinnerModal = () => setIsWinnerModalOpen(true);
+  const openWinnerModal = (targetModule?: 'pm' | 'sales') => {
+    if (targetModule) {
+      setWinnerModalModule(targetModule);
+    } else {
+      setWinnerModalModule(activeModule);
+    }
+    setIsWinnerModalOpen(true);
+  };
   const closeWinnerModal = () => setIsWinnerModalOpen(false);
 
   const openDataEntryModal = (record?: PerformanceRecord, periodId?: string) => {
@@ -501,6 +511,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         availableMonths,
         availableYears,
         isWinnerModalOpen,
+        winnerModalModule,
+        setWinnerModalModule,
         openWinnerModal,
         closeWinnerModal,
         activeModule,

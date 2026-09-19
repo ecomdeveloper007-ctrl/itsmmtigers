@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useSales } from '../../context/SalesContext';
 import confetti from 'canvas-confetti';
+import { SalesWinnerSection } from './SalesWinnerSection';
 import {
   Trophy,
   Crown,
@@ -16,12 +18,15 @@ import {
   Repeat,
   Flame,
   Award,
+  Layers,
 } from 'lucide-react';
 
 export const WinnerModal: React.FC = () => {
   const {
     isWinnerModalOpen,
     closeWinnerModal,
+    winnerModalModule,
+    setWinnerModalModule,
     leaderboardData,
     itLeaderboardData,
     smmLeaderboardData,
@@ -88,27 +93,60 @@ export const WinnerModal: React.FC = () => {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex-shrink-0 relative flex items-center justify-between p-4 sm:p-6 border-b border-[#e2ebd9] bg-[#f8faf6] z-10 print:hidden">
-          <div className="flex items-center gap-2">
+        <div className="flex-shrink-0 relative flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 border-b border-[#e2ebd9] bg-[#f8faf6] z-10 gap-3 print:hidden">
+          <div className="flex items-center gap-2.5">
             <span className="p-2 rounded-xl bg-[#8cc540]/20 text-[#436320] border border-[#8cc540]/40">
               <Trophy className="w-5 h-5 animate-bounce" />
             </span>
             <div>
-              <h2 className="text-sm font-black uppercase tracking-wider text-[#101010]">
-                IT SMM Tigers Recognition
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-black uppercase tracking-wider text-[#101010]">
+                  IT SMM Tigers Recognition
+                </h2>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-white text-[#436320] border border-[#e2ebd9]">
+                  {winnerModalModule === 'sales' ? 'Sales Module' : 'PM Module'}
+                </span>
+              </div>
               <p className="text-xs text-[#666666] font-medium">
                 Official Performance Winner & Podium Announcement
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Module Selector Switcher in Modal Header */}
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            <div className="inline-flex items-center p-1 rounded-xl bg-[#eaeaea] border border-[#d8d8d8]">
+              <button
+                type="button"
+                onClick={() => setWinnerModalModule('sales')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  winnerModalModule === 'sales'
+                    ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                    : 'text-[#666666] hover:text-[#101010]'
+                }`}
+              >
+                <Briefcase className="w-3.5 h-3.5" />
+                <span>Sales Winner</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setWinnerModalModule('pm')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  winnerModalModule === 'pm'
+                    ? 'bg-[#8cc540] text-[#101010] shadow-xs'
+                    : 'text-[#666666] hover:text-[#101010]'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>PM Winner</span>
+              </button>
+            </div>
+
             <button
               onClick={handlePrint}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-white hover:bg-[#f0f0f0] text-[#101010] border border-[#e2ebd9] transition-colors cursor-pointer"
             >
-              <Printer className="w-4 h-4" /> Print / PDF
+              <Printer className="w-4 h-4" /> <span className="hidden md:inline">Print / PDF</span>
             </button>
             <button
               onClick={closeWinnerModal}
@@ -121,59 +159,63 @@ export const WinnerModal: React.FC = () => {
 
         {/* Modal Body Content */}
         <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-8 space-y-6 sm:space-y-8 print:p-6 print:text-black print:overflow-visible">
-          {/* Headline Banner */}
-          <div className="text-center space-y-2">
-            <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-[#f3f8ef] border border-[#8cc540]/50 text-[#436320] text-xs font-black tracking-widest uppercase">
-              <Sparkles className="w-3.5 h-3.5" />
-              REWARDS & RECOGNITION
-              <Sparkles className="w-3.5 h-3.5" />
-            </div>
+          {winnerModalModule === 'sales' ? (
+            <SalesWinnerSection />
+          ) : (
+            <>
+              {/* Headline Banner */}
+              <div className="text-center space-y-2">
+                <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-[#f3f8ef] border border-[#8cc540]/50 text-[#436320] text-xs font-black tracking-widest uppercase">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  REWARDS & RECOGNITION
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
 
-            <h1 className="text-2xl sm:text-4xl font-black text-[#101010] uppercase tracking-tight">
-              {activeWinnerDivision === 'it'
-                ? 'IT TEAM CHAMPION'
-                : activeWinnerDivision === 'smm'
-                ? 'SMM TEAM CHAMPION'
-                : 'WINNER OF THE MONTH'}
-            </h1>
-            <p className="text-sm text-[#666666] font-semibold">
-              Performance Period: <strong className="text-[#101010]">{selectedMonth} {selectedYear}</strong>
-            </p>
+                <h1 className="text-2xl sm:text-4xl font-black text-[#101010] uppercase tracking-tight">
+                  {activeWinnerDivision === 'it'
+                    ? 'IT TEAM CHAMPION'
+                    : activeWinnerDivision === 'smm'
+                    ? 'SMM TEAM CHAMPION'
+                    : 'WINNER OF THE MONTH'}
+                </h1>
+                <p className="text-sm text-[#666666] font-semibold">
+                  Performance Period: <strong className="text-[#101010]">{selectedMonth} {selectedYear}</strong>
+                </p>
 
-            {/* Division Switching Buttons */}
-            <div className="flex items-center justify-center gap-2 pt-2 print:hidden">
-              <button
-                onClick={() => setActiveWinnerDivision('active')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                  activeWinnerDivision === 'active'
-                    ? 'bg-[#8cc540] text-[#101010] shadow-sm'
-                    : 'bg-[#f5f5f5] text-[#666666] hover:text-[#101010] border border-[#e2ebd9]'
-                }`}
-              >
-                🌟 Overall Winner
-              </button>
-              <button
-                onClick={() => setActiveWinnerDivision('it')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                  activeWinnerDivision === 'it'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-[#f5f5f5] text-[#666666] hover:text-[#101010] border border-[#e2ebd9]'
-                }`}
-              >
-                💻 IT Team Winner
-              </button>
-              <button
-                onClick={() => setActiveWinnerDivision('smm')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                  activeWinnerDivision === 'smm'
-                    ? 'bg-purple-600 text-white shadow-sm'
-                    : 'bg-[#f5f5f5] text-[#666666] hover:text-[#101010] border border-[#e2ebd9]'
-                }`}
-              >
-                📱 SMM Team Winner
-              </button>
-            </div>
-          </div>
+                {/* Division Switching Buttons */}
+                <div className="flex items-center justify-center gap-2 pt-2 print:hidden">
+                  <button
+                    onClick={() => setActiveWinnerDivision('active')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      activeWinnerDivision === 'active'
+                        ? 'bg-[#8cc540] text-[#101010] shadow-sm'
+                        : 'bg-[#f5f5f5] text-[#666666] hover:text-[#101010] border border-[#e2ebd9]'
+                    }`}
+                  >
+                    🌟 Overall Winner
+                  </button>
+                  <button
+                    onClick={() => setActiveWinnerDivision('it')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      activeWinnerDivision === 'it'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-[#f5f5f5] text-[#666666] hover:text-[#101010] border border-[#e2ebd9]'
+                    }`}
+                  >
+                    💻 IT Team Winner
+                  </button>
+                  <button
+                    onClick={() => setActiveWinnerDivision('smm')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      activeWinnerDivision === 'smm'
+                        ? 'bg-purple-600 text-white shadow-sm'
+                        : 'bg-[#f5f5f5] text-[#666666] hover:text-[#101010] border border-[#e2ebd9]'
+                    }`}
+                  >
+                    📱 SMM Team Winner
+                  </button>
+                </div>
+              </div>
 
           {winner ? (
             <>
@@ -436,6 +478,8 @@ export const WinnerModal: React.FC = () => {
               Generated automatically by the <strong className="text-[#101010]">IT SMM Tigers Platform</strong> based on verified KPI weights & targets.
             </p>
           </div>
+            </>
+          )}
         </div>
       </div>
     </div>

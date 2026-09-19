@@ -34,6 +34,7 @@ import {
   UploadCloud,
   Layers,
   KeyRound,
+  Crown,
 } from 'lucide-react';
 import { usePermissions } from '../../context/PermissionContext';
 import { EditProfileModal } from './EditProfileModal';
@@ -338,11 +339,22 @@ export const Header: React.FC = () => {
             {/* Announce Winner Button for PM Admins & Super Admins */}
             {activeModule === 'pm' && isAdmin && (
               <button
-                onClick={openWinnerModal}
+                onClick={() => openWinnerModal('pm')}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] text-[#101010] shadow-md shadow-[#8cc540]/30 transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
               >
                 <Trophy className="w-4 h-4 text-[#101010] animate-bounce" />
                 <span>🏆 Announce Winner</span>
+              </button>
+            )}
+
+            {/* Announce Winner Button for Sales Admins & Super Admins */}
+            {activeModule === 'sales' && isAdmin && (
+              <button
+                onClick={() => openWinnerModal('sales')}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black bg-[#8cc540] hover:bg-[#7db734] text-[#101010] shadow-md shadow-[#8cc540]/30 transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                <Trophy className="w-4 h-4 text-[#101010] animate-bounce" />
+                <span>🏆 Announce Sales Winner</span>
               </button>
             )}
 
@@ -1326,6 +1338,18 @@ export const Header: React.FC = () => {
                     >
                       <Trophy className="w-4 h-4 text-amber-500" />
                       <span>Leaderboard</span>
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button
+                      onClick={() => {
+                        openWinnerModal('sales');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="p-2.5 rounded-xl text-left text-xs font-black flex items-center gap-2 bg-[#f3f8ef] text-[#2d4317] border border-[#8cc540]/30 hover:bg-[#8cc540]/20"
+                    >
+                      <Crown className="w-4 h-4 text-amber-500" />
+                      <span>Sales Winner</span>
                     </button>
                   )}
                 </div>

@@ -1,6 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  getFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 // Initialize Firebase App instance
@@ -9,24 +14,41 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 // Initialize Auth
 export const auth = getAuth(app);
 
-// Initialize Firestore with specific database ID as mandated by Firebase skill
-const databaseId = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
-  ? firebaseConfig.firestoreDatabaseId
-  : undefined;
+// Initialize Firestore with specific database ID as mandated by Firebase configuration
+const databaseId =
+  firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
+    ? firebaseConfig.firestoreDatabaseId
+    : undefined;
 
-export const db = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
-
-// Validate Connection to Firestore as required by Firebase skill
-async function testConnection() {
+// Configure Firestore with long-polling transport and persistent cache to ensure reliable connectivity
+// across iframes, proxies, and restricted network environments
+function createFirestoreInstance() {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firestore operating in offline/cached mode:', error.message);
+    return initializeFirestore(
+      app,
+      {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
+        experimentalForceLongPolling: true,
+      },
+      databaseId
+    );
+  } catch {
+    try {
+      return initializeFirestore(
+        app,
+        {
+          experimentalForceLongPolling: true,
+        },
+        databaseId
+      );
+    } catch {
+      return databaseId ? getFirestore(app, databaseId) : getFirestore(app);
     }
   }
 }
 
-testConnection();
+export const db = createFirestoreInstance();
 
 export default app;
