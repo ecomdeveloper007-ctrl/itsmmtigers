@@ -11,7 +11,7 @@ import {
   SalesProfileSummary,
   SalesAuditLog,
 } from '../types/sales';
-import { SalesDataService, INITIAL_SALES_EMPLOYEES } from '../services/salesDataService';
+import { SalesDataService } from '../services/salesDataService';
 import {
   DEFAULT_SALES_SETTINGS,
   calculateSalesLeaderboard,

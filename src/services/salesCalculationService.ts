@@ -971,7 +971,7 @@ export function calculateSalesLeaderboard(
   });
 
   const top3 = filtered.slice(0, 3);
-  const winner = filtered.length > 0 ? filtered[0] : undefined;
+  const winner = filtered.length > 0 && filtered[0].totalPerformanceScore > 0 ? filtered[0] : undefined;
 
   return {
     items: filtered,

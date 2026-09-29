@@ -42,136 +42,9 @@ const SALES_LS_KEYS = {
 };
 
 /**
- * Initial Seed Sales Employees (with multi-profile assignments support)
+ * Initial Sales Employees (Clean Slate - Database is Single Source of Truth)
  */
-export const INITIAL_SALES_EMPLOYEES: SalesEmployee[] = [
-  // IT Team - PR Profile
-  {
-    id: 'sales_emp_1',
-    name: 'Rahul Sharma',
-    email: 'rahul.sharma@itsmmtigers.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    department: 'IT',
-    profileCode: 'PR',
-    assignedProfiles: ['PR', 'WR'],
-    joiningDate: '2024-02-10',
-    status: 'active',
-    createdAt: '2024-02-10T00:00:00.000Z',
-    updatedAt: '2026-08-01T00:00:00.000Z',
-  },
-  {
-    id: 'sales_emp_2',
-    name: 'Anjali Patel',
-    email: 'anjali.patel@itsmmtigers.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
-    department: 'IT',
-    profileCode: 'PR',
-    assignedProfiles: ['PR'],
-    joiningDate: '2024-04-15',
-    status: 'active',
-    createdAt: '2024-04-15T00:00:00.000Z',
-    updatedAt: '2026-08-01T00:00:00.000Z',
-  },
-
-  // IT Team - WR Profile
-  {
-    id: 'sales_emp_3',
-    name: 'Vikram Verma',
-    email: 'vikram.verma@itsmmtigers.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    department: 'IT',
-    profileCode: 'WR',
-    assignedProfiles: ['WR', 'HW'],
-    joiningDate: '2024-05-01',
-    status: 'active',
-    createdAt: '2024-05-01T00:00:00.000Z',
-    updatedAt: '2026-08-01T00:00:00.000Z',
-  },
-  {
-    id: 'sales_emp_4',
-    name: 'Sneha Kapoor',
-    email: 'sneha.kapoor@itsmmtigers.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    department: 'IT',
-    profileCode: 'WR',
-    assignedProfiles: ['WR'],
-    joiningDate: '2024-06-20',
-    status: 'active',
-    createdAt: '2024-06-20T00:00:00.000Z',
-    updatedAt: '2026-08-01T00:00:00.000Z',
-  },
-
-  // IT Team - HW Profile
-  {
-    id: 'sales_emp_5',
-    name: 'Amit Kumar',
-    email: 'amit.kumar@itsmmtigers.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    department: 'IT',
-    profileCode: 'HW',
-    assignedProfiles: ['HW', 'PR', 'WR'],
-    joiningDate: '2024-07-01',
-    status: 'active',
-    createdAt: '2024-07-01T00:00:00.000Z',
-    updatedAt: '2026-08-01T00:00:00.000Z',
-  },
-
-  // SMM Team - DR Profile
-  {
-    id: 'sales_emp_6',
-    name: 'Divya Nair',
-    email: 'divya.nair@itsmmtigers.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    department: 'SMM',
-    profileCode: 'DR',
-    assignedProfiles: ['DR', 'RR'],
-    joiningDate: '2024-03-01',
-    status: 'active',
-    createdAt: '2024-03-01T00:00:00.000Z',
-    updatedAt: '2026-08-01T00:00:00.000Z',
-  },
-  {
-    id: 'sales_emp_7',
-    name: 'Rohan Mehta',
-    email: 'rohan.mehta@itsmmtigers.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-    department: 'SMM',
-    profileCode: 'DR',
-    assignedProfiles: ['DR'],
-    joiningDate: '2024-08-01',
-    status: 'active',
-    createdAt: '2024-08-01T00:00:00.000Z',
-    updatedAt: '2026-08-01T00:00:00.000Z',
-  },
-
-  // SMM Team - RR Profile
-  {
-    id: 'sales_emp_8',
-    name: 'Pooja Joshi',
-    email: 'pooja.joshi@itsmmtigers.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    department: 'SMM',
-    profileCode: 'RR',
-    assignedProfiles: ['RR', 'DR'],
-    joiningDate: '2024-01-15',
-    status: 'active',
-    createdAt: '2024-01-15T00:00:00.000Z',
-    updatedAt: '2026-08-01T00:00:00.000Z',
-  },
-  {
-    id: 'sales_emp_9',
-    name: 'Priya Singh',
-    email: 'priya.singh@itsmmtigers.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-    department: 'SMM',
-    profileCode: 'RR',
-    assignedProfiles: ['RR'],
-    joiningDate: '2024-06-01',
-    status: 'active',
-    createdAt: '2024-06-01T00:00:00.000Z',
-    updatedAt: '2026-08-01T00:00:00.000Z',
-  },
-];
+export const INITIAL_SALES_EMPLOYEES: SalesEmployee[] = [];
 
 /**
  * LocalStorage Helpers
@@ -217,120 +90,20 @@ function sanitizeForFirestore<T>(data: T): T {
 }
 
 /**
- * Generate initial weekly sample performance records
+ * Clean records generator - Never generates dummy records
  */
 function generateInitialRecords(): SalesPerformanceRecord[] {
-  const settings = DEFAULT_SALES_SETTINGS;
-  const records: SalesPerformanceRecord[] = [];
-
-  // Seed weekly data for Week 1 (Sep 1 - Sep 7)
-  const week1Inputs = [
-    { empId: 'sales_emp_1', name: 'Rahul Sharma', code: 'PR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachouts: 210, conversions: 22, followups: 105, orderValue: 110000, remarks: 'Strong enterprise pipeline closed.' },
-    { empId: 'sales_emp_1', name: 'Rahul Sharma', code: 'WR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachouts: 160, conversions: 14, followups: 82, orderValue: 85000, remarks: 'Web architecture contracts.' },
-    { empId: 'sales_emp_2', name: 'Anjali Patel', code: 'PR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachouts: 190, conversions: 18, followups: 95, orderValue: 95000, remarks: 'Consistent product solutions delivery.' },
-    { empId: 'sales_emp_3', name: 'Vikram Verma', code: 'WR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachouts: 175, conversions: 17, followups: 90, orderValue: 88000, remarks: 'Full stack development closures.' },
-    { empId: 'sales_emp_4', name: 'Sneha Kapoor', code: 'WR' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachouts: 165, conversions: 15, followups: 85, orderValue: 80000, remarks: 'Frontend proposal renewals.' },
-    { empId: 'sales_emp_5', name: 'Amit Kumar', code: 'HW' as SalesProfileCode, dept: 'IT' as SalesDepartment, reachouts: 145, conversions: 15, followups: 78, orderValue: 130000, remarks: 'High value cloud infrastructure deal.' },
-    { empId: 'sales_emp_6', name: 'Divya Nair', code: 'DR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachouts: 260, conversions: 28, followups: 125, orderValue: 82000, remarks: 'Paid ad campaign acquisition boost.' },
-    { empId: 'sales_emp_7', name: 'Rohan Mehta', code: 'DR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachouts: 230, conversions: 21, followups: 105, orderValue: 72000, remarks: 'Direct response sales stable.' },
-    { empId: 'sales_emp_8', name: 'Pooja Joshi', code: 'RR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachouts: 220, conversions: 23, followups: 110, orderValue: 160000, remarks: 'Social retainer contract extensions.' },
-    { empId: 'sales_emp_9', name: 'Priya Singh', code: 'RR' as SalesProfileCode, dept: 'SMM' as SalesDepartment, reachouts: 200, conversions: 19, followups: 100, orderValue: 145000, remarks: 'Brand retainer additions.' },
-  ];
-
-  week1Inputs.forEach((inp) => {
-    records.push(
-      computeCompleteSalesRecord(
-        {
-          id: `sales_rec_${inp.empId}_${inp.code}_Week_1_September_2026`,
-          employeeId: inp.empId,
-          employeeName: inp.name,
-          department: inp.dept,
-          profileCode: inp.code,
-          week: 'Week 1',
-          weekStartDate: '2026-09-01',
-          weekEndDate: '2026-09-07',
-          month: 'September',
-          year: 2026,
-          reachouts: inp.reachouts,
-          conversions: inp.conversions,
-          followups: inp.followups,
-          orderValue: inp.orderValue,
-          managerRemarks: inp.remarks,
-          submittedBy: 'Admin',
-        },
-        settings
-      )
-    );
-  });
-
-  return records;
+  return [];
 }
 
 export class SalesDataService {
   /**
-   * Initialize Sales Data store
+   * Initialize Sales Data store - strictly respects existing database records.
+   * Never seeds fake employees, dummy records, or synthetic data.
    */
   static async initializeSalesStore(): Promise<void> {
     try {
-      const isInitialized = localStorage.getItem(SALES_LS_KEYS.INITIALIZED);
-      const deletedEmp = getFromStorage<string[]>(SALES_LS_KEYS.DELETED_EMPLOYEES, []);
-
-      if (!isInitialized) {
-        const storedEmployees = getFromStorage<SalesEmployee[] | null>(SALES_LS_KEYS.EMPLOYEES, null);
-        if (!storedEmployees || storedEmployees.length === 0) {
-          const freshEmployees = INITIAL_SALES_EMPLOYEES.filter(
-            (e) => !deletedEmp.includes(e.id) && !deletedEmp.includes(e.name.toLowerCase())
-          );
-          saveToStorage(SALES_LS_KEYS.EMPLOYEES, freshEmployees);
-        }
-
-        const storedRecords = getFromStorage<SalesPerformanceRecord[] | null>(SALES_LS_KEYS.RECORDS, null);
-        if (!storedRecords || storedRecords.length === 0) {
-          saveToStorage(SALES_LS_KEYS.RECORDS, generateInitialRecords());
-        }
-
-        const storedSettings = getFromStorage<SalesRewardSettings | null>(SALES_LS_KEYS.SETTINGS, null);
-        if (!storedSettings) {
-          saveToStorage(SALES_LS_KEYS.SETTINGS, DEFAULT_SALES_SETTINGS);
-        }
-
-        localStorage.setItem(SALES_LS_KEYS.INITIALIZED, 'true');
-      }
-
-      // Sync with Firestore if connected
-      if (db) {
-        try {
-          const initMarkerSnap = await getDoc(doc(db, 'sales_settings', 'system_init_marker'));
-          if (!initMarkerSnap.exists()) {
-            const empSnap = await getDocs(collection(db, 'sales_employees'));
-            if (empSnap.empty && deletedEmp.length === 0) {
-              for (const emp of INITIAL_SALES_EMPLOYEES) {
-                await setDoc(doc(db, 'sales_employees', emp.id), emp);
-              }
-            }
-
-            const settingsSnap = await getDoc(doc(db, 'sales_settings', 'global_config'));
-            if (!settingsSnap.exists()) {
-              await setDoc(doc(db, 'sales_settings', 'global_config'), DEFAULT_SALES_SETTINGS);
-            }
-
-            const recSnap = await getDocs(collection(db, 'sales_records'));
-            if (recSnap.empty && deletedEmp.length === 0) {
-              const initialRecs = generateInitialRecords();
-              for (const rec of initialRecs) {
-                await setDoc(doc(db, 'sales_records', rec.id), rec);
-              }
-            }
-
-            await setDoc(doc(db, 'sales_settings', 'system_init_marker'), {
-              initializedAt: new Date().toISOString(),
-              version: '3.0',
-            });
-          }
-        } catch (fsErr) {
-          console.warn('Firestore sales initialization warning (using local fallback):', fsErr);
-        }
-      }
+      localStorage.setItem(SALES_LS_KEYS.INITIALIZED, 'true');
     } catch (e) {
       console.warn('Error during sales data initialization:', e);
     }
@@ -374,6 +147,9 @@ export class SalesDataService {
             .filter((e) => !isDeleted(e));
           saveToStorage(SALES_LS_KEYS.EMPLOYEES, items);
           return items;
+        } else {
+          saveToStorage(SALES_LS_KEYS.EMPLOYEES, []);
+          return [];
         }
       }
     } catch (e) {
@@ -680,7 +456,6 @@ export class SalesDataService {
       return deletedEmp.includes(empId) || deletedEmp.includes(empName);
     };
 
-    const local = getFromStorage<SalesPerformanceRecord[]>(SALES_LS_KEYS.RECORDS, []);
     try {
       if (db) {
         const snap = await getDocs(collection(db, 'sales_records'));
@@ -695,28 +470,17 @@ export class SalesDataService {
             })
             .filter((r) => !isRecordDeleted(r));
 
-          // Merge Firestore items with local items, avoiding deleted records
-          const recordMap = new Map<string, SalesPerformanceRecord>();
-          firestoreItems.forEach((r) => {
-            const key = (r.id || '').trim().toLowerCase();
-            if (key && !deletedLower.includes(key)) {
-              recordMap.set(key, r);
-            }
-          });
-          local.forEach((r) => {
-            const key = (r.id || '').trim().toLowerCase();
-            if (key && !deletedLower.includes(key) && !recordMap.has(key)) {
-              recordMap.set(key, r);
-            }
-          });
-          const merged = Array.from(recordMap.values());
-          saveToStorage(SALES_LS_KEYS.RECORDS, merged);
-          return merged;
+          saveToStorage(SALES_LS_KEYS.RECORDS, firestoreItems);
+          return firestoreItems;
+        } else {
+          saveToStorage(SALES_LS_KEYS.RECORDS, []);
+          return [];
         }
       }
     } catch (e) {
       console.warn('Firestore fetch records failed, fallback to local storage:', e);
     }
+    const local = getFromStorage<SalesPerformanceRecord[]>(SALES_LS_KEYS.RECORDS, []);
     return local.filter((r) => !isRecordDeleted(r));
   }
 
@@ -1113,70 +877,15 @@ export class SalesDataService {
           logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
           saveToStorage(SALES_LS_KEYS.AUDIT_LOGS, logs);
           return logs;
+        } else {
+          saveToStorage(SALES_LS_KEYS.AUDIT_LOGS, []);
+          return [];
         }
       }
     } catch (e) {
-      console.warn('Firestore fetch audit logs failed:', e);
+      console.warn('Firestore fetch audit logs failed, fallback to local storage:', e);
     }
     const local = getFromStorage<SalesAuditLog[]>(SALES_LS_KEYS.AUDIT_LOGS, []);
-    if (local.length === 0) {
-      // Seed initial high-quality audit logs
-      const seedLogs: SalesAuditLog[] = [
-        {
-          id: 'audit_init_1',
-          timestamp: new Date(Date.now() - 3600000 * 24).toISOString(),
-          module: 'Sales',
-          action: 'UPDATE_SALES_SETTINGS',
-          actionCategory: 'configuration',
-          recordType: 'Target & Reward Configuration',
-          entityType: 'settings',
-          entityId: 'global_config',
-          userId: 'admin_1',
-          userName: 'Super Admin',
-          userRole: 'super_admin',
-          ipAddress: '192.168.1.10 (Admin Web Console)',
-          source: 'UI',
-          status: 'Success',
-          details: 'Super Admin configured profile-specific targets and reward slabs for PR, WR, HW, DR, RR profiles.',
-        },
-        {
-          id: 'audit_init_2',
-          timestamp: new Date(Date.now() - 3600000 * 12).toISOString(),
-          module: 'Sales',
-          action: 'ASSIGN_PROFILE',
-          actionCategory: 'member',
-          recordType: 'Sales Member Profile Assignment',
-          entityType: 'employee',
-          entityId: 'emp_pr_1',
-          userId: 'admin_1',
-          userName: 'Super Admin',
-          userRole: 'super_admin',
-          ipAddress: '192.168.1.10 (Admin Web Console)',
-          source: 'UI',
-          status: 'Success',
-          details: 'Super Admin assigned PR and WR profiles to Sales Member Rahul Sharma.',
-        },
-        {
-          id: 'audit_init_3',
-          timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
-          module: 'Sales',
-          action: 'CREATE_PERFORMANCE_RECORD',
-          actionCategory: 'performance',
-          recordType: 'Performance Record (Daily)',
-          entityType: 'record',
-          entityId: 'sales_rec_daily_init',
-          userId: 'emp_pr_1',
-          userName: 'Rahul Sharma',
-          userRole: 'sales_member',
-          ipAddress: '127.0.0.1 (Web UI)',
-          source: 'UI',
-          status: 'Success',
-          details: 'Rahul Sharma entered Daily performance for PR (Reachouts: 45, Conversions: 6, Follow-ups: 22, Value: ₹30,000, Score: 84/100)',
-        },
-      ];
-      saveToStorage(SALES_LS_KEYS.AUDIT_LOGS, seedLogs);
-      return seedLogs;
-    }
     return local.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
 
@@ -1275,7 +984,7 @@ export class SalesDataService {
         },
         (error) => {
           console.warn('Real-time sales employees subscription warning:', error);
-          const cached = getFromStorage<SalesEmployee[]>(SALES_LS_KEYS.EMPLOYEES, INITIAL_SALES_EMPLOYEES);
+          const cached = getFromStorage<SalesEmployee[]>(SALES_LS_KEYS.EMPLOYEES, []);
           callback(cached);
         }
       );
@@ -1310,23 +1019,8 @@ export class SalesDataService {
               const empName = (r.employeeName || '').toLowerCase();
               return !deletedEmp.includes(empId) && !deletedEmp.includes(empName);
             });
-          const local = getFromStorage<SalesPerformanceRecord[]>(SALES_LS_KEYS.RECORDS, []);
-          const recordMap = new Map<string, SalesPerformanceRecord>();
-          items.forEach((r) => {
-            const key = (r.id || '').trim().toLowerCase();
-            if (key && !deletedLower.includes(key)) {
-              recordMap.set(key, r);
-            }
-          });
-          local.forEach((r) => {
-            const recIdLower = (r.id || '').trim().toLowerCase();
-            if (recIdLower && !deletedLower.includes(recIdLower) && !recordMap.has(recIdLower)) {
-              recordMap.set(recIdLower, r);
-            }
-          });
-          const merged = Array.from(recordMap.values());
-          saveToStorage(SALES_LS_KEYS.RECORDS, merged);
-          callback(merged);
+          saveToStorage(SALES_LS_KEYS.RECORDS, items);
+          callback(items);
         },
         (error) => {
           console.warn('Real-time sales records subscription warning:', error);

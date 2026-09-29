@@ -878,8 +878,10 @@ export function calculateLeaderboard(
   // Compute comprehensive Month-End Revenue Breakdown with -20% platform charge
   const revenueSummary = calculateMonthEndRevenueSummary(sortedAll);
 
-  const itWinner = itSummaries.length > 0 ? itSummaries[0] : undefined;
-  const smmWinner = smmSummaries.length > 0 ? smmSummaries[0] : undefined;
+  const hasSubmissions = (m?: MemberPerformanceSummary) => Boolean(m && m.weeksSubmitted > 0 && m.finalScore > 0);
+
+  const itWinner = hasSubmissions(itSummaries[0]) ? itSummaries[0] : undefined;
+  const smmWinner = hasSubmissions(smmSummaries[0]) ? smmSummaries[0] : undefined;
 
   // Choose the active dataset based on filterTeam
   let activeRankings: MemberPerformanceSummary[];
@@ -900,7 +902,7 @@ export function calculateLeaderboard(
   } else {
     activeRankings = sortedAll;
     activeStats = overallTeamStats;
-    activeWinner = sortedAll.length > 0 ? sortedAll[0] : undefined;
+    activeWinner = hasSubmissions(sortedAll[0]) ? sortedAll[0] : undefined;
     activeTop3 = sortedAll.slice(0, 3);
   }
 

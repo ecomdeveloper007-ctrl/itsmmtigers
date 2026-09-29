@@ -48,7 +48,7 @@ export const WinnerModal: React.FC = () => {
   const { winner, top3, rankings } = currentDataset;
 
   useEffect(() => {
-    if (isWinnerModalOpen) {
+    if (isWinnerModalOpen && winner) {
       // Trigger festive celebration confetti
       const end = Date.now() + 2.5 * 1000;
       const colors = ['#8cc540', '#F59E0B', '#10B981', '#3B82F6', '#EC4899'];
@@ -468,7 +468,8 @@ export const WinnerModal: React.FC = () => {
           ) : (
             <div className="text-center py-12 text-[#666666]">
               <Trophy className="w-12 h-12 mx-auto mb-3 opacity-30 text-[#8cc540]" />
-              <p className="text-sm font-bold">No performance data recorded for this period yet.</p>
+              <p className="text-sm font-bold text-[#101010]">No winner has been announced for this period.</p>
+              <p className="text-xs text-[#888888] mt-1">No performance data has been submitted for this period.</p>
             </div>
           )}
 

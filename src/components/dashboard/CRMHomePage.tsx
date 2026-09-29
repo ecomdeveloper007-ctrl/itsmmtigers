@@ -77,7 +77,7 @@ export const CRMHomePage: React.FC = () => {
 
   // Top performers from existing leaderboard calculations
   const { winner, top3, rankings, averageScore: rawAverageScore, teamStats, revenueSummary } = leaderboardData;
-  const currentChampion = winner || (top3.length > 0 ? top3[0] : undefined);
+  const currentChampion = (winner && winner.weeksSubmitted > 0) ? winner : (top3.length > 0 && top3[0].weeksSubmitted > 0 ? top3[0] : undefined);
 
   // Safely compute Team Average score from leaderboard calculations
   const averageScore = useMemo(() => {

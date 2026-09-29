@@ -40,165 +40,13 @@ const LS_KEYS = {
   AUDIT: 'tiger_audit_v2',
 };
 
-// Initial Seed Users (Only permanent administrator accounts - No dummy team members)
-export const INITIAL_USERS: UserProfile[] = [
-  {
-    uid: 'user_superadmin_prakash',
-    userId: 'prakash.choudhary',
-    name: 'Prakash Choudhary',
-    email: 'prakash.choudhary@coozmoo.com',
-    password: 'Coozmoo@@12',
-    role: 'super_admin',
-    status: 'active',
-    department: 'Leadership & Ops',
-    team: 'Leadership',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    joiningDate: '2024-01-01',
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2026-08-25T00:00:00.000Z',
-  },
-  {
-    uid: 'user_superadmin_ecomdev',
-    userId: 'ecomdeveloper007',
-    name: 'Super Admin Developer',
-    email: 'ecomdeveloper007@gmail.com',
-    password: 'Coozmoo@@12',
-    role: 'super_admin',
-    status: 'active',
-    department: 'Leadership & Ops',
-    team: 'Leadership',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    joiningDate: '2024-01-01',
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2026-08-25T00:00:00.000Z',
-  },
-  {
-    uid: 'user_admin',
-    userId: 'admin',
-    name: 'Ops Admin',
-    email: 'admin@itsmmtigers.com',
-    password: 'tiger2026admin',
-    role: 'admin',
-    status: 'active',
-    department: 'Operations',
-    team: 'Operations',
-    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    joiningDate: '2025-03-15',
-    createdAt: '2025-03-15T00:00:00.000Z',
-    updatedAt: '2026-08-25T00:00:00.000Z',
-  },
-  {
-    uid: 'user_member_kuldeep',
-    userId: 'kuldeep.chouhan',
-    name: 'Kuldeep Singh',
-    email: 'Kuldeep.chouhan@coozmoo.com',
-    password: 'tiger2026',
-    role: 'team_member',
-    status: 'active',
-    department: 'IT Development',
-    team: 'IT',
-    profileCode: 'PR',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    joiningDate: '2025-01-10',
-    createdAt: '2025-01-10T00:00:00.000Z',
-    updatedAt: '2026-08-25T00:00:00.000Z',
-  },
-];
+// Initial User Roster (Clean Slate - Database is Single Source of Truth)
+export const INITIAL_USERS: UserProfile[] = [];
 
-// Initial Performance Periods (August 2026 Week 1-4)
-export const INITIAL_PERIODS: PerformancePeriod[] = [
-  {
-    id: 'period_2026_08_w1',
-    month: 'August',
-    year: 2026,
-    weekName: 'Week 1',
-    weekNumber: 1,
-    startDate: '2026-08-01',
-    endDate: '2026-08-07',
-    status: 'active',
-    createdAt: '2026-08-01T00:00:00.000Z',
-  },
-  {
-    id: 'period_2026_08_w2',
-    month: 'August',
-    year: 2026,
-    weekName: 'Week 2',
-    weekNumber: 2,
-    startDate: '2026-08-08',
-    endDate: '2026-08-14',
-    status: 'active',
-    createdAt: '2026-08-08T00:00:00.000Z',
-  },
-  {
-    id: 'period_2026_08_w3',
-    month: 'August',
-    year: 2026,
-    weekName: 'Week 3',
-    weekNumber: 3,
-    startDate: '2026-08-15',
-    endDate: '2026-08-21',
-    status: 'active',
-    createdAt: '2026-08-15T00:00:00.000Z',
-  },
-  {
-    id: 'period_2026_08_w4',
-    month: 'August',
-    year: 2026,
-    weekName: 'Week 4',
-    weekNumber: 4,
-    startDate: '2026-08-22',
-    endDate: '2026-08-28',
-    status: 'active',
-    createdAt: '2026-08-22T00:00:00.000Z',
-  },
-  // September 2026 Performance Periods (Week 1-4)
-  {
-    id: 'period_2026_09_w1',
-    month: 'September',
-    year: 2026,
-    weekName: 'Week 1',
-    weekNumber: 1,
-    startDate: '2026-09-01',
-    endDate: '2026-09-07',
-    status: 'active',
-    createdAt: '2026-09-01T00:00:00.000Z',
-  },
-  {
-    id: 'period_2026_09_w2',
-    month: 'September',
-    year: 2026,
-    weekName: 'Week 2',
-    weekNumber: 2,
-    startDate: '2026-09-08',
-    endDate: '2026-09-14',
-    status: 'active',
-    createdAt: '2026-09-08T00:00:00.000Z',
-  },
-  {
-    id: 'period_2026_09_w3',
-    month: 'September',
-    year: 2026,
-    weekName: 'Week 3',
-    weekNumber: 3,
-    startDate: '2026-09-15',
-    endDate: '2026-09-21',
-    status: 'active',
-    createdAt: '2026-09-15T00:00:00.000Z',
-  },
-  {
-    id: 'period_2026_09_w4',
-    month: 'September',
-    year: 2026,
-    weekName: 'Week 4',
-    weekNumber: 4,
-    startDate: '2026-09-22',
-    endDate: '2026-09-28',
-    status: 'active',
-    createdAt: '2026-09-22T00:00:00.000Z',
-  },
-];
+// Initial Performance Periods (Clean Slate - Database is Single Source of Truth)
+export const INITIAL_PERIODS: PerformancePeriod[] = [];
 
-export const INITIAL_PERIOD_IDS = new Set(INITIAL_PERIODS.map((p) => p.id.toLowerCase()));
+export const INITIAL_PERIOD_IDS = new Set<string>();
 
 // Initial Performance Records (Clean Slate - No hardcoded dummy data)
 export const INITIAL_RECORDS: PerformanceRecord[] = [];
@@ -239,78 +87,10 @@ export class DataService {
   private static isInitialized = false;
 
   /**
-   * Initialize and seed database if necessary
+   * Initialize data service - Strictly relies on existing database records.
+   * Never seeds fake users, dummy periods, or synthetic records.
    */
   public static async initializeData(): Promise<void> {
-    if (this.isInitialized) return;
-
-    try {
-      // Check if firestore has users collection
-      const usersSnap = await getDocs(collection(db, 'users'));
-      if (usersSnap.empty) {
-        // Seed users in firestore
-        for (const user of INITIAL_USERS) {
-          await setDoc(doc(db, 'users', user.uid), user);
-        }
-
-        // Seed KPIs
-        for (const kpi of DEFAULT_KPIS) {
-          await setDoc(doc(db, 'kpiSettings', kpi.id), kpi);
-        }
-
-        // Seed Periods
-        for (const period of INITIAL_PERIODS) {
-          await setDoc(doc(db, 'performancePeriods', period.id), period);
-        }
-
-        // Seed Records
-        for (const rec of INITIAL_RECORDS) {
-          await setDoc(doc(db, 'performanceRecords', rec.id), rec);
-        }
-
-        // Seed Settings
-        await setDoc(doc(db, 'settings', 'global'), DEFAULT_SETTINGS);
-
-        // Seed Audit
-        for (const log of INITIAL_AUDIT_LOGS) {
-          await setDoc(doc(db, 'auditLogs', log.id), log);
-        }
-      }
-    } catch (e) {
-      console.warn('Firestore initial check failed, using local storage cache fallback:', e);
-    }
-
-    // Ensure LocalStorage is populated
-    if (!localStorage.getItem(LS_KEYS.USERS)) {
-      const deletedSet = this.getDeletedUserIds();
-      const initialNonDeleted = INITIAL_USERS.filter(
-        (u) =>
-          !deletedSet.has(u.uid.toLowerCase()) &&
-          !deletedSet.has(u.userId.toLowerCase()) &&
-          !deletedSet.has(u.email.toLowerCase())
-      );
-      saveToStorage(LS_KEYS.USERS, initialNonDeleted);
-    }
-    if (!localStorage.getItem(LS_KEYS.KPIS)) {
-      saveToStorage(LS_KEYS.KPIS, DEFAULT_KPIS);
-    }
-    if (!localStorage.getItem(LS_KEYS.PERIODS)) {
-      saveToStorage(LS_KEYS.PERIODS, INITIAL_PERIODS);
-    }
-    if (!localStorage.getItem(LS_KEYS.RECORDS)) {
-      const deletedRecordSet = this.getDeletedRecordIds();
-      const initialNonDeletedRecords = INITIAL_RECORDS.filter(
-        (r) => !deletedRecordSet.has(r.id.toLowerCase())
-      );
-      saveToStorage(LS_KEYS.RECORDS, initialNonDeletedRecords);
-    }
-    if (!localStorage.getItem(LS_KEYS.SETTINGS)) {
-      saveToStorage(LS_KEYS.SETTINGS, DEFAULT_SETTINGS);
-    }
-    if (!localStorage.getItem(LS_KEYS.AUDIT)) {
-      saveToStorage(LS_KEYS.AUDIT, INITIAL_AUDIT_LOGS);
-    }
-
     this.isInitialized = true;
   }
 
@@ -445,20 +225,12 @@ export class DataService {
 
   public static async getUsers(): Promise<UserProfile[]> {
     const rawList: (Partial<UserProfile> & { uid?: string; userId?: string; email?: string })[] = [];
+    const deletedSet = this.getDeletedUserIds();
 
-    // 1. Read existing local storage users if available
-    const localUsers = getFromStorage<UserProfile[] | null>(LS_KEYS.USERS, null);
-    if (localUsers && Array.isArray(localUsers) && localUsers.length > 0) {
-      rawList.push(...localUsers);
-    } else {
-      rawList.push(...INITIAL_USERS);
-    }
-
-    // 2. Fetch Firestore users
+    // 1. Fetch Firestore users (Primary Source of Truth)
     try {
       const snap = await getDocs(collection(db, 'users'));
       if (!snap.empty) {
-        const deletedSet = this.getDeletedUserIds();
         for (const docSnap of snap.docs) {
           const cloudData = docSnap.data() as Partial<UserProfile>;
           const cloudUser: Partial<UserProfile> = {
@@ -476,14 +248,24 @@ export class DataService {
             rawList.push(cloudUser);
           }
         }
+        const finalUsers = this.consolidateUsers(rawList);
+        saveToStorage(LS_KEYS.USERS, finalUsers);
+        return finalUsers;
+      } else {
+        saveToStorage(LS_KEYS.USERS, []);
+        return [];
       }
     } catch (e) {
       console.warn('Firestore getUsers error, fallback to resilient local cache:', e);
+      // Offline fallback: load cached real users from local storage
+      const localUsers = getFromStorage<UserProfile[]>(LS_KEYS.USERS, []);
+      const nonDeleted = localUsers.filter(
+        (u) =>
+          !deletedSet.has((u.uid || '').toLowerCase()) &&
+          !deletedSet.has((u.userId || '').toLowerCase())
+      );
+      return this.consolidateUsers(nonDeleted);
     }
-
-    const finalUsers = this.consolidateUsers(rawList);
-    saveToStorage(LS_KEYS.USERS, finalUsers);
-    return finalUsers;
   }
 
   public static async saveUser(user: UserProfile, actor: { id: string; name: string; role: UserRole }): Promise<void> {
@@ -1092,53 +874,42 @@ export class DataService {
   }
 
   public static async getPeriods(): Promise<PerformancePeriod[]> {
-    const localPeriods = getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, INITIAL_PERIODS);
     const deletedPeriodIds = this.getDeletedPeriodIds();
     const periodMap = new Map<string, PerformancePeriod>();
 
-    // 1. Baseline initial periods (filtered by deletions)
-    for (const p of INITIAL_PERIODS) {
-      if (!deletedPeriodIds.has(p.id.toLowerCase())) {
-        periodMap.set(p.id, { ...p, isManual: false });
-      }
-    }
-
-    // 2. Local storage periods
-    for (const p of localPeriods) {
-      if (p.id && !deletedPeriodIds.has(p.id.toLowerCase())) {
-        const isManuallyAdded = p.isManual ?? !INITIAL_PERIOD_IDS.has(p.id.toLowerCase());
-        periodMap.set(p.id, { ...p, isManual: isManuallyAdded });
-      }
-    }
-
-    // 3. Firestore periods
+    // 1. Fetch Firestore periods (Primary Source of Truth)
     try {
       const snap = await getDocs(collection(db, 'performancePeriods'));
       if (!snap.empty) {
         for (const docSnap of snap.docs) {
           const cloudPeriod = docSnap.data() as PerformancePeriod;
-          if (cloudPeriod && cloudPeriod.id && !deletedPeriodIds.has(cloudPeriod.id.toLowerCase())) {
-            const isManuallyAdded = cloudPeriod.isManual ?? !INITIAL_PERIOD_IDS.has(cloudPeriod.id.toLowerCase());
-            periodMap.set(cloudPeriod.id, { ...cloudPeriod, isManual: isManuallyAdded });
+          const pid = cloudPeriod.id || docSnap.id;
+          if (pid && !deletedPeriodIds.has(pid.toLowerCase())) {
+            periodMap.set(pid, { ...cloudPeriod, id: pid, isManual: true });
           }
         }
+        const finalPeriods = Array.from(periodMap.values()).sort(
+          (a, b) => b.year - a.year || a.weekNumber - b.weekNumber
+        );
+        saveToStorage(LS_KEYS.PERIODS, finalPeriods);
+        return finalPeriods;
       } else {
-        // Seed firestore with initial periods
-        for (const p of INITIAL_PERIODS) {
-          if (!deletedPeriodIds.has(p.id.toLowerCase())) {
-            await setDoc(doc(db, 'performancePeriods', p.id), { ...p, isManual: false });
-          }
-        }
+        saveToStorage(LS_KEYS.PERIODS, []);
+        return [];
       }
     } catch (e) {
-      console.warn('Firestore getPeriods error:', e);
+      console.warn('Firestore getPeriods error, fallback to resilient local cache:', e);
+      // Offline fallback: load cached real periods from local storage
+      const localPeriods = getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, []);
+      for (const p of localPeriods) {
+        if (p.id && !deletedPeriodIds.has(p.id.toLowerCase())) {
+          periodMap.set(p.id, { ...p, isManual: true });
+        }
+      }
+      return Array.from(periodMap.values()).sort(
+        (a, b) => b.year - a.year || a.weekNumber - b.weekNumber
+      );
     }
-
-    const finalPeriods = Array.from(periodMap.values()).sort(
-      (a, b) => b.year - a.year || a.weekNumber - b.weekNumber
-    );
-    saveToStorage(LS_KEYS.PERIODS, finalPeriods);
-    return finalPeriods;
   }
 
   public static async savePeriod(
@@ -1336,24 +1107,7 @@ export class DataService {
     const rawList: (Partial<PerformanceRecord> & { id?: string })[] = [];
     const deletedSet = this.getDeletedRecordIds();
 
-    // 1. Read existing local storage records
-    const localRecords = getFromStorage<PerformanceRecord[] | null>(LS_KEYS.RECORDS, null);
-    if (localRecords && Array.isArray(localRecords)) {
-      for (const r of localRecords) {
-        if (r && r.id && !deletedSet.has(String(r.id).trim().toLowerCase())) {
-          rawList.push(r);
-        }
-      }
-    } else {
-      // First time initialization: use INITIAL_RECORDS that are not deleted
-      for (const r of INITIAL_RECORDS) {
-        if (!deletedSet.has(r.id.toLowerCase())) {
-          rawList.push(r);
-        }
-      }
-    }
-
-    // 2. Query Firestore records
+    // 1. Query Firestore records (Primary Source of Truth)
     try {
       const snap = await getDocs(collection(db, 'performanceRecords'));
       if (!snap.empty) {
@@ -1373,14 +1127,26 @@ export class DataService {
             });
           }
         }
+        const finalRecords = this.consolidateRecords(rawList);
+        saveToStorage(LS_KEYS.RECORDS, finalRecords);
+        return finalRecords;
+      } else {
+        saveToStorage(LS_KEYS.RECORDS, []);
+        return [];
       }
     } catch (e) {
       console.warn('Firestore getRecords error, fallback to resilient local cache:', e);
+      // Offline fallback: load cached real records from local storage
+      const localRecords = getFromStorage<PerformanceRecord[] | null>(LS_KEYS.RECORDS, null);
+      if (localRecords && Array.isArray(localRecords)) {
+        for (const r of localRecords) {
+          if (r && r.id && !deletedSet.has(String(r.id).trim().toLowerCase())) {
+            rawList.push(r);
+          }
+        }
+      }
+      return this.consolidateRecords(rawList);
     }
-
-    const finalRecords = this.consolidateRecords(rawList);
-    saveToStorage(LS_KEYS.RECORDS, finalRecords);
-    return finalRecords;
   }
 
   /**
@@ -2029,29 +1795,24 @@ export class DataService {
               .filter((p) => p && p.id && !deletedSet.has(p.id.toLowerCase()))
               .map((p) => ({
                 ...p,
-                isManual: p.isManual ?? !INITIAL_PERIOD_IDS.has(p.id.toLowerCase()),
+                isManual: true,
               }));
             const sorted = periods.sort((a, b) => b.year - a.year || a.weekNumber - b.weekNumber);
             saveToStorage(LS_KEYS.PERIODS, sorted);
             callback(sorted);
           } else {
-            const cached = getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, INITIAL_PERIODS)
-              .filter((p) => p && p.id && !deletedSet.has(p.id.toLowerCase()))
-              .map((p) => ({
-                ...p,
-                isManual: p.isManual ?? !INITIAL_PERIOD_IDS.has(p.id.toLowerCase()),
-              }));
-            callback(cached);
+            saveToStorage(LS_KEYS.PERIODS, []);
+            callback([]);
           }
         },
         (error) => {
           console.warn('Real-time periods subscription warning:', error);
           const deletedSet = this.getDeletedPeriodIds();
-          const cached = getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, INITIAL_PERIODS)
+          const cached = getFromStorage<PerformancePeriod[]>(LS_KEYS.PERIODS, [])
             .filter((p) => p && p.id && !deletedSet.has(p.id.toLowerCase()))
             .map((p) => ({
               ...p,
-              isManual: p.isManual ?? !INITIAL_PERIOD_IDS.has(p.id.toLowerCase()),
+              isManual: true,
             }));
           callback(cached);
         }
@@ -2152,18 +1913,17 @@ export class DataService {
                 userId: data.userId || d.id,
               });
             }
+            const consolidated = this.consolidateUsers(rawList);
+            saveToStorage(LS_KEYS.USERS, consolidated);
+            callback(consolidated);
           } else {
-            const cached = getFromStorage<UserProfile[]>(LS_KEYS.USERS, INITIAL_USERS);
-            rawList.push(...cached);
+            saveToStorage(LS_KEYS.USERS, []);
+            callback([]);
           }
-
-          const consolidated = this.consolidateUsers(rawList);
-          saveToStorage(LS_KEYS.USERS, consolidated);
-          callback(consolidated);
         },
         (error) => {
           console.warn('Real-time users subscription warning:', error);
-          const cached = getFromStorage<UserProfile[]>(LS_KEYS.USERS, INITIAL_USERS);
+          const cached = getFromStorage<UserProfile[]>(LS_KEYS.USERS, []);
           const consolidated = this.consolidateUsers(cached);
           callback(consolidated);
         }

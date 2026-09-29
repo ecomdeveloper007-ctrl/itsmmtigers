@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserProfile, UserRole, UserStatus, ProfileCode } from '../types';
-import { DataService, INITIAL_USERS } from '../services/dataService';
+import { DataService } from '../services/dataService';
 import { isUserSuperAdmin } from '../utils/salesAuthUtils';
 
 interface AuthContextType {
@@ -47,7 +47,7 @@ const CURRENT_USER_KEY = 'tiger_current_user_v3';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-  const [allUsers, setAllUsers] = useState<UserProfile[]>(INITIAL_USERS);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const loadUsersAndSession = async () => {
@@ -170,32 +170,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const uNameAlphaNum = uName.replace(/[^a-z0-9]/g, '');
         return uIdAlphaNum === cleanAlphaNum || uNameAlphaNum === cleanAlphaNum;
       });
-    }
-
-    // Step 1D: Fallback to INITIAL_USERS if the specific user exists in seed data but not yet loaded
-    if (!matched) {
-      const seedMatch = INITIAL_USERS.find((u) => {
-        const uUid = (u.uid || '').trim().toLowerCase();
-        const uEmail = (u.email || '').trim().toLowerCase();
-        const uUserId = (u.userId || '').trim().toLowerCase();
-        const uEmailPrefix = uEmail.split('@')[0].trim().toLowerCase();
-        return (
-          uUid === cleanInput ||
-          uEmail === cleanInput ||
-          uUserId === cleanInput ||
-          uUserId === cleanPrefix ||
-          uEmailPrefix === cleanInput ||
-          uEmailPrefix === cleanPrefix
-        );
-      });
-      if (seedMatch) {
-        matched = { ...seedMatch };
-        await DataService.saveUser(matched, {
-          id: matched.uid,
-          name: matched.name,
-          role: matched.role,
-        });
-      }
     }
 
     // 2. Not Found Check

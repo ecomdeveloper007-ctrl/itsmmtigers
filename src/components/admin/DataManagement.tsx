@@ -21,7 +21,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { PerformanceRecord } from '../../types';
-import { DataService, INITIAL_RECORDS } from '../../services/dataService';
+import { DataService } from '../../services/dataService';
 
 interface DataManagementProps {
   onOpenImportModal: () => void;
@@ -47,7 +47,6 @@ export const DataManagement: React.FC<DataManagementProps> = ({ onOpenImportModa
   const [search, setSearch] = useState<string>('');
   const [filterWeek, setFilterWeek] = useState<string>('all');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [isResetting, setIsResetting] = useState<boolean>(false);
   const [showPurgeModal, setShowPurgeModal] = useState<boolean>(false);
   const [isPurging, setIsPurging] = useState<boolean>(false);
 
@@ -61,26 +60,6 @@ export const DataManagement: React.FC<DataManagementProps> = ({ onOpenImportModa
       addToast('error', 'Purge Failed', 'Could not clear records.');
     } finally {
       setIsPurging(false);
-    }
-  };
-
-  const handleRestoreDefaultRecords = async () => {
-    setIsResetting(true);
-    try {
-      for (const rec of INITIAL_RECORDS) {
-        await DataService.saveRecord(rec, {
-          id: 'super_admin_restore',
-          name: 'Super Admin',
-          role: 'super_admin',
-        });
-      }
-      await refreshAllData();
-      addToast('success', 'Data Restored Successfully', 'All team performance records and initial user data have been reloaded.');
-    } catch (e) {
-      console.error(e);
-      addToast('error', 'Restore failed', 'Please try again.');
-    } finally {
-      setIsResetting(false);
     }
   };
 

@@ -15,11 +15,27 @@ export const PerformanceCharts: React.FC = () => {
 
   const [activeChart, setActiveChart] = useState<'revenue' | 'score' | 'projects' | 'achievement'>('revenue');
 
-  if (rankings.length === 0) return null;
+  const activeRankings = rankings.filter(
+    (r) => (r.weeksSubmitted ?? 0) > 0 || (r.revenueGenerated ?? 0) > 0 || (r.projectClosed ?? 0) > 0
+  );
+
+  const hasSubmissions = activeRankings.length > 0;
+
+  if (activeRankings.length === 0 || !hasSubmissions) {
+    return (
+      <div className="bg-white border border-[#e2ebd9] rounded-3xl p-8 text-center text-[#666666]">
+        <BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-30 text-[#8cc540]" />
+        <p className="text-sm font-bold text-[#101010]">No performance data available yet.</p>
+        <p className="text-xs text-[#888888] mt-1">
+          Comparative analytics and charts will appear once performance records are submitted for this period.
+        </p>
+      </div>
+    );
+  }
 
   // Max calculations for scaling
-  const maxRevenue = Math.max(...rankings.map((r) => r.revenueGenerated), 10000);
-  const maxProjects = Math.max(...rankings.map((r) => r.projectClosed), 25);
+  const maxRevenue = Math.max(...activeRankings.map((r) => r.revenueGenerated), 10000);
+  const maxProjects = Math.max(...activeRankings.map((r) => r.projectClosed), 25);
   const maxScore = 100;
 
   return (
@@ -92,7 +108,7 @@ export const PerformanceCharts: React.FC = () => {
           </div>
 
           <div className="space-y-3.5">
-            {rankings.map((member) => {
+            {activeRankings.map((member) => {
               const rev = member.revenueGenerated ?? 0;
               const pct = Math.min((rev / (maxRevenue || 1)) * 100, 100);
               const targetPct = (10000 / (maxRevenue || 1)) * 100;
@@ -139,7 +155,7 @@ export const PerformanceCharts: React.FC = () => {
           </div>
 
           <div className="space-y-3.5">
-            {rankings.map((member) => {
+            {activeRankings.map((member) => {
               const scorePct = Math.min((member.finalScore / maxScore) * 100, 100);
               return (
                 <div key={member.userId} className="space-y-1.5">
@@ -181,7 +197,7 @@ export const PerformanceCharts: React.FC = () => {
           </div>
 
           <div className="space-y-3.5">
-            {rankings.map((member) => {
+            {activeRankings.map((member) => {
               const projPct = Math.min((member.projectClosed / maxProjects) * 100, 100);
               return (
                 <div key={member.userId} className="space-y-1.5">
@@ -208,7 +224,7 @@ export const PerformanceCharts: React.FC = () => {
       {/* Chart 4: KPI Breakdown & Distribution */}
       {activeChart === 'achievement' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {rankings.slice(0, 6).map((member) => (
+          {activeRankings.slice(0, 6).map((member) => (
             <div
               key={member.userId}
               className="p-4 rounded-2xl bg-white border border-[#e2ebd9] space-y-3 shadow-xs"

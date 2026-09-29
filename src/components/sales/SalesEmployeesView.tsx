@@ -339,6 +339,18 @@ export const SalesEmployeesView: React.FC = () => {
         })}
       </div>
 
+      {filtered.length === 0 && (
+        <div className="bg-white rounded-3xl border border-[#e2ebd9] p-12 text-center text-[#666666]">
+          <Users className="w-12 h-12 mx-auto mb-3 opacity-30 text-[#8cc540]" />
+          <h4 className="text-sm font-bold text-[#101010]">No team members have been added yet.</h4>
+          <p className="text-xs text-[#888888] mt-1">
+            {salesEmployees.length === 0
+              ? 'No team members have been added yet. Click "+ Add Sales Member" above to add your first sales member.'
+              : 'No team members match the current filter criteria.'}
+          </p>
+        </div>
+      )}
+
       {/* Confirmation Modal for Permanent Delete */}
       {deletingEmployee && (
         <div

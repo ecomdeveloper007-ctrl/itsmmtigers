@@ -71,24 +71,11 @@ export class PermissionService {
           fetched.push(d.data() as AppRole);
         });
 
-        // Ensure all built-in roles are preserved
-        let updated = false;
+        // Complement in-memory list with built-in role structures if missing in DB, without auto-writing to DB
         for (const defaultRole of DEFAULT_APP_ROLES) {
           const foundIndex = fetched.findIndex((r) => r.id === defaultRole.id);
           if (foundIndex === -1) {
-            await setDoc(doc(db, 'roles', defaultRole.id), defaultRole);
             fetched.push(defaultRole);
-            updated = true;
-          } else if (defaultRole.id === 'super_admin') {
-            // Verify super_admin is set to Omnipotent (all permissions true)
-            const omnipotent = createOmnipotentPermissions();
-            fetched[foundIndex] = {
-              ...fetched[foundIndex],
-              permissions: omnipotent,
-              status: 'active',
-              isSystem: true,
-            };
-            await setDoc(doc(db, 'roles', 'super_admin'), fetched[foundIndex], { merge: true });
           }
         }
 
@@ -98,10 +85,7 @@ export class PermissionService {
         this.isInitialized = true;
         return sorted;
       } else {
-        // First run: seed all default roles
-        for (const role of DEFAULT_APP_ROLES) {
-          await setDoc(doc(db, 'roles', role.id), role);
-        }
+        // Return default system roles in memory without automatically writing to Firestore
         const sorted = this.sortRoles(DEFAULT_APP_ROLES);
         this.cachedRoles = sorted;
         saveRolesToStorage(sorted);
